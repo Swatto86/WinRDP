@@ -1,0 +1,30 @@
+# Build artifacts
+build/
+*.exe
+*.o
+*.obj
+*.dll
+*.so
+*.dylib
+
+# Compiled resource files
+*.res
+
+# Log files
+*.log
+
+# Data files (user-specific)
+hosts.csv
+
+# IDE and editor files
+.vscode/
+.vs/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Windows specific
+Thumbs.db
+Desktop.ini
+

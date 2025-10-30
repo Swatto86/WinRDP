@@ -1,0 +1,119 @@
+/*
+ * Resource Script File
+ * 
+ * This file defines the visual elements of the application:
+ * - Dialogs and their controls
+ * - Menus
+ * - Icons
+ * - Strings
+ * 
+ * The resource compiler (windres) compiles this into binary format
+ * that gets embedded in the executable.
+ */
+
+#include <windows.h>
+#include "resource.h"
+
+// Application icon (we'll use the default for now)
+// Create app.ico and uncomment the line below to use a custom icon
+// IDI_MAINICON ICON "app.ico"
+
+/*
+ * Login Dialog
+ * 
+ * This is where users enter their default RDP credentials.
+ * These credentials will be stored in Windows Credential Manager.
+ * 
+ * Dialog styles explained:
+ *   DS_MODALFRAME  - Creates a modal dialog (blocks parent)
+ *   DS_CENTER      - Centers the dialog on screen
+ *   WS_POPUP       - Creates a popup window
+ *   WS_CAPTION     - Adds title bar
+ *   WS_SYSMENU     - Adds system menu (close button)
+ */
+IDD_LOGIN DIALOGEX 0, 0, 280, 160
+STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "WinRDP - Enter Credentials"
+FONT 9, "Segoe UI"
+BEGIN
+    LTEXT           "Enter your default RDP credentials:", IDC_STATIC, 10, 10, 260, 10
+    
+    LTEXT           "Username:", IDC_STATIC, 10, 30, 60, 10
+    EDITTEXT        IDC_EDIT_USERNAME, 80, 28, 180, 14, ES_AUTOHSCROLL
+    
+    LTEXT           "Password:", IDC_STATIC, 10, 50, 60, 10
+    EDITTEXT        IDC_EDIT_PASSWORD, 80, 48, 180, 14, ES_PASSWORD | ES_AUTOHSCROLL
+    
+    GROUPBOX        "Saved Credentials", IDC_STATIC, 10, 70, 260, 50
+    LTEXT           "No credentials saved", IDC_STATIC, 20, 85, 240, 10
+    PUSHBUTTON      "Delete Saved Credentials", IDC_BTN_DELETE_CREDS, 20, 100, 120, 14
+    
+    DEFPUSHBUTTON   "Save && Continue", IDOK, 110, 135, 80, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 195, 135, 75, 14
+END
+
+/*
+ * Main Server List Dialog
+ * 
+ * This shows the list of available RDP servers and allows
+ * searching and connecting to them.
+ */
+IDD_MAIN DIALOGEX 0, 0, 450, 350
+STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "WinRDP - Connect to Server"
+FONT 9, "Segoe UI"
+BEGIN
+    LTEXT           "Search:", IDC_STATIC, 10, 10, 40, 10
+    EDITTEXT        IDC_EDIT_SEARCH, 50, 8, 300, 14, ES_AUTOHSCROLL
+    
+    CONTROL         "", IDC_LIST_SERVERS, WC_LISTVIEW, 
+                    LVS_REPORT | LVS_SINGLESEL | WS_BORDER | WS_TABSTOP,
+                    10, 30, 430, 280
+    
+    PUSHBUTTON      "Connect", IDC_BTN_CONNECT, 10, 320, 80, 20
+    PUSHBUTTON      "Manage Hosts", IDC_BTN_MANAGE, 100, 320, 80, 20
+    DEFPUSHBUTTON   "Close", IDCANCEL, 360, 320, 80, 20
+END
+
+/*
+ * Host Management Dialog
+ * 
+ * Add, edit, and delete RDP server entries.
+ */
+IDD_HOSTS DIALOGEX 0, 0, 500, 400
+STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "WinRDP - Manage Hosts"
+FONT 9, "Segoe UI"
+BEGIN
+    CONTROL         "", IDC_LIST_HOSTS, WC_LISTVIEW,
+                    LVS_REPORT | LVS_SINGLESEL | WS_BORDER | WS_TABSTOP,
+                    10, 10, 480, 330
+    
+    PUSHBUTTON      "Add Host", IDC_BTN_ADD_HOST, 10, 350, 80, 20
+    PUSHBUTTON      "Edit Host", IDC_BTN_EDIT_HOST, 95, 350, 80, 20
+    PUSHBUTTON      "Delete Host", IDC_BTN_DELETE_HOST, 180, 350, 80, 20
+    PUSHBUTTON      "Scan Domain", IDC_BTN_SCAN_DOMAIN, 265, 350, 80, 20
+    DEFPUSHBUTTON   "Close", IDCANCEL, 410, 350, 80, 20
+END
+
+/*
+ * Add/Edit Host Dialog
+ * 
+ * Dialog for entering hostname and description for an RDP server.
+ */
+IDD_ADD_HOST DIALOGEX 0, 0, 350, 150
+STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "WinRDP - Add/Edit Host"
+FONT 9, "Segoe UI"
+BEGIN
+    LTEXT           "Hostname:", IDC_STATIC, 10, 15, 60, 10
+    EDITTEXT        IDC_EDIT_HOSTNAME, 80, 13, 250, 14, ES_AUTOHSCROLL
+    
+    LTEXT           "Description:", IDC_STATIC, 10, 40, 60, 10
+    EDITTEXT        IDC_EDIT_DESCRIPTION, 80, 38, 250, 60, 
+                    ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL
+    
+    DEFPUSHBUTTON   "Save", IDOK, 180, 120, 70, 20
+    PUSHBUTTON      "Cancel", IDCANCEL, 260, 120, 70, 20
+END
+

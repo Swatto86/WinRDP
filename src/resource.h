@@ -1,0 +1,60 @@
+/*
+ * Resource Identifiers
+ * 
+ * These constants identify UI elements (dialogs, buttons, menus, etc.)
+ * They're used in both C code and resource (.rc) files.
+ * 
+ * Naming convention:
+ *   IDD_ = Dialog ID
+ *   IDC_ = Control ID (button, edit box, etc.)
+ *   IDM_ = Menu item ID
+ *   IDS_ = String resource ID
+ *   IDI_ = Icon ID
+ */
+
+#ifndef RESOURCE_H
+#define RESOURCE_H
+
+// Dialog IDs
+#define IDD_LOGIN               100
+#define IDD_MAIN                101
+#define IDD_HOSTS               102
+#define IDD_ADD_HOST            103
+
+// Control IDs - Login Dialog
+#define IDC_EDIT_USERNAME       200
+#define IDC_EDIT_PASSWORD       201
+#define IDC_BTN_SAVE_CREDS      202
+#define IDC_BTN_DELETE_CREDS    203
+
+// Control IDs - Main Dialog
+#define IDC_LIST_SERVERS        210
+#define IDC_EDIT_SEARCH         211
+#define IDC_BTN_CONNECT         212
+#define IDC_BTN_MANAGE          213
+
+// Control IDs - Host Management Dialog
+#define IDC_LIST_HOSTS          220
+#define IDC_BTN_ADD_HOST        221
+#define IDC_BTN_EDIT_HOST       222
+#define IDC_BTN_DELETE_HOST     223
+#define IDC_BTN_SCAN_DOMAIN     224
+
+// Control IDs - Add/Edit Host Dialog
+#define IDC_EDIT_HOSTNAME       230
+#define IDC_EDIT_DESCRIPTION    231
+
+// Menu IDs
+#define IDM_OPEN                300
+#define IDM_EXIT                301
+#define IDM_ABOUT               302
+
+// System Tray
+#define ID_TRAYICON             400
+#define WM_TRAYICON             (WM_USER + 1)
+
+// Icons
+#define IDI_MAINICON            500
+
+#endif // RESOURCE_H
+

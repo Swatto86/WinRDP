@@ -1,0 +1,29 @@
+Icon Placeholder
+================
+
+To create an icon for this application:
+
+1. Use an online icon generator or tool like:
+   - GIMP (free, open source)
+   - Paint.NET with icon plugin
+   - Online: https://www.icoconverter.com/
+
+2. Create a 32x32 or 48x48 pixel icon
+
+3. Save as "app.ico" in the src/ directory
+
+4. The icon will automatically be embedded in the executable
+
+For now, the application uses the default Windows application icon (IDI_APPLICATION).
+
+Temporary solution:
+- Comment out the icon line in resources.rc
+- Or use a Windows system icon
+
+To use a system icon, in resources.rc change:
+  IDI_MAINICON ICON "app.ico"
+To:
+  // IDI_MAINICON ICON "app.ico"
+
+And the code will use LoadIcon(NULL, IDI_APPLICATION) for the default icon.
+
