@@ -70,6 +70,7 @@
 #define IDM_EXIT                301
 #define IDM_ABOUT               302
 #define IDM_DELETE_ALL          303
+#define IDM_GLOBAL_HOTKEY       304
 
 // System Tray
 #define ID_TRAYICON             400

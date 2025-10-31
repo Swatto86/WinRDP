@@ -233,7 +233,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     switch (msg)
     {
         case WM_CREATE:
-            // Window is being created
+            // Register global hotkey (Ctrl+Shift+R) to open connect dialog
+            if (!RegisterHotKey(hwnd, IDM_GLOBAL_HOTKEY, MOD_CONTROL | MOD_SHIFT, 'R'))
+            {
+                // Hotkey registration failed - could be in use by another app
+                // Silently fail - the app will still work without the hotkey
+            }
             return 0;
 
         case WM_TRAYICON:
@@ -290,7 +295,48 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             }
             return 0;
 
+        case WM_HOTKEY:
+            // Handle global hotkey for opening connect dialog
+            if (wParam == IDM_GLOBAL_HOTKEY)
+            {
+                // Check if we have global credentials saved
+                wchar_t username[MAX_USERNAME_LEN];
+                wchar_t password[MAX_PASSWORD_LEN];
+                
+                if (LoadCredentials(NULL, username, password))
+                {
+                    // We have global credentials - show connect dialog
+                    if (g_hwndMainDialog == NULL)
+                    {
+                        DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_MAIN), 
+                                 hwnd, MainDialogProc);
+                    }
+                    else
+                    {
+                        // Bring existing dialog to front
+                        SetForegroundWindow(g_hwndMainDialog);
+                    }
+                }
+                else
+                {
+                    // No global credentials - show credentials dialog
+                    if (g_hwndLoginDialog == NULL)
+                    {
+                        DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_LOGIN), 
+                                 hwnd, LoginDialogProc);
+                    }
+                    else
+                    {
+                        // Bring existing dialog to front
+                        SetForegroundWindow(g_hwndLoginDialog);
+                    }
+                }
+            }
+            return 0;
+
         case WM_DESTROY:
+            // Unregister global hotkey
+            UnregisterHotKey(hwnd, IDM_GLOBAL_HOTKEY);
             // Window is being destroyed - quit the application
             PostQuitMessage(0);
             return 0;
