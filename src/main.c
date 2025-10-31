@@ -59,6 +59,9 @@ static HWND g_hwndAddHostDialog = NULL;
 // Scan results tracking
 static int g_scanComputerCount = 0;
 
+// Timer ID for auto-close countdown
+#define TIMER_AUTO_CLOSE_LOGIN 1
+
 // Scan domain parameters
 typedef struct {
     wchar_t domain[256];
@@ -373,6 +376,9 @@ void ShowContextMenu(HWND hwnd)
  */
 INT_PTR CALLBACK LoginDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+    // Static variable to track countdown seconds (persists across messages)
+    static int s_countdownSeconds = 0;
+    
     UNREFERENCED_PARAMETER(lParam);
 
     switch (msg)
@@ -381,6 +387,9 @@ INT_PTR CALLBACK LoginDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
         {
             // Track this dialog instance
             g_hwndLoginDialog = hwnd;
+            
+            // Reset countdown
+            s_countdownSeconds = 0;
             
             // Dialog is being initialized
             CenterWindow(hwnd);
@@ -403,9 +412,15 @@ INT_PTR CALLBACK LoginDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
                 SetDlgItemTextW(hwnd, IDC_EDIT_USERNAME, username);
                 SetDlgItemTextW(hwnd, IDC_EDIT_PASSWORD, password);
                 
-                // Show compact status message
-                SetDlgItemTextW(hwnd, IDC_STATIC_STATUS, L"✓ Credentials are saved");
+                // Show compact status message and start countdown
+                s_countdownSeconds = 5;
+                wchar_t statusMsg[128];
+                swprintf_s(statusMsg, 128, L"✓ Credentials saved - Auto-closing in %d seconds...", s_countdownSeconds);
+                SetDlgItemTextW(hwnd, IDC_STATIC_STATUS, statusMsg);
                 ShowWindow(GetDlgItem(hwnd, IDC_BTN_DELETE_CREDS), SW_SHOW);
+                
+                // Start timer - fires every 1 second (1000 milliseconds)
+                SetTimer(hwnd, TIMER_AUTO_CLOSE_LOGIN, 1000, NULL);
             }
             else
             {
@@ -416,12 +431,45 @@ INT_PTR CALLBACK LoginDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
             
             return TRUE;
         }
+        
+        case WM_TIMER:
+        {
+            // Handle timer events
+            if (wParam == TIMER_AUTO_CLOSE_LOGIN)
+            {
+                // Decrement countdown
+                s_countdownSeconds--;
+                
+                if (s_countdownSeconds > 0)
+                {
+                    // Update countdown message
+                    wchar_t statusMsg[128];
+                    swprintf_s(statusMsg, 128, L"✓ Credentials saved - Auto-closing in %d seconds...", s_countdownSeconds);
+                    SetDlgItemTextW(hwnd, IDC_STATIC_STATUS, statusMsg);
+                }
+                else
+                {
+                    // Time's up - kill timer, close login dialog
+                    // WinMain will automatically open the main dialog when EndDialog returns IDOK
+                    KillTimer(hwnd, TIMER_AUTO_CLOSE_LOGIN);
+                    s_countdownSeconds = 0;
+                    
+                    // Close the login dialog (returns IDOK to WinMain)
+                    EndDialog(hwnd, IDOK);
+                }
+            }
+            return TRUE;
+        }
 
         case WM_COMMAND:
             switch (LOWORD(wParam))
             {
                 case IDOK:
                 {
+                    // Kill timer if it's running (user clicked OK manually)
+                    KillTimer(hwnd, TIMER_AUTO_CLOSE_LOGIN);
+                    s_countdownSeconds = 0;
+                    
                     // User clicked OK - save credentials
                     wchar_t username[MAX_USERNAME_LEN];
                     wchar_t password[MAX_PASSWORD_LEN];
@@ -458,6 +506,10 @@ INT_PTR CALLBACK LoginDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
 
                 case IDC_BTN_DELETE_CREDS:
                 {
+                    // Kill timer if running
+                    KillTimer(hwnd, TIMER_AUTO_CLOSE_LOGIN);
+                    s_countdownSeconds = 0;
+                    
                     // Delete saved credentials
                     if (DeleteCredentials(NULL))
                     {
@@ -471,6 +523,9 @@ INT_PTR CALLBACK LoginDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
                 }
 
                 case IDCANCEL:
+                    // Kill timer if running
+                    KillTimer(hwnd, TIMER_AUTO_CLOSE_LOGIN);
+                    s_countdownSeconds = 0;
                     g_hwndLoginDialog = NULL;
                     EndDialog(hwnd, IDCANCEL);
                     return TRUE;
@@ -478,11 +533,17 @@ INT_PTR CALLBACK LoginDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
             break;
 
         case WM_CLOSE:
+            // Kill timer if running
+            KillTimer(hwnd, TIMER_AUTO_CLOSE_LOGIN);
+            s_countdownSeconds = 0;
             g_hwndLoginDialog = NULL;
             EndDialog(hwnd, IDCANCEL);
             return TRUE;
             
         case WM_DESTROY:
+            // Kill timer if running
+            KillTimer(hwnd, TIMER_AUTO_CLOSE_LOGIN);
+            s_countdownSeconds = 0;
             g_hwndLoginDialog = NULL;
             return TRUE;
     }
