@@ -6,6 +6,13 @@ A lightweight Remote Desktop (RDP) connection manager written in **pure C** usin
 
 This project demonstrates:
 
+**C Language Fundamentals:**
+- **Pointers & Memory Management** - malloc, realloc, free, pointer-to-pointer
+- **Structures** - typedef struct, nested structures
+- **Function Pointers** - Callbacks and Windows message handlers
+- **Wide Character Strings** - Unicode support with wchar_t
+
+**Windows API Programming:**
 - **Window Management** - Creating windows, dialog boxes, and message handling
 - **System Tray Programming** - Adding icons to the notification area
 - **Credential Manager API** - Secure password storage using Windows Credential Manager
@@ -13,6 +20,7 @@ This project demonstrates:
 - **File I/O** - CSV file handling with Unicode support
 - **Process Launching** - Starting applications with ShellExecuteW
 - **ListView Controls** - Working with common controls
+- **Network APIs** - NetServerEnum for computer discovery
 
 ## 📋 Features
 
@@ -39,6 +47,22 @@ pacman -S mingw-w64-x86_64-gcc
 ### Option 2: Microsoft Visual Studio
 - Visual Studio 2019 or later with C++ Desktop Development workload
 - Windows SDK
+
+## 📚 Documentation
+
+**New to C or need a refresher?** Start with:
+- **C_LANGUAGE_PRIMER.md** - Comprehensive guide to all C concepts used in this project
+  - Pointers and memory management
+  - Structures and typedef
+  - Function pointers and callbacks
+  - Wide character strings
+  - Windows-specific C patterns
+
+**Other documentation:**
+- **00_START_HERE.md** - Quick start guide
+- **GETTING_STARTED.md** - Learning path and exercises
+- **BUILD_INSTRUCTIONS.md** - Detailed build instructions
+- **PROJECT_SUMMARY.md** - Architecture overview
 
 ## 🏗️ Building the Project
 

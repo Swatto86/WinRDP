@@ -42,13 +42,22 @@ The app will:
 
 **Read these in order:**
 
-1. **BUILD_INSTRUCTIONS.md** ← How to compile the project
-2. **README.md** ← Overview and features
-3. **GETTING_STARTED.md** ← Learning path and exercises
-4. **PROJECT_SUMMARY.md** ← Architecture and technical details
+1. **C_LANGUAGE_PRIMER.md** ← ⭐ NEW! C language concepts explained (START HERE if new to C)
+2. **BUILD_INSTRUCTIONS.md** ← How to compile the project
+3. **README.md** ← Overview and features
+4. **GETTING_STARTED.md** ← Learning path and exercises
+5. **PROJECT_SUMMARY.md** ← Architecture and technical details
 
 ## 🎯 What You'll Learn
 
+**C Language Fundamentals:**
+- ✅ Pointers and pointer-to-pointer patterns
+- ✅ Structures and typedef
+- ✅ Dynamic memory management (malloc/realloc/free)
+- ✅ Function pointers and callbacks
+- ✅ Wide character strings (Unicode)
+
+**Windows API:**
 - ✅ Windows message loop and event handling
 - ✅ Creating dialogs and controls
 - ✅ ListView controls for data display
@@ -58,13 +67,13 @@ The app will:
 - ✅ File I/O with Unicode
 - ✅ Process launching (ShellExecuteW)
 - ✅ Resource files (.rc)
-- ✅ Memory management in C
 
 ## 📁 Project Structure
 
 ```
 WinRDP/
 ├── 00_START_HERE.md        ← YOU ARE HERE
+├── C_LANGUAGE_PRIMER.md    ← ⭐ C concepts explained (read first!)
 ├── README.md               ← Main documentation
 ├── GETTING_STARTED.md      ← Learning guide
 ├── BUILD_INSTRUCTIONS.md   ← Build help
@@ -72,18 +81,25 @@ WinRDP/
 │
 ├── build.bat               ← Build script (auto-detects GCC/MSVC)
 │
-└── src/                    ← Source code (START HERE)
+└── src/                    ← Source code
     ├── main.c              ← Entry point, UI, dialogs
     ├── credentials.c       ← Credential Manager API
-    ├── hosts.c             ← CSV file management
-    ├── rdp.c              ← RDP launching
+    ├── hosts.c             ← CSV file management (GREAT for learning pointers!)
+    ├── rdp.c               ← RDP launching
     ├── registry.c          ← Registry operations
     ├── utils.c             ← Helper functions
-    ├── *.h                ← Header files
+    ├── darkmode.c          ← Dark mode theming
+    ├── adscan.c            ← Network computer scanning
+    ├── *.h                 ← Header files
     └── resources.rc        ← Dialog definitions
 ```
 
 ## 🔧 First Steps for Learning
+
+### Step 0: Understand C (if needed)
+- **New to C?** Read `C_LANGUAGE_PRIMER.md` first!
+- Focus on sections 1-3 (Pointers, Structs, Arrays)
+- Then come back here
 
 ### Step 1: Build and Run
 - Run `build.bat`
@@ -92,11 +108,12 @@ WinRDP/
 
 ### Step 2: Read the Code
 Start with these files in order:
-1. `src/main.c` - Read `wWinMain()` first
-2. `src/resources.rc` - See how UI is defined
-3. `src/credentials.c` - Learn Credential Manager
-4. `src/hosts.c` - CSV file handling
-5. `src/rdp.c` - RDP file generation
+1. `C_LANGUAGE_PRIMER.md` - Understand C concepts (if you haven't already)
+2. `src/hosts.c` - **Best file for learning pointers!** Read LoadHosts() thoroughly
+3. `src/main.c` - Read `wWinMain()` and a dialog procedure
+4. `src/resources.rc` - See how UI is defined
+5. `src/credentials.c` - Learn Credential Manager
+6. `src/rdp.c` - RDP file generation
 
 ### Step 3: Make Changes
 Try these exercises:
@@ -106,21 +123,24 @@ Try these exercises:
 - Save an additional setting
 
 ### Step 4: Explore Advanced Topics
-- Add connection history
-- Implement search functionality
+- Add connection history (already implemented: search functionality ✓)
 - Create host groups
 - Add custom RDP settings per host
+- Implement connection profiles
 
 ## 💡 Key Files to Study
 
 | File | Lines | Learn About |
 |------|-------|-------------|
-| `main.c` | ~750 | Message loop, dialogs, ListView |
+| `C_LANGUAGE_PRIMER.md` | ~900 | ⭐ Pointers, structs, memory, C concepts |
+| `hosts.c` | ~550 | **Best for learning!** malloc/realloc/pointers |
+| `main.c` | ~1400 | Message loop, dialogs, ListView, search |
+| `adscan.c` | ~200 | NetAPI, filtering, dynamic memory |
+| `darkmode.c` | ~200 | Function pointers, WinAPI theming |
 | `credentials.c` | ~300 | Windows Credential Manager |
-| `hosts.c` | ~350 | File I/O, CSV parsing, malloc |
-| `rdp.c` | ~200 | RDP file format, ShellExecute |
+| `rdp.c` | ~250 | File I/O, wide strings, ShellExecute |
 | `registry.c` | ~200 | Registry API, autostart |
-| `resources.rc` | ~150 | Dialog layout, controls |
+| `resources.rc` | ~200 | Dialog layout, controls |
 
 **Every file is heavily commented for learning!**
 
