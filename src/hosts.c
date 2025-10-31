@@ -461,6 +461,39 @@ void FreeHosts(Host* hosts, int count)
 }
 
 /*
+ * DeleteAllHosts - Delete all hosts from the CSV file
+ * 
+ * This function creates an empty CSV file with just the header,
+ * effectively deleting all hosts in one operation.
+ * 
+ * Returns:
+ *   TRUE on success, FALSE on failure
+ */
+BOOL DeleteAllHosts(void)
+{
+    FILE* file = NULL;
+    errno_t err;
+    
+    // Open file for writing (overwrites existing file) in binary mode
+    err = _wfopen_s(&file, HOSTS_FILE_NAME, L"wb");
+    if (err != 0 || file == NULL)
+    {
+        return FALSE;
+    }
+    
+    // Write UTF-8 BOM
+    unsigned char bom[3] = {0xEF, 0xBB, 0xBF};
+    fwrite(bom, 1, 3, file);
+    
+    // Write CSV header only (no hosts)
+    const char* header = "hostname,description\r\n";
+    fwrite(header, 1, strlen(header), file);
+    
+    fclose(file);
+    return TRUE;
+}
+
+/*
  * Helper function: Trim whitespace from string
  */
 static wchar_t* trim_whitespace(wchar_t* str)

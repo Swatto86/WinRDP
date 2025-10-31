@@ -18,6 +18,7 @@ BOOL SaveRDPCredentials(const wchar_t* hostname, const wchar_t* username,
                         const wchar_t* password);
 BOOL LoadRDPCredentials(const wchar_t* hostname, wchar_t* username, wchar_t* password);
 BOOL DeleteRDPCredentials(const wchar_t* hostname);
+BOOL DeleteAllWinRDPCredentials(void);
 
 #endif // CREDENTIALS_H
 

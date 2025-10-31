@@ -857,6 +857,9 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             // Track this dialog instance
             g_hwndHostDialog = hwnd;
             
+            // Register global hotkey for Ctrl+Shift+Alt+D
+            RegisterHotKey(hwnd, IDM_DELETE_ALL, MOD_CONTROL | MOD_SHIFT | MOD_ALT, 0x44);
+            
             CenterWindow(hwnd);
             
             // Apply dark mode if enabled
@@ -911,6 +914,76 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             }
             
             return TRUE;
+        }
+
+        case WM_HOTKEY:
+        {
+            // Handle the registered hotkey Ctrl+Shift+Alt+D
+            if (wParam == IDM_DELETE_ALL)
+            {
+                // Show warning confirmation dialog
+                int result = MessageBoxW(hwnd,
+                    L"WARNING: This will permanently delete:\n\n"
+                    L"• ALL RDP hosts from your list\n"
+                    L"• ALL saved credentials (global and per-host)\n\n"
+                    L"This action cannot be undone!\n\n"
+                    L"Are you absolutely sure?",
+                    L"Delete All Data - WinRDP",
+                    MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2);
+                
+                if (result == IDYES)
+                {
+                    // Second confirmation
+                    int result2 = MessageBoxW(hwnd,
+                        L"FINAL WARNING:\n\n"
+                        L"You are about to delete ALL hosts and credentials.\n\n"
+                        L"This is your last chance to cancel.\n\n"
+                        L"Continue?",
+                        L"Delete All Data - WinRDP",
+                        MB_YESNO | MB_ICONSTOP | MB_DEFBUTTON2);
+                    
+                    if (result2 == IDYES)
+                    {
+                        // Perform the deletion
+                        BOOL hostsDeleted = DeleteAllHosts();
+                        BOOL credsDeleted = DeleteAllWinRDPCredentials();
+                        
+                        if (hostsDeleted && credsDeleted)
+                        {
+                            MessageBoxW(hwnd,
+                                L"All hosts and credentials have been deleted.",
+                                L"Delete Complete - WinRDP",
+                                MB_OK | MB_ICONINFORMATION);
+                            
+                            // Reload the list (should be empty now)
+                            HWND hList = GetDlgItem(hwnd, IDC_LIST_HOSTS);
+                            
+                            if (hosts != NULL)
+                            {
+                                FreeHosts(hosts, hostCount);
+                                hosts = NULL;
+                                hostCount = 0;
+                            }
+                            
+                            if (LoadHosts(&hosts, &hostCount))
+                            {
+                                RefreshHostListView(hList, hosts, hostCount, NULL);
+                            }
+                        }
+                        else
+                        {
+                            MessageBoxW(hwnd,
+                                L"Some data may not have been deleted successfully.\n\n"
+                                L"Please check and try again if needed.",
+                                L"Delete Warning - WinRDP",
+                                MB_OK | MB_ICONWARNING);
+                        }
+                    }
+                }
+                
+                return TRUE;
+            }
+            break;
         }
 
         case WM_COMMAND:
@@ -1144,6 +1217,8 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             break;
 
         case WM_CLOSE:
+            // Unregister hotkey when closing
+            UnregisterHotKey(hwnd, IDM_DELETE_ALL);
             if (hosts != NULL)
             {
                 FreeHosts(hosts, hostCount);
@@ -1154,6 +1229,8 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             return TRUE;
             
         case WM_DESTROY:
+            // Unregister hotkey when destroying
+            UnregisterHotKey(hwnd, IDM_DELETE_ALL);
             g_hwndHostDialog = NULL;
             return TRUE;
     }

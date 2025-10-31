@@ -227,3 +227,73 @@ BOOL DeleteRDPCredentials(const wchar_t* hostname)
     return DeleteCredentials(targetName);
 }
 
+/*
+ * DeleteAllWinRDPCredentials - Delete all WinRDP credentials from Credential Manager
+ * 
+ * This function enumerates all credentials in the Credential Manager and
+ * deletes any that match WinRDP patterns (both global and per-host credentials).
+ * 
+ * The function:
+ * 1. Uses CredEnumerateW to get a list of all credentials
+ * 2. Filters for credentials starting with "WinRDP:"
+ * 3. Deletes each matching credential using CredDeleteW
+ * 4. Frees the memory allocated by CredEnumerateW
+ * 
+ * Returns:
+ *   TRUE on success (even if no credentials found), FALSE on critical error
+ * 
+ * Learning notes:
+ *   - CredEnumerateW allocates memory that must be freed with CredFree
+ *   - We use wcsstr to match prefix efficiently
+ *   - ERROR_NOT_FOUND is OK (no credentials to delete)
+ */
+BOOL DeleteAllWinRDPCredentials(void)
+{
+    DWORD count = 0;
+    PCREDENTIALW* credentials = NULL;
+    int deletedCount = 0;
+    
+    // Enumerate all credentials
+    // CredEnumerateW allocates memory that must be freed with CredFree
+    if (!CredEnumerateW(NULL, 0, &count, &credentials))
+    {
+        DWORD error = GetLastError();
+        
+        // ERROR_NOT_FOUND is OK - just means no credentials exist
+        if (error == ERROR_NOT_FOUND)
+        {
+            return TRUE;
+        }
+        
+        // Other errors are actual failures
+        return FALSE;
+    }
+    
+    // Iterate through all credentials and delete WinRDP ones
+    for (DWORD i = 0; i < count; i++)
+    {
+        // Check if this credential belongs to WinRDP
+        // Match both "WinRDP:DefaultCredentials" and "WinRDP:TERMSRV/hostname"
+        if (credentials[i]->TargetName != NULL &&
+            wcsstr(credentials[i]->TargetName, L"WinRDP:") == credentials[i]->TargetName)
+        {
+            // Delete this credential
+            if (CredDeleteW(credentials[i]->TargetName, CRED_TYPE_GENERIC, 0))
+            {
+                deletedCount++;
+            }
+            // Note: We don't fail if individual delete fails,
+            // we just continue with the rest
+        }
+    }
+    
+    // Free the memory allocated by CredEnumerateW
+    if (credentials != NULL)
+    {
+        CredFree(credentials);
+    }
+    
+    // Return success if we got here (even if deletedCount is 0)
+    return TRUE;
+}
+

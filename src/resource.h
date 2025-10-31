@@ -69,6 +69,7 @@
 #define IDM_OPEN                300
 #define IDM_EXIT                301
 #define IDM_ABOUT               302
+#define IDM_DELETE_ALL          303
 
 // System Tray
 #define ID_TRAYICON             400
@@ -76,6 +77,9 @@
 
 // Icons
 #define IDI_MAINICON            500
+
+// Accelerator Tables
+#define IDM_HOSTS_ACCEL         600
 
 #endif // RESOURCE_H
 

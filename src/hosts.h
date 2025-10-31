@@ -19,6 +19,7 @@ BOOL LoadHosts(Host** hosts, int* count);
 BOOL SaveHosts(const Host* hosts, int count);
 BOOL AddHost(const wchar_t* hostname, const wchar_t* description);
 BOOL DeleteHost(const wchar_t* hostname);
+BOOL DeleteAllHosts(void);
 void FreeHosts(Host* hosts, int count);
 
 #endif // HOSTS_H
