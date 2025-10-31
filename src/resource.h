@@ -43,6 +43,7 @@
 #define IDC_BTN_EDIT_HOST       222
 #define IDC_BTN_DELETE_HOST     223
 #define IDC_BTN_SCAN_DOMAIN     224
+#define IDC_EDIT_SEARCH_HOSTS   225
 
 // Control IDs - Add/Edit Host Dialog
 #define IDC_EDIT_HOSTNAME       230
@@ -55,9 +56,6 @@
 
 // Control IDs - Scan Domain Dialog
 #define IDC_EDIT_DOMAIN         250
-#define IDC_EDIT_SCAN_USERNAME  251
-#define IDC_EDIT_SCAN_PASSWORD  252
-#define IDC_CHECK_USE_CREDS     253
 #define IDC_CHECK_WORKSTATIONS  254
 #define IDC_CHECK_SERVERS       255
 #define IDC_CHECK_DOMAIN_CTRL   256

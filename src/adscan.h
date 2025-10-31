@@ -19,8 +19,6 @@ typedef struct {
 // Scan for computers in the domain/workgroup
 // Parameters:
 //   domain - Domain/workgroup name (NULL for current)
-//   username - Optional username (NULL for anonymous)
-//   password - Optional password (NULL for anonymous)
 //   includeWorkstations - Include workstation computers
 //   includeServers - Include server computers
 //   includeDomainControllers - Include domain controllers
@@ -28,8 +26,8 @@ typedef struct {
 //   count - Receives number of computers found
 // Returns array of ComputerInfo and count
 // Caller must free the array with FreeComputerList()
-BOOL ScanForComputers(const wchar_t* domain, const wchar_t* username, 
-                      const wchar_t* password, BOOL includeWorkstations,
+// Note: Uses caller's security context (runs as current logged-in user)
+BOOL ScanForComputers(const wchar_t* domain, BOOL includeWorkstations,
                       BOOL includeServers, BOOL includeDomainControllers,
                       ComputerInfo** computers, int* count);
 

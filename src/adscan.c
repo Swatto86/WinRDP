@@ -25,17 +25,14 @@
  * 
  * Parameters:
  *   domain    - Domain/workgroup name (NULL or empty for current)
- *   username  - Optional username (currently unused - uses caller's credentials)
- *   password  - Optional password (currently unused - uses caller's credentials)
  *   includeWorkstations - Include workstation computers
  *   includeServers - Include server computers (excluding DCs)
  *   includeDomainControllers - Include domain controllers
  *   computers - Pointer to receive allocated array of ComputerInfo
  *   count     - Pointer to receive number of computers found
  * 
- * Note: NetServerEnum uses the caller's security context. For authenticated
- * scanning, the application should be run as a user with appropriate permissions.
- * NetUseAdd could be used for explicit credentials but adds complexity.
+ * Note: NetServerEnum uses the caller's security context. 
+ * The scan runs with the current logged-in user's permissions.
  * 
  * Returns:
  *   TRUE on success (even if no computers found)
@@ -43,8 +40,7 @@
  * 
  * The caller MUST call FreeComputerList() when done with the array!
  */
-BOOL ScanForComputers(const wchar_t* domain, const wchar_t* username, 
-                      const wchar_t* password, BOOL includeWorkstations,
+BOOL ScanForComputers(const wchar_t* domain, BOOL includeWorkstations,
                       BOOL includeServers, BOOL includeDomainControllers,
                       ComputerInfo** computers, int* count)
 {
@@ -53,10 +49,6 @@ BOOL ScanForComputers(const wchar_t* domain, const wchar_t* username,
     DWORD totalEntries = 0;
     DWORD resumeHandle = 0;
     NET_API_STATUS status;
-    
-    // Suppress unused parameter warnings (credentials not used by NetServerEnum)
-    UNREFERENCED_PARAMETER(username);
-    UNREFERENCED_PARAMETER(password);
     
     // Initialize output parameters
     *computers = NULL;

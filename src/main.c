@@ -62,13 +62,18 @@ static int g_scanComputerCount = 0;
 // Scan domain parameters
 typedef struct {
     wchar_t domain[256];
-    wchar_t username[256];
-    wchar_t password[256];
-    BOOL useCredentials;
     BOOL includeWorkstations;
     BOOL includeServers;
     BOOL includeDomainControllers;
 } ScanParams;
+
+// Edit host data (for pre-filling edit dialog)
+typedef struct {
+    wchar_t originalHostname[MAX_HOSTNAME_LEN];  // Original hostname (for deletion if renamed)
+    wchar_t hostname[MAX_HOSTNAME_LEN];
+    wchar_t description[MAX_DESCRIPTION_LEN];
+    BOOL isEdit;  // TRUE if editing, FALSE if adding new
+} EditHostData;
 
 /*
  * WinMain - Entry point for Windows GUI applications
@@ -841,18 +846,7 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             // Load and display hosts
             if (LoadHosts(&hosts, &hostCount))
             {
-                for (int i = 0; i < hostCount; i++)
-                {
-                    LVITEMW item = {0};
-                    item.mask = LVIF_TEXT;
-                    item.iItem = i;
-                    item.iSubItem = 0;
-                    item.pszText = L"";  // Dummy column 0
-                    ListView_InsertItem(hList, &item);
-                    
-                    ListView_SetItemText(hList, i, 1, hosts[i].hostname);  // Hostname in column 1
-                    ListView_SetItemText(hList, i, 2, hosts[i].description);  // Description in column 2
-                }
+                RefreshHostListView(hList, hosts, hostCount, NULL);
             }
             
             return TRUE;
@@ -861,6 +855,24 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
         case WM_COMMAND:
             switch (LOWORD(wParam))
             {
+                case IDC_EDIT_SEARCH_HOSTS:
+                {
+                    // Handle search text changes
+                    if (HIWORD(wParam) == EN_CHANGE)
+                    {
+                        HWND hList = GetDlgItem(hwnd, IDC_LIST_HOSTS);
+                        HWND hSearch = GetDlgItem(hwnd, IDC_EDIT_SEARCH_HOSTS);
+                        
+                        // Get search text
+                        wchar_t searchText[256] = {0};
+                        GetWindowTextW(hSearch, searchText, 256);
+                        
+                        // Refresh list with filter
+                        RefreshHostListView(hList, hosts, hostCount, searchText);
+                    }
+                    return TRUE;
+                }
+
                 case IDC_BTN_ADD_HOST:
                 {
                     // Show add host dialog (only if not already open)
@@ -876,7 +888,6 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                     {
                         // Reload the list
                         HWND hList = GetDlgItem(hwnd, IDC_LIST_HOSTS);
-                        ListView_DeleteAllItems(hList);
                         
                         if (hosts != NULL)
                         {
@@ -887,17 +898,12 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                         
                         if (LoadHosts(&hosts, &hostCount))
                         {
-                            for (int i = 0; i < hostCount; i++)
-                            {
-                                LVITEMW item = {0};
-                                item.mask = LVIF_TEXT;
-                                item.iItem = i;
-                                item.iSubItem = 0;
-                                item.pszText = hosts[i].hostname;
-                                ListView_InsertItem(hList, &item);
-                                
-                                ListView_SetItemText(hList, i, 1, hosts[i].description);
-                            }
+                            // Get search text if any
+                            HWND hSearch = GetDlgItem(hwnd, IDC_EDIT_SEARCH_HOSTS);
+                            wchar_t searchText[256] = {0};
+                            GetWindowTextW(hSearch, searchText, 256);
+                            
+                            RefreshHostListView(hList, hosts, hostCount, searchText);
                         }
                     }
                     return TRUE;
@@ -918,36 +924,30 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                             return TRUE;
                         }
                         
-                        // Store the host to edit globally (simple approach for educational purposes)
-                        static wchar_t editHostname[MAX_HOSTNAME_LEN];
-                        static wchar_t editDescription[MAX_DESCRIPTION_LEN];
-                        wcsncpy_s(editHostname, MAX_HOSTNAME_LEN, hosts[selected].hostname, _TRUNCATE);
-                        wcsncpy_s(editDescription, MAX_DESCRIPTION_LEN, hosts[selected].description, _TRUNCATE);
+                        // Prepare edit data to pass to dialog
+                        EditHostData editData = {0};
+                        wcsncpy_s(editData.originalHostname, MAX_HOSTNAME_LEN, hosts[selected].hostname, _TRUNCATE);
+                        wcsncpy_s(editData.hostname, MAX_HOSTNAME_LEN, hosts[selected].hostname, _TRUNCATE);
+                        wcsncpy_s(editData.description, MAX_DESCRIPTION_LEN, hosts[selected].description, _TRUNCATE);
+                        editData.isEdit = TRUE;
                         
-                        // Show edit dialog
-                        if (DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_ADD_HOST),
-                                     hwnd, AddHostDialogProc) == IDOK)
+                        // Show edit dialog with pre-filled data
+                        if (DialogBoxParam(g_hInstance, MAKEINTRESOURCE(IDD_ADD_HOST),
+                                          hwnd, AddHostDialogProc, (LPARAM)&editData) == IDOK)
                         {
                             // Reload the list
-                            ListView_DeleteAllItems(hList);
-                            
                             FreeHosts(hosts, hostCount);
                             hosts = NULL;
                             hostCount = 0;
                             
                             if (LoadHosts(&hosts, &hostCount))
                             {
-                                for (int i = 0; i < hostCount; i++)
-                                {
-                                    LVITEMW item = {0};
-                                    item.mask = LVIF_TEXT;
-                                    item.iItem = i;
-                                    item.iSubItem = 0;
-                                    item.pszText = hosts[i].hostname;
-                                    ListView_InsertItem(hList, &item);
-                                    
-                                    ListView_SetItemText(hList, i, 1, hosts[i].description);
-                                }
+                                // Get search text if any
+                                HWND hSearch = GetDlgItem(hwnd, IDC_EDIT_SEARCH_HOSTS);
+                                wchar_t searchText[256] = {0};
+                                GetWindowTextW(hSearch, searchText, 256);
+                                
+                                RefreshHostListView(hList, hosts, hostCount, searchText);
                             }
                         }
                     }
@@ -975,25 +975,18 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                             if (DeleteHost(hosts[selected].hostname))
                             {
                                 // Reload the list
-                                ListView_DeleteAllItems(hList);
-                                
                                 FreeHosts(hosts, hostCount);
                                 hosts = NULL;
                                 hostCount = 0;
                                 
                                 if (LoadHosts(&hosts, &hostCount))
                                 {
-                                    for (int i = 0; i < hostCount; i++)
-                                    {
-                                        LVITEMW item = {0};
-                                        item.mask = LVIF_TEXT;
-                                        item.iItem = i;
-                                        item.iSubItem = 0;
-                                        item.pszText = hosts[i].hostname;
-                                        ListView_InsertItem(hList, &item);
-                                        
-                                        ListView_SetItemText(hList, i, 1, hosts[i].description);
-                                    }
+                                    // Get search text if any
+                                    HWND hSearch = GetDlgItem(hwnd, IDC_EDIT_SEARCH_HOSTS);
+                                    wchar_t searchText[256] = {0};
+                                    GetWindowTextW(hSearch, searchText, 256);
+                                    
+                                    RefreshHostListView(hList, hosts, hostCount, searchText);
                                 }
                             }
                         }
@@ -1021,12 +1014,10 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                         // Show scanning message
                         SetCursor(LoadCursor(NULL, IDC_WAIT));
                         
-                        // Prepare credentials
-                        const wchar_t* username = params.useCredentials && wcslen(params.username) > 0 ? params.username : NULL;
-                        const wchar_t* password = params.useCredentials && wcslen(params.password) > 0 ? params.password : NULL;
+                        // Prepare domain parameter
                         const wchar_t* domain = wcslen(params.domain) > 0 ? params.domain : NULL;
                         
-                        if (ScanForComputers(domain, username, password, 
+                        if (ScanForComputers(domain, 
                                            params.includeWorkstations, params.includeServers, params.includeDomainControllers,
                                            &computers, &computerCount))
                         {
@@ -1120,8 +1111,8 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
  */
 INT_PTR CALLBACK AddHostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    UNREFERENCED_PARAMETER(lParam);
-
+    static EditHostData* s_editData = NULL;  // Store pointer for later use
+    
     switch (msg)
     {
         case WM_INITDIALOG:
@@ -1138,6 +1129,20 @@ INT_PTR CALLBACK AddHostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
             HICON hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_MAINICON));
             SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
             SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+            
+            // Store edit data pointer for use in WM_COMMAND
+            s_editData = (EditHostData*)lParam;
+            
+            // Check if we're editing an existing host
+            if (s_editData != NULL && s_editData->isEdit)
+            {
+                // Pre-fill the fields with existing data
+                SetDlgItemTextW(hwnd, IDC_EDIT_HOSTNAME, s_editData->hostname);
+                SetDlgItemTextW(hwnd, IDC_EDIT_DESCRIPTION, s_editData->description);
+                
+                // Change dialog title to "Edit Host"
+                SetWindowTextW(hwnd, L"WinRDP - Edit Host");
+            }
             
             return TRUE;
         }
@@ -1159,20 +1164,30 @@ INT_PTR CALLBACK AddHostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
                         return TRUE;
                     }
                     
+                    // If editing, delete the original host first
+                    // (This handles both rename and update scenarios)
+                    if (s_editData != NULL && s_editData->isEdit)
+                    {
+                        DeleteHost(s_editData->originalHostname);
+                    }
+                    
+                    // Add the host (new or updated)
                     if (AddHost(hostname, description))
                     {
                         g_hwndAddHostDialog = NULL;
+                        s_editData = NULL;  // Clear edit data
                         EndDialog(hwnd, IDOK);
                     }
                     else
                     {
-                        ShowErrorMessage(hwnd, L"Failed to add host.");
+                        ShowErrorMessage(hwnd, L"Failed to save host.");
                     }
                     return TRUE;
                 }
 
                 case IDCANCEL:
                     g_hwndAddHostDialog = NULL;
+                    s_editData = NULL;  // Clear edit data
                     EndDialog(hwnd, IDCANCEL);
                     return TRUE;
             }
@@ -1180,11 +1195,13 @@ INT_PTR CALLBACK AddHostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
 
         case WM_CLOSE:
             g_hwndAddHostDialog = NULL;
+            s_editData = NULL;  // Clear edit data
             EndDialog(hwnd, IDCANCEL);
             return TRUE;
             
         case WM_DESTROY:
             g_hwndAddHostDialog = NULL;
+            s_editData = NULL;  // Clear edit data
             return TRUE;
     }
 
@@ -1197,9 +1214,9 @@ INT_PTR CALLBACK AddHostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
 }
 
 /*
- * ScanDomainDialogProc - Get domain and credentials for scanning
+ * ScanDomainDialogProc - Get domain and computer type filters for scanning
  * 
- * Prompts user for domain name and optional credentials before scanning.
+ * Prompts user for domain name and computer types to scan for.
  * The ScanParams structure is passed via lParam and filled on IDOK.
  */
 INT_PTR CALLBACK ScanDomainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -1221,11 +1238,6 @@ INT_PTR CALLBACK ScanDomainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM
             // Store pointer to params structure
             s_params = (ScanParams*)lParam;
             
-            // Set default state - credentials disabled
-            CheckDlgButton(hwnd, IDC_CHECK_USE_CREDS, BST_UNCHECKED);
-            EnableWindow(GetDlgItem(hwnd, IDC_EDIT_SCAN_USERNAME), FALSE);
-            EnableWindow(GetDlgItem(hwnd, IDC_EDIT_SCAN_PASSWORD), FALSE);
-            
             // Set default state - all computer types checked
             CheckDlgButton(hwnd, IDC_CHECK_WORKSTATIONS, BST_CHECKED);
             CheckDlgButton(hwnd, IDC_CHECK_SERVERS, BST_CHECKED);
@@ -1241,21 +1253,6 @@ INT_PTR CALLBACK ScanDomainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM
         {
             switch (LOWORD(wParam))
             {
-                case IDC_CHECK_USE_CREDS:
-                {
-                    // Enable/disable credential fields based on checkbox
-                    BOOL useCredentials = (IsDlgButtonChecked(hwnd, IDC_CHECK_USE_CREDS) == BST_CHECKED);
-                    EnableWindow(GetDlgItem(hwnd, IDC_EDIT_SCAN_USERNAME), useCredentials);
-                    EnableWindow(GetDlgItem(hwnd, IDC_EDIT_SCAN_PASSWORD), useCredentials);
-                    
-                    // Focus on username if enabled
-                    if (useCredentials)
-                    {
-                        SetFocus(GetDlgItem(hwnd, IDC_EDIT_SCAN_USERNAME));
-                    }
-                    return TRUE;
-                }
-                
                 case IDOK:
                 {
                     if (s_params != NULL)
@@ -1274,20 +1271,6 @@ INT_PTR CALLBACK ScanDomainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM
                         
                         // Get domain name
                         GetDlgItemTextW(hwnd, IDC_EDIT_DOMAIN, s_params->domain, 256);
-                        
-                        // Get credentials if checkbox is checked
-                        s_params->useCredentials = (IsDlgButtonChecked(hwnd, IDC_CHECK_USE_CREDS) == BST_CHECKED);
-                        
-                        if (s_params->useCredentials)
-                        {
-                            GetDlgItemTextW(hwnd, IDC_EDIT_SCAN_USERNAME, s_params->username, 256);
-                            GetDlgItemTextW(hwnd, IDC_EDIT_SCAN_PASSWORD, s_params->password, 256);
-                        }
-                        else
-                        {
-                            s_params->username[0] = L'\0';
-                            s_params->password[0] = L'\0';
-                        }
                     }
                     
                     EndDialog(hwnd, IDOK);
