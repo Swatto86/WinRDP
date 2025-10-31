@@ -60,6 +60,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 - `WM_PAINT`: Window needs repainting
 - `WM_COMMAND`: User clicked button/menu
 - `WM_NOTIFY`: Control notification (ListView, etc.)
+- `WM_HOTKEY`: Global hotkey was pressed
 
 ### 3. **Dialog Boxes vs Windows**
 
@@ -231,6 +232,9 @@ cred.Persist = CRED_PERSIST_LOCAL_MACHINE;
 
 CredWriteW(&cred, 0);  // Save
 CredReadW(L"MyApp:Credentials", CRED_TYPE_GENERIC, 0, &pCred);  // Read
+CredEnumerateW(NULL, 0, &count, &credentials);  // List all credentials
+CredDeleteW(L"MyApp:Credentials", CRED_TYPE_GENERIC, 0);  // Delete
+CredFree(credentials);  // Free memory from CredReadW/CredEnumerateW
 ```
 
 **Security notes:**
@@ -239,8 +243,41 @@ CredReadW(L"MyApp:Credentials", CRED_TYPE_GENERIC, 0, &pCred);  // Read
 - Survives reboots
 - Can be backed up with system
 - Better than storing in plain text files!
+- `CredEnumerateW` enumerates all credentials (must free with `CredFree`)
 
-### 11. **Registry Operations**
+### 11. **Global Hotkeys**
+
+```c
+// Register a global hotkey (works from anywhere in Windows)
+RegisterHotKey(hwnd, ID_HOTKEY, MOD_CONTROL | MOD_SHIFT, 'R');
+
+// Handle the hotkey press
+case WM_HOTKEY:
+    if (wParam == ID_HOTKEY) {
+        // Hotkey was pressed - do something
+    }
+    return 0;
+
+// Always unregister when done
+UnregisterHotKey(hwnd, ID_HOTKEY);
+```
+
+**Key concepts:**
+- **RegisterHotKey**: Registers key combination system-wide
+- **WM_HOTKEY**: Message sent when hotkey is pressed
+- **Modifiers**: MOD_CONTROL, MOD_SHIFT, MOD_ALT, MOD_WIN
+- **Virtual keys**: Use virtual key codes (e.g., 0x44 for 'D')
+- **UnregisterHotKey**: Required to free the hotkey
+- Hotkeys registered in WM_CREATE, unregistered in WM_DESTROY
+- Works even when your application doesn't have focus!
+
+**Best practices:**
+- Always unregister hotkeys to prevent conflicts
+- Check return value (registration might fail if in use)
+- Use unique hotkey IDs for each hotkey
+- Silently handle failures (app still works without hotkey)
+
+### 12. **Registry Operations**
 
 ```c
 HKEY hKey;
@@ -265,7 +302,7 @@ RegCloseKey(hKey);  // ALWAYS close!
 - Use appropriate hive (HKCU vs HKLM)
 - Don't write to system areas
 
-### 12. **Error Handling**
+### 13. **Error Handling**
 
 ```c
 // Windows functions return different things:
@@ -288,7 +325,7 @@ if (hFile == INVALID_HANDLE_VALUE) {
 - `GetLastError()`: Gets detailed error code
 - Always check return values!
 
-### 13. **Single Instance (Mutex)**
+### 14. **Single Instance (Mutex)**
 
 ```c
 HANDLE hMutex = CreateMutexW(NULL, TRUE, L"MyApp_Mutex");
@@ -309,7 +346,7 @@ CloseHandle(hMutex);  // Release on exit
 - `CreateMutex` with same name returns handle but sets `ERROR_ALREADY_EXISTS`
 - Check error even if handle is valid!
 
-### 14. **Memory Management**
+### 15. **Memory Management**
 
 ```c
 // Allocate:
@@ -337,7 +374,7 @@ hosts = NULL;  // Good practice
 - Always `free` what you `malloc`
 - Set pointer to NULL after freeing (prevents double-free)
 
-### 15. **String Safety**
+### 16. **String Safety**
 
 ```c
 // UNSAFE:

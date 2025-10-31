@@ -8,6 +8,8 @@
 - Store and manage multiple RDP server connections
 - **Per-Host Credentials** - Set individual credentials for specific hosts
 - **Global Credentials** - Default credentials used for all hosts (fallback)
+- **Global Hotkey (Ctrl+Shift+R)** - Instantly open WinRDP from anywhere
+- **Bulk Delete** - Secret hotkey (Ctrl+Shift+Alt+D) to delete all data at once
 - Secure credential storage using Windows Credential Manager
 - Quick connect to saved servers
 - System tray integration
@@ -85,7 +87,8 @@ Create .rdp file → Launch mstsc.exe
 - **System Tray**: Background application
 
 ### 3. System Integration
-- **Credential Manager**: `CredWriteW`, `CredReadW`, `CredDeleteW`
+- **Credential Manager**: `CredWriteW`, `CredReadW`, `CredDeleteW`, `CredEnumerateW`
+- **Global Hotkeys**: `RegisterHotKey`, `UnregisterHotKey`, `WM_HOTKEY`
 - **Registry API**: `RegOpenKeyExW`, `RegSetValueExW`, `RegQueryValueExW`
 - **Shell API**: `ShellExecuteW` for launching applications
 - **File API**: `_wfopen_s`, `fgetws`, `fwprintf` for Unicode files

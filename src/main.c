@@ -7,6 +7,7 @@
  * - Dialog boxes
  * - ListView controls
  * - Credential Manager API
+ * - Global hotkeys (RegisterHotKey, WM_HOTKEY)
  * - Registry operations
  * - Process launching
  * 
@@ -890,6 +891,10 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
 /*
  * HostDialogProc - Host management dialog
+ * 
+ * This dialog provides full CRUD operations for managing RDP server entries.
+ * It also registers a secret hotkey (Ctrl+Shift+Alt+D) for bulk deletion of
+ * all hosts and credentials.
  */
 INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -903,7 +908,8 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             // Track this dialog instance
             g_hwndHostDialog = hwnd;
             
-            // Register global hotkey for Ctrl+Shift+Alt+D
+            // Register global hotkey for Ctrl+Shift+Alt+D (bulk delete)
+            // This hotkey is intentionally hard to press to prevent accidental use
             RegisterHotKey(hwnd, IDM_DELETE_ALL, MOD_CONTROL | MOD_SHIFT | MOD_ALT, 0x44);
             
             CenterWindow(hwnd);
@@ -964,7 +970,8 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
         case WM_HOTKEY:
         {
-            // Handle the registered hotkey Ctrl+Shift+Alt+D
+            // Handle the registered secret hotkey Ctrl+Shift+Alt+D for bulk deletion
+            // This hotkey was registered in WM_INITDIALOG to delete all hosts and credentials
             if (wParam == IDM_DELETE_ALL)
             {
                 // Show warning confirmation dialog

@@ -62,6 +62,7 @@ The app will:
 - ✅ Creating dialogs and controls
 - ✅ ListView controls for data display
 - ✅ Windows Credential Manager API
+- ✅ Global hotkeys (RegisterHotKey, WM_HOTKEY)
 - ✅ Registry operations
 - ✅ System tray programming
 - ✅ File I/O with Unicode

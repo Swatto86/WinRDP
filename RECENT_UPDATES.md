@@ -2,7 +2,43 @@
 
 ## Latest Changes
 
-### 🎯 **NEW FEATURE: Per-Host Credentials (Latest)**
+### ⌨️ **NEW FEATURES: Global Hotkeys (December 2025)**
+
+#### 1. **Global Open Hotkey (Ctrl+Shift+R)**
+- ✅ Instantly open WinRDP from anywhere in Windows
+- ✅ Automatically shows appropriate dialog based on saved credentials
+- ✅ If global credentials exist: Shows connect dialog
+- ✅ If no credentials: Shows credentials entry dialog
+- ✅ Prevents duplicate dialogs by bringing existing dialog to front
+
+#### 2. **Bulk Delete Hotkey (Ctrl+Shift+Alt+D)**
+- ✅ Hidden secret hotkey in Host Management dialog
+- ✅ Deletes all hosts and credentials in one operation
+- ✅ Double confirmation for safety (two dialogs with warnings)
+- ✅ Deletes all hosts from CSV file
+- ✅ Deletes all WinRDP credentials from Windows Credential Manager
+- ✅ Hard to press accidentally (4 modifier keys)
+
+#### Technical Implementation
+- Uses `RegisterHotKey()` / `UnregisterHotKey()` for global hotkeys
+- Handles `WM_HOTKEY` messages in window procedures
+- Global hotkey registered in `WM_CREATE`, unregistered in `WM_DESTROY`
+- Bulk delete hotkey registered in Host Management `WM_INITDIALOG`
+- Credential enumeration using `CredEnumerateW` API
+
+#### Files Modified
+- `src/main.c` - Added global hotkey registration and WM_HOTKEY handlers
+- `src/resource.h` - Added IDM_GLOBAL_HOTKEY and IDM_DELETE_ALL constants
+- `src/hosts.c` - Added `DeleteAllHosts()` function
+- `src/hosts.h` - Added DeleteAllHosts() declaration
+- `src/credentials.c` - Added `DeleteAllWinRDPCredentials()` function
+- `src/credentials.h` - Added DeleteAllWinRDPCredentials() declaration
+
+#### Documentation
+- `GLOBAL_HOTKEY_FEATURE.md` - Global hotkey feature documentation
+- `DELETE_ALL_FEATURE.md` - Bulk delete feature documentation
+
+### 🎯 **NEW FEATURE: Per-Host Credentials**
 
 #### What It Does
 - ✅ Optionally set individual credentials for specific hosts

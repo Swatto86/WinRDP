@@ -15,6 +15,7 @@ This project demonstrates:
 **Windows API Programming:**
 - **Window Management** - Creating windows, dialog boxes, and message handling
 - **System Tray Programming** - Adding icons to the notification area
+- **Global Hotkeys** - RegisterHotKey, UnregisterHotKey, WM_HOTKEY messages
 - **Credential Manager API** - Secure password storage using Windows Credential Manager
 - **Registry Operations** - Reading and writing to the Windows Registry
 - **File I/O** - CSV file handling with Unicode support
@@ -30,6 +31,8 @@ This project demonstrates:
 - Quick connect to saved servers
 - Search functionality for hosts
 - **Network Computer Scanning** - Automatically discover computers on your network
+- **Global Hotkey (Ctrl+Shift+R)** - Instantly open WinRDP from anywhere in Windows
+- **Bulk Delete** - Secret hotkey (Ctrl+Shift+Alt+D) to delete all hosts and credentials at once
 - System tray icon for quick access
 - Autostart with Windows (optional)
 - **Dark Mode Support** - Automatically follows Windows theme
