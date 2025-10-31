@@ -1,6 +1,55 @@
 # Recent Updates to WinRDP
 
-## Latest Changes (October 31, 2025)
+## Latest Changes
+
+### 🎯 **NEW FEATURE: Per-Host Credentials (Latest)**
+
+#### What It Does
+- ✅ Optionally set individual credentials for specific hosts
+- ✅ Falls back to global credentials if per-host credentials not set
+- ✅ Edit dialog shows existing per-host credentials when editing
+- ✅ Checkbox to enable/disable per-host credentials per host
+- ✅ Seamless integration with existing credential system
+
+#### How It Works
+1. **Global Credentials** (Default):
+   - Set once at application launch in Login Dialog
+   - Used for all hosts by default
+   - Stored in Windows Credential Manager
+
+2. **Per-Host Credentials** (Optional):
+   - When adding/editing a host, check "Use custom credentials for this host"
+   - Enter username and password for that specific host
+   - Credentials are stored per-host in Windows Credential Manager
+   - Takes precedence over global credentials when connecting
+
+3. **Connection Priority**:
+   - When connecting: Checks per-host credentials first
+   - If per-host credentials exist → use them
+   - If not → use global credentials
+   - If neither exist → show error
+
+#### Files Modified
+- `src/rdp.c` - Updated `LaunchRDP()` to check per-host credentials first
+- `src/main.c` - Updated `AddHostDialogProc()` to handle per-host credentials
+- `src/resources.rc` - Added per-host credential fields to Add/Edit Host dialog
+- `src/resource.h` - Added new control IDs for credential fields
+
+#### Technical Details
+- Per-host credentials stored as: `WinRDP:TERMSRV/hostname`
+- Global credentials stored as: `WinRDP:DefaultCredentials`
+- Credential lookup uses existing `LoadRDPCredentials()` function
+- Backward compatible: Existing hosts continue using global credentials
+- Per-host credentials automatically cleaned up when host is deleted
+
+#### UI Changes
+- Add/Edit Host dialog now includes:
+  - Checkbox: "Use custom credentials for this host"
+  - Username field (shown when checkbox checked)
+  - Password field (shown when checkbox checked)
+  - Help text: "Leave unchecked to use global credentials"
+
+## Previous Changes (October 31, 2025)
 
 ### 🚀 **NEW FEATURE: Active Directory / Network Scanning (Enhanced!)**
 

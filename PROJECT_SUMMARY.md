@@ -6,6 +6,8 @@
 
 **Key Features:**
 - Store and manage multiple RDP server connections
+- **Per-Host Credentials** - Set individual credentials for specific hosts
+- **Global Credentials** - Default credentials used for all hosts (fallback)
 - Secure credential storage using Windows Credential Manager
 - Quick connect to saved servers
 - System tray integration
@@ -34,14 +36,39 @@ User Opens App
     ↓
 [System Tray Icon]
     ↓
-Click → [Login Dialog] → Save Credentials → [Credential Manager]
+Click → [Login Dialog] → Save Global Credentials → [Credential Manager]
     ↓
 [Main Dialog] → Load Hosts → [CSV File]
     ↓
 Select Server → Connect
     ↓
-[RDP Launch] → Create .rdp file → Launch mstsc.exe
+[RDP Launch] → Check Per-Host Credentials → (if not found) Use Global Credentials
+    ↓
+Create .rdp file → Launch mstsc.exe
 ```
+
+### Credential Management Strategy
+
+**Two-tier credential system:**
+
+1. **Global Credentials** (Default):
+   - Set once at application launch in Login Dialog
+   - Stored as: `WinRDP:DefaultCredentials`
+   - Used for all hosts unless overridden
+   - Persists across sessions
+
+2. **Per-Host Credentials** (Optional):
+   - Set individually in Add/Edit Host dialog
+   - Stored as: `WinRDP:TERMSRV/hostname`
+   - Takes precedence over global credentials
+   - Can be enabled/disabled per host
+
+**Connection Logic:**
+- When connecting to a host:
+  1. First check if per-host credentials exist
+  2. If found, use per-host credentials
+  3. If not found, fall back to global credentials
+  4. If neither exist, show error message
 
 ## Windows API Concepts Demonstrated
 

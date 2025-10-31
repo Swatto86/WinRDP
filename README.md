@@ -25,6 +25,7 @@ This project demonstrates:
 ## 📋 Features
 
 - Store and manage RDP server connections
+- **Per-Host Credentials** - Set individual credentials for specific hosts, or use global credentials
 - Secure credential storage using Windows Credential Manager
 - Quick connect to saved servers
 - Search functionality for hosts
@@ -150,23 +151,30 @@ Shell_NotifyIcon(NIM_ADD, &nid);
 
 ### 4. **Credential Manager**
 ```c
-// Save credentials securely
+// Save credentials securely (global or per-host)
 CREDENTIALW cred = {0};
 cred.Type = CRED_TYPE_GENERIC;
-cred.TargetName = L"MyApp:Credential";
+cred.TargetName = L"MyApp:Credential";  // Or L"MyApp:TERMSRV/hostname" for per-host
 cred.UserName = L"username";
 cred.CredentialBlob = (LPBYTE)password;
 cred.CredentialBlobSize = wcslen(password) * sizeof(wchar_t);
 CredWriteW(&cred, 0);
 
-// Read credentials
+// Read credentials (checks per-host first, falls back to global)
+// Per-host: LoadRDPCredentials(hostname, username, password)
+// Global: LoadCredentials(NULL, username, password)
 PCREDENTIALW pcred;
 CredReadW(L"MyApp:Credential", CRED_TYPE_GENERIC, 0, &pcred);
 // Use pcred->UserName and pcred->CredentialBlob
 CredFree(pcred);
 ```
 
-**Files**: `credentials.c`
+**Files**: `credentials.c`, `rdp.c`
+
+**Credential Strategy**:
+- Global credentials: Stored once at application launch, used for all hosts by default
+- Per-host credentials: Optional individual credentials for specific hosts
+- When connecting: Per-host credentials are checked first, then fall back to global
 
 ### 5. **Registry Operations**
 ```c

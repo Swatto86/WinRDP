@@ -1169,6 +1169,22 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
 /*
  * AddHostDialogProc - Add/Edit host dialog procedure
+ * 
+ * This dialog allows users to add new hosts or edit existing ones.
+ * It supports both global credentials (default) and per-host credentials (optional).
+ * 
+ * Per-Host Credentials Feature:
+ * - Users can optionally set individual credentials for specific hosts
+ * - When the "Use custom credentials for this host" checkbox is checked,
+ *   username and password fields appear
+ * - Per-host credentials take precedence over global credentials when connecting
+ * - If checkbox is unchecked, the host will use global credentials
+ * 
+ * Dialog Behavior:
+ * - When adding a new host: Checkbox is unchecked, credential fields hidden
+ * - When editing a host: If per-host credentials exist, checkbox is checked and fields shown
+ * - Credential fields are dynamically shown/hidden based on checkbox state
+ * - Per-host credentials are saved/deleted based on checkbox state when saving
  */
 INT_PTR CALLBACK AddHostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -1195,6 +1211,7 @@ INT_PTR CALLBACK AddHostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
             s_editData = (EditHostData*)lParam;
             
             // Initially hide credential fields and labels (shown when checkbox is checked)
+            // These fields are only visible when user enables per-host credentials
             ShowWindow(GetDlgItem(hwnd, IDC_STATIC_HOST_USERNAME), SW_HIDE);
             ShowWindow(GetDlgItem(hwnd, IDC_STATIC_HOST_PASSWORD), SW_HIDE);
             ShowWindow(GetDlgItem(hwnd, IDC_EDIT_HOST_USERNAME), SW_HIDE);
@@ -1203,24 +1220,28 @@ INT_PTR CALLBACK AddHostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
             // Check if we're editing an existing host
             if (s_editData != NULL && s_editData->isEdit)
             {
-                // Pre-fill the fields with existing data
+                // Pre-fill the fields with existing host data
                 SetDlgItemTextW(hwnd, IDC_EDIT_HOSTNAME, s_editData->hostname);
                 SetDlgItemTextW(hwnd, IDC_EDIT_DESCRIPTION, s_editData->description);
                 
-                // Try to load per-host credentials
+                // Try to load per-host credentials for this host
+                // If they exist, enable the checkbox and show the fields
                 wchar_t username[MAX_USERNAME_LEN];
                 wchar_t password[MAX_PASSWORD_LEN];
                 if (LoadRDPCredentials(s_editData->hostname, username, password))
                 {
-                    // Per-host credentials exist - check the checkbox and show fields
+                    // Per-host credentials exist - enable checkbox and populate fields
                     CheckDlgButton(hwnd, IDC_CHECK_USE_HOST_CREDS, BST_CHECKED);
                     SetDlgItemTextW(hwnd, IDC_EDIT_HOST_USERNAME, username);
                     SetDlgItemTextW(hwnd, IDC_EDIT_HOST_PASSWORD, password);
+                    // Show the credential fields now that checkbox is checked
                     ShowWindow(GetDlgItem(hwnd, IDC_STATIC_HOST_USERNAME), SW_SHOW);
                     ShowWindow(GetDlgItem(hwnd, IDC_STATIC_HOST_PASSWORD), SW_SHOW);
                     ShowWindow(GetDlgItem(hwnd, IDC_EDIT_HOST_USERNAME), SW_SHOW);
                     ShowWindow(GetDlgItem(hwnd, IDC_EDIT_HOST_PASSWORD), SW_SHOW);
                 }
+                // If no per-host credentials exist, checkbox remains unchecked
+                // and the host will use global credentials
                 
                 // Change dialog title to "Edit Host"
                 SetWindowTextW(hwnd, L"WinRDP - Edit Host");
@@ -1234,14 +1255,19 @@ INT_PTR CALLBACK AddHostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
             {
                 case IDC_CHECK_USE_HOST_CREDS:
                 {
-                    // Toggle visibility of credential fields and labels based on checkbox state
+                    // Handle checkbox state change for per-host credentials
+                    // When checked: Show credential fields
+                    // When unchecked: Hide credential fields and clear them
                     BOOL checked = (IsDlgButtonChecked(hwnd, IDC_CHECK_USE_HOST_CREDS) == BST_CHECKED);
+                    
+                    // Toggle visibility of credential fields and labels based on checkbox state
                     ShowWindow(GetDlgItem(hwnd, IDC_STATIC_HOST_USERNAME), checked ? SW_SHOW : SW_HIDE);
                     ShowWindow(GetDlgItem(hwnd, IDC_STATIC_HOST_PASSWORD), checked ? SW_SHOW : SW_HIDE);
                     ShowWindow(GetDlgItem(hwnd, IDC_EDIT_HOST_USERNAME), checked ? SW_SHOW : SW_HIDE);
                     ShowWindow(GetDlgItem(hwnd, IDC_EDIT_HOST_PASSWORD), checked ? SW_SHOW : SW_HIDE);
                     
-                    // If unchecked, clear the fields
+                    // If unchecked, clear the fields to ensure clean state
+                    // This prevents accidental use of old credential values
                     if (!checked)
                     {
                         SetDlgItemTextW(hwnd, IDC_EDIT_HOST_USERNAME, L"");
@@ -1252,31 +1278,35 @@ INT_PTR CALLBACK AddHostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
                 
                 case IDOK:
                 {
+                    // User clicked Save - validate and save host data
                     wchar_t hostname[MAX_HOSTNAME_LEN];
                     wchar_t description[MAX_DESCRIPTION_LEN];
                     
                     GetDlgItemTextW(hwnd, IDC_EDIT_HOSTNAME, hostname, MAX_HOSTNAME_LEN);
                     GetDlgItemTextW(hwnd, IDC_EDIT_DESCRIPTION, description, MAX_DESCRIPTION_LEN);
                     
+                    // Validate hostname (required field)
                     if (wcslen(hostname) == 0)
                     {
                         ShowErrorMessage(hwnd, L"Please enter a hostname.");
                         return TRUE;
                     }
                     
-                    // Check if we need to handle per-host credentials
+                    // Check if user enabled per-host credentials
                     BOOL useHostCreds = (IsDlgButtonChecked(hwnd, IDC_CHECK_USE_HOST_CREDS) == BST_CHECKED);
                     
+                    // If per-host credentials are enabled, validate them
                     if (useHostCreds)
                     {
-                        // Get per-host credentials
+                        // Get per-host credentials from dialog fields
                         wchar_t username[MAX_USERNAME_LEN];
                         wchar_t password[MAX_PASSWORD_LEN];
                         
                         GetDlgItemTextW(hwnd, IDC_EDIT_HOST_USERNAME, username, MAX_USERNAME_LEN);
                         GetDlgItemTextW(hwnd, IDC_EDIT_HOST_PASSWORD, password, MAX_PASSWORD_LEN);
                         
-                        // Validate per-host credentials if checkbox is checked
+                        // Validate that both username and password are provided
+                        // If checkbox is checked, both fields must be filled
                         if (wcslen(username) == 0 || wcslen(password) == 0)
                         {
                             ShowErrorMessage(hwnd, L"Please enter both username and password for per-host credentials, or uncheck the option to use global credentials.");
@@ -1284,42 +1314,48 @@ INT_PTR CALLBACK AddHostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
                         }
                     }
                     
-                    // If editing, delete the original host first
-                    // (This handles both rename and update scenarios)
+                    // If editing an existing host, delete the original host first
+                    // This handles both rename (hostname change) and update (description change) scenarios
                     wchar_t oldHostname[MAX_HOSTNAME_LEN] = {0};
                     if (s_editData != NULL && s_editData->isEdit)
                     {
                         wcsncpy_s(oldHostname, MAX_HOSTNAME_LEN, s_editData->originalHostname, _TRUNCATE);
                         DeleteHost(s_editData->originalHostname);
                         
-                        // If hostname changed, delete old per-host credentials
+                        // If hostname changed, clean up old per-host credentials
+                        // This prevents orphaned credentials from old hostname
                         if (_wcsicmp(oldHostname, hostname) != 0)
                         {
                             DeleteRDPCredentials(oldHostname);
                         }
                     }
                     
-                    // Add the host (new or updated)
+                    // Add the host (new or updated) to the CSV file
                     if (AddHost(hostname, description))
                     {
-                        // Handle per-host credentials
+                        // Handle per-host credentials based on checkbox state
                         if (useHostCreds)
                         {
-                            // Save per-host credentials
+                            // User enabled per-host credentials - save them
+                            // These will be used instead of global credentials when connecting
                             wchar_t username[MAX_USERNAME_LEN];
                             wchar_t password[MAX_PASSWORD_LEN];
                             
                             GetDlgItemTextW(hwnd, IDC_EDIT_HOST_USERNAME, username, MAX_USERNAME_LEN);
                             GetDlgItemTextW(hwnd, IDC_EDIT_HOST_PASSWORD, password, MAX_PASSWORD_LEN);
                             
+                            // Save per-host credentials to Windows Credential Manager
+                            // Stored as: WinRDP:TERMSRV/hostname
                             SaveRDPCredentials(hostname, username, password);
                         }
                         else
                         {
-                            // Delete per-host credentials if they exist (user unchecked the option)
+                            // User unchecked per-host credentials - delete them if they exist
+                            // This ensures the host will use global credentials
                             DeleteRDPCredentials(hostname);
                         }
                         
+                        // Clear dialog state and close
                         g_hwndAddHostDialog = NULL;
                         s_editData = NULL;  // Clear edit data
                         EndDialog(hwnd, IDOK);

@@ -164,8 +164,19 @@ BOOL DeleteCredentials(const wchar_t* targetName)
 /*
  * SaveRDPCredentials - Save credentials for a specific RDP host
  * 
- * This stores credentials in the format that mstsc.exe (RDP client) expects.
- * The target name is "TERMSRV/hostname" which is the Windows convention.
+ * This stores credentials for individual hosts, allowing per-host credential
+ * management. The target name format "WinRDP:TERMSRV/hostname" allows the
+ * application to distinguish between per-host and global credentials.
+ * 
+ * Per-host credentials take precedence over global credentials when connecting.
+ * 
+ * Parameters:
+ *   hostname - The RDP server hostname
+ *   username - Username for this specific host
+ *   password - Password for this specific host
+ * 
+ * Returns:
+ *   TRUE on success, FALSE on failure
  */
 BOOL SaveRDPCredentials(const wchar_t* hostname, const wchar_t* username, 
                         const wchar_t* password)
@@ -173,7 +184,8 @@ BOOL SaveRDPCredentials(const wchar_t* hostname, const wchar_t* username,
     wchar_t targetName[512];
     
     // Format: "WinRDP:TERMSRV/hostname"
-    // The TERMSRV prefix is what Windows RDP client uses
+    // The TERMSRV prefix matches Windows RDP client convention
+    // This allows per-host credential storage separate from global credentials
     swprintf_s(targetName, 512, L"%s%s", CRED_TARGET_PREFIX, hostname);
     
     return SaveCredentials(targetName, username, password);
@@ -181,6 +193,20 @@ BOOL SaveRDPCredentials(const wchar_t* hostname, const wchar_t* username,
 
 /*
  * LoadRDPCredentials - Load credentials for a specific RDP host
+ * 
+ * Retrieves per-host credentials if they exist. Returns FALSE if no
+ * per-host credentials are stored for the given hostname.
+ * 
+ * Note: This function only loads per-host credentials. For connection logic
+ * that falls back to global credentials, see LaunchRDP() in rdp.c.
+ * 
+ * Parameters:
+ *   hostname - The RDP server hostname
+ *   username - Buffer to receive username (must be at least MAX_USERNAME_LEN)
+ *   password - Buffer to receive password (must be at least MAX_PASSWORD_LEN)
+ * 
+ * Returns:
+ *   TRUE if per-host credentials were found and loaded, FALSE otherwise
  */
 BOOL LoadRDPCredentials(const wchar_t* hostname, wchar_t* username, wchar_t* password)
 {

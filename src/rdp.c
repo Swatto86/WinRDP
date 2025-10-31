@@ -137,19 +137,31 @@ BOOL CreateRDPFile(const wchar_t* hostname, const wchar_t* username,
 /*
  * LaunchRDP - Connect to an RDP server
  * 
- * This function:
- *   1. Saves credentials to Windows Credential Manager
- *   2. Creates a temporary RDP file
- *   3. Launches mstsc.exe with the RDP file
- *   4. Cleans up the temporary file
+ * This function implements a two-tier credential strategy:
+ *   1. Per-Host Credentials: If credentials are stored for this specific host,
+ *      they take precedence and are used for the connection.
+ *   2. Global Credentials: If no per-host credentials exist, falls back to
+ *      the global credentials saved at application launch.
+ * 
+ * Connection process:
+ *   1. Determine credentials (per-host or global)
+ *   2. Save credentials to Windows Credential Manager (for RDP session)
+ *   3. Create a temporary RDP configuration file
+ *   4. Launch mstsc.exe with the RDP file
+ *   5. Clean up the temporary file after a short delay
  * 
  * Parameters:
  *   hostname - The RDP server to connect to
- *   username - Username (if NULL, uses default credentials)
- *   password - Password (if NULL, uses default credentials)
+ *   username - Username (if NULL, uses credential lookup strategy)
+ *   password - Password (if NULL, uses credential lookup strategy)
  * 
  * Returns:
  *   TRUE on success, FALSE on failure
+ * 
+ * Credential Lookup Order (when username/password are NULL):
+ *   1. Check for per-host credentials (WinRDP:TERMSRV/hostname)
+ *   2. If not found, check for global credentials (WinRDP:DefaultCredentials)
+ *   3. If neither found, show error and return FALSE
  */
 BOOL LaunchRDP(const wchar_t* hostname, const wchar_t* username, 
                const wchar_t* password)
@@ -158,23 +170,25 @@ BOOL LaunchRDP(const wchar_t* hostname, const wchar_t* username,
     wchar_t actualUsername[MAX_USERNAME_LEN];
     wchar_t actualPassword[MAX_PASSWORD_LEN];
     
-    // If credentials not provided, try to load credentials for this host
-    // Check per-host credentials first, then fall back to global credentials
+    // If credentials not provided, use credential lookup strategy
+    // Priority: per-host credentials first, then global credentials
     if (username == NULL || password == NULL)
     {
-        // First, try to load per-host credentials for this specific host
+        // Step 1: Try to load per-host credentials for this specific host
         if (LoadRDPCredentials(hostname, actualUsername, actualPassword))
         {
             // Per-host credentials found and loaded
+            // These take precedence over global credentials
         }
-        // If per-host credentials not found, try global credentials
+        // Step 2: If per-host credentials not found, try global credentials
         else if (LoadCredentials(NULL, actualUsername, actualPassword))
         {
             // Global credentials found and loaded
+            // These are the default credentials set at application launch
         }
         else
         {
-            // No credentials available
+            // No credentials available - neither per-host nor global
             MessageBoxW(NULL, 
                        L"No credentials provided and no credentials saved.\n"
                        L"Please enter credentials first.",
@@ -184,6 +198,7 @@ BOOL LaunchRDP(const wchar_t* hostname, const wchar_t* username,
     }
     else
     {
+        // Explicit credentials provided - use them directly
         wcsncpy_s(actualUsername, MAX_USERNAME_LEN, username, _TRUNCATE);
         wcsncpy_s(actualPassword, MAX_PASSWORD_LEN, password, _TRUNCATE);
     }

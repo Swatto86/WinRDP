@@ -13,7 +13,9 @@ This document provides a comprehensive test plan for all WinRDP features.
 
 ### 2. **Credential Management**
 
-#### Save Credentials:
+#### Global Credentials (Default):
+
+##### Save Global Credentials:
 1. Open WinRDP
 2. Enter username (e.g., "admin@domain.com")
 3. Enter password
@@ -21,19 +23,78 @@ This document provides a comprehensive test plan for all WinRDP features.
 5. **Expected**: Credentials saved to Windows Credential Manager
 6. **Expected**: Main dialog appears automatically
 
-#### Load Credentials:
+##### Load Global Credentials:
 1. Close and restart WinRDP
 2. **Expected**: Username and password fields pre-filled
-3. **Expected**: Status shows "✓ Credentials are saved"
+3. **Expected**: Status shows "✓ Credentials saved - Auto-closing in X seconds..."
 4. **Expected**: "Delete Saved" button visible
 
-#### Delete Credentials:
+##### Delete Global Credentials:
 1. With saved credentials loaded
 2. Click "Delete Saved"
-3. **Expected**: Confirmation message
-4. **Expected**: Fields cleared
-5. **Expected**: "Delete Saved" button hidden
-6. **Expected**: Status text cleared
+3. **Expected**: Fields cleared
+4. **Expected**: "Delete Saved" button hidden
+5. **Expected**: Status text cleared
+
+#### Per-Host Credentials (Optional):
+
+##### Add Host with Per-Host Credentials:
+1. Open "Manage Hosts" dialog
+2. Click "Add Host"
+3. Enter hostname and description
+4. Check "Use custom credentials for this host"
+5. **Expected**: Username and password fields appear
+6. Enter per-host username and password (different from global)
+7. Click "Save"
+8. **Expected**: Host saved with per-host credentials
+
+##### Connect Using Per-Host Credentials:
+1. In main dialog, select host with per-host credentials
+2. Click "Connect"
+3. **Expected**: Connects using per-host credentials (not global)
+4. **Expected**: Connection succeeds with per-host credentials
+
+##### Add Host Without Per-Host Credentials:
+1. Open "Manage Hosts" dialog
+2. Click "Add Host"
+3. Enter hostname and description
+4. **Expected**: Checkbox is unchecked, credential fields hidden
+5. Click "Save"
+6. **Expected**: Host uses global credentials when connecting
+
+##### Edit Host - Enable Per-Host Credentials:
+1. Select a host that uses global credentials
+2. Click "Edit Host"
+3. Check "Use custom credentials for this host"
+4. Enter per-host username and password
+5. Click "Save"
+6. **Expected**: Per-host credentials saved
+7. **Expected**: Host now uses per-host credentials
+
+##### Edit Host - Disable Per-Host Credentials:
+1. Select a host with per-host credentials
+2. Click "Edit Host"
+3. **Expected**: Checkbox is checked, credentials are shown
+4. Uncheck "Use custom credentials for this host"
+5. **Expected**: Credential fields hidden
+6. Click "Save"
+7. **Expected**: Per-host credentials deleted
+8. **Expected**: Host now uses global credentials
+
+##### Edit Host - View Existing Per-Host Credentials:
+1. Select a host with per-host credentials
+2. Click "Edit Host"
+3. **Expected**: Checkbox is checked
+4. **Expected**: Username and password fields populated
+5. **Expected**: Can modify credentials
+
+##### Rename Host with Per-Host Credentials:
+1. Select a host with per-host credentials
+2. Click "Edit Host"
+3. Change hostname
+4. Click "Save"
+5. **Expected**: Old hostname per-host credentials deleted
+6. **Expected**: New hostname uses global credentials (unless checkbox is checked)
 
 ### 3. **Host Management**
 
@@ -102,14 +163,31 @@ This document provides a comprehensive test plan for all WinRDP features.
 
 ### 5. **RDP Connection**
 
-#### Connect to Host:
-1. In main dialog, select a host
+#### Connect to Host (Global Credentials):
+1. In main dialog, select a host without per-host credentials
 2. Double-click OR click "Connect"
-3. **Expected**: `mstsc.exe` launches with credentials
-4. **Expected**: Connects to specified hostname
+3. **Expected**: `mstsc.exe` launches
+4. **Expected**: Connects using global credentials
+5. **Expected**: Connects to specified hostname
+
+#### Connect to Host (Per-Host Credentials):
+1. In main dialog, select a host with per-host credentials
+2. Double-click OR click "Connect"
+3. **Expected**: `mstsc.exe` launches
+4. **Expected**: Connects using per-host credentials (not global)
+5. **Expected**: Connection uses correct per-host credentials
+
+#### Credential Priority (Per-Host over Global):
+1. Set global credentials (user1/pass1)
+2. Add host with per-host credentials (user2/pass2)
+3. Connect to host with per-host credentials
+4. **Expected**: Uses user2/pass2 (not user1/pass1)
+5. Add another host without per-host credentials
+6. Connect to that host
+7. **Expected**: Uses user1/pass1 (global credentials)
 
 #### Default Credentials:
-1. Ensure credentials saved
+1. Ensure global credentials saved
 2. Connect to a host
 3. **Expected**: Username pre-filled in RDP
 4. **Expected**: Password pre-filled (if supported)
