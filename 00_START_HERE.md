@@ -70,8 +70,7 @@ WinRDP/
 ├── BUILD_INSTRUCTIONS.md   ← Build help
 ├── PROJECT_SUMMARY.md      ← Technical overview
 │
-├── build.bat               ← Easy build script
-├── Makefile                ← Make configuration
+├── build.bat               ← Build script (auto-detects GCC/MSVC)
 │
 └── src/                    ← Source code (START HERE)
     ├── main.c              ← Entry point, UI, dialogs

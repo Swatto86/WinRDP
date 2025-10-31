@@ -22,6 +22,7 @@ This project demonstrates:
 - Search functionality for hosts
 - System tray icon for quick access
 - Autostart with Windows (optional)
+- **Dark Mode Support** - Automatically follows Windows theme
 - Pure C with no external dependencies (except Windows SDK)
 
 ## 🔧 Prerequisites
@@ -40,36 +41,19 @@ pacman -S mingw-w64-x86_64-gcc
 
 ## 🏗️ Building the Project
 
-### Using MinGW (GCC)
+### Using the Build Script (Recommended)
 ```bash
 # Navigate to project directory
 cd WinRDP
 
-# Build
-make
+# Build (automatically detects GCC or MSVC)
+.\build.bat
 
 # Run
-make run
-
-# Clean
-make clean
-
-# Build optimized release version
-make release
+.\build\WinRDP.exe
 ```
 
-### Using Visual Studio Developer Command Prompt
-```bash
-# Navigate to src directory
-cd src
-
-# Compile
-cl /W4 /D_UNICODE /DUNICODE *.c resources.rc /Fe:../build/WinRDP.exe ^
-   /link user32.lib gdi32.lib shell32.lib comctl32.lib advapi32.lib credui.lib
-
-# Run
-..\build\WinRDP.exe
-```
+The `build.bat` script will automatically detect whether you have GCC (MinGW) or MSVC installed and use the appropriate compiler.
 
 ## 📚 Code Structure
 
@@ -81,13 +65,14 @@ WinRDP/
 │   ├── hosts.c         - Host list management (CSV file I/O)
 │   ├── rdp.c          - RDP file generation and launching
 │   ├── registry.c      - Windows Registry operations
+│   ├── darkmode.c      - Dark mode detection and theming
 │   ├── utils.c         - Utility functions (centering windows, etc.)
 │   ├── resources.rc    - Dialog definitions, menus, strings
 │   ├── resource.h      - Resource identifiers
 │   ├── config.h        - Application configuration
 │   └── *.h            - Header files
-├── build/             - Compiled output (created by make)
-├── Makefile           - Build configuration
+├── build/             - Compiled output (created by build.bat)
+├── build.bat          - Windows build script
 └── README.md          - This file
 ```
 
@@ -210,6 +195,24 @@ ListView_InsertItem(hListView, &item);
 
 **Files**: `main.c` (MainDialogProc, HostDialogProc)
 
+### 8. **Dark Mode Support**
+```c
+// Detect Windows dark mode
+BOOL IsDarkModeEnabled(void);
+
+// Apply dark mode to dialogs
+void ApplyDarkModeToDialog(HWND hwnd);
+
+// Handle control color messages
+INT_PTR HandleDarkModeMessages(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+// Dark title bar (Windows 10 1903+)
+BOOL darkMode = TRUE;
+DwmSetWindowAttribute(hwnd, 20, &darkMode, sizeof(darkMode));
+```
+
+**Files**: `darkmode.c`, `darkmode.h`
+
 ## 🔐 Security Notes
 
 - Credentials are stored using Windows Credential Manager (encrypted)
@@ -218,20 +221,17 @@ ListView_InsertItem(hListView, &item);
 
 ## 🐛 Debugging Tips
 
-1. **Enable Debug Build**:
-   ```bash
-   make debug
-   ```
-   This adds symbols and disables optimization.
-
-2. **Use DebugView** (Sysinternals):
+1. **Use DebugView** (Sysinternals):
    Add `OutputDebugString()` calls to see debug output:
    ```c
    OutputDebugStringW(L"Debug message here\n");
    ```
 
-3. **Check Windows Event Viewer**:
+2. **Check Windows Event Viewer**:
    Some errors are logged to Windows Event Log.
+
+3. **Visual Studio Debugger**:
+   Open the built executable in Visual Studio or use `windbg` for advanced debugging.
 
 ## 📖 Additional Resources
 
@@ -253,7 +253,7 @@ Want to extend your learning? Try adding:
 3. **Connection History** - Log successful connections
 4. **Custom RDP Settings** - Per-host resolution, color depth, etc.
 5. **LDAP Integration** - Scan Active Directory for servers
-6. **Dark Mode** - Support Windows dark theme
+6. ✅ **Dark Mode** - Support Windows dark theme (IMPLEMENTED!)
 7. **Hotkeys** - Global hotkeys to show/hide window
 8. **Multi-monitor Support** - Choose which monitor for RDP
 9. **Port Scanning** - Check if port 3389 is open

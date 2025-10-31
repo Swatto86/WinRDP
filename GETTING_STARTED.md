@@ -177,8 +177,8 @@ MessageBoxW(NULL, buffer, L"Debug", MB_OK);
 
 ### GDB Debugging
 ```bash
-# Build with debug symbols
-make debug
+# Build the application first
+.\build.bat
 
 # Run in debugger
 gdb build/WinRDP.exe

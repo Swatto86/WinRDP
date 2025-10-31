@@ -28,6 +28,7 @@
 #include "hosts.h"
 #include "rdp.h"
 #include "registry.h"
+#include "darkmode.h"
 
 // Forward declarations of our functions
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -97,6 +98,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
     icex.dwICC = ICC_LISTVIEW_CLASSES | ICC_STANDARD_CLASSES;
     InitCommonControlsEx(&icex);
+    
+    // Initialize dark mode support
+    InitDarkMode();
 
     // Register the main window class
     WNDCLASSEXW wc = {0};
@@ -359,6 +363,9 @@ INT_PTR CALLBACK LoginDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
             // Dialog is being initialized
             CenterWindow(hwnd);
             
+            // Apply dark mode if enabled
+            ApplyDarkModeToDialog(hwnd);
+            
             // Set dialog icon
             HICON hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_MAINICON));
             SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
@@ -458,6 +465,11 @@ INT_PTR CALLBACK LoginDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
             return TRUE;
     }
 
+    // Handle dark mode color messages
+    INT_PTR result = HandleDarkModeMessages(hwnd, msg, wParam, lParam);
+    if (result != 0)
+        return result;
+
     return FALSE;
 }
 
@@ -478,6 +490,9 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             
             CenterWindow(hwnd);
             
+            // Apply dark mode if enabled
+            ApplyDarkModeToDialog(hwnd);
+            
             // Set dialog icon
             HICON hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_MAINICON));
             SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
@@ -490,17 +505,35 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             ListView_SetExtendedListViewStyle(hList, 
                 LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES | LVS_EX_DOUBLEBUFFER);
             
-            // Create columns
-            LVCOLUMNW col = {0};
-            col.mask = LVCF_TEXT | LVCF_WIDTH;
+            // Apply dark mode to ListView
+            ApplyDarkModeToListView(hList);
             
-            col.pszText = L"Hostname";
-            col.cx = 200;
+            // Get ListView client area to calculate proper column widths
+            RECT rcList;
+            GetClientRect(hList, &rcList);
+            int listWidth = rcList.right - rcList.left;
+            
+            // Create columns that fill the ListView width exactly
+            // Note: Column 0 cannot be centered, so we add a tiny dummy column and use 1 & 2
+            LVCOLUMNW col = {0};
+            
+            // Add invisible dummy column at position 0
+            col.mask = LVCF_TEXT | LVCF_WIDTH;
+            col.pszText = L"";
+            col.cx = 1;  // Almost invisible
             ListView_InsertColumn(hList, 0, &col);
             
-            col.pszText = L"Description";
-            col.cx = 300;
+            // Now add the real columns which CAN be centered
+            col.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_FMT;
+            col.fmt = LVCFMT_CENTER;
+            
+            col.pszText = L"Hostname";
+            col.cx = 180;
             ListView_InsertColumn(hList, 1, &col);
+            
+            col.pszText = L"Description";
+            col.cx = listWidth - 180 - 5;  // Adjust for dummy column
+            ListView_InsertColumn(hList, 2, &col);
             
             // Load and display hosts
             if (LoadHosts(&hosts, &hostCount))
@@ -511,10 +544,11 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                     item.mask = LVIF_TEXT;
                     item.iItem = i;
                     item.iSubItem = 0;
-                    item.pszText = hosts[i].hostname;
+                    item.pszText = L"";  // Dummy column 0
                     ListView_InsertItem(hList, &item);
                     
-                    ListView_SetItemText(hList, i, 1, hosts[i].description);
+                    ListView_SetItemText(hList, i, 1, hosts[i].hostname);  // Hostname in column 1
+                    ListView_SetItemText(hList, i, 2, hosts[i].description);  // Description in column 2
                 }
             }
             
@@ -634,6 +668,11 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             return TRUE;
     }
 
+    // Handle dark mode color messages
+    INT_PTR result = HandleDarkModeMessages(hwnd, msg, wParam, lParam);
+    if (result != 0)
+        return result;
+
     UNREFERENCED_PARAMETER(lParam);
     return FALSE;
 }
@@ -655,6 +694,9 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             
             CenterWindow(hwnd);
             
+            // Apply dark mode if enabled
+            ApplyDarkModeToDialog(hwnd);
+            
             // Set dialog icon
             HICON hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_MAINICON));
             SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
@@ -667,17 +709,35 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             ListView_SetExtendedListViewStyle(hList,
                 LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES | LVS_EX_DOUBLEBUFFER);
             
-            // Create columns
-            LVCOLUMNW col = {0};
-            col.mask = LVCF_TEXT | LVCF_WIDTH;
+            // Apply dark mode to ListView
+            ApplyDarkModeToListView(hList);
             
-            col.pszText = L"Hostname";
-            col.cx = 250;
+            // Get ListView client area to calculate proper column widths
+            RECT rcList;
+            GetClientRect(hList, &rcList);
+            int listWidth = rcList.right - rcList.left;
+            
+            // Create columns that fill the ListView width exactly
+            // Note: Column 0 cannot be centered, so we add a tiny dummy column and use 1 & 2
+            LVCOLUMNW col = {0};
+            
+            // Add invisible dummy column at position 0
+            col.mask = LVCF_TEXT | LVCF_WIDTH;
+            col.pszText = L"";
+            col.cx = 1;  // Almost invisible
             ListView_InsertColumn(hList, 0, &col);
             
-            col.pszText = L"Description";
-            col.cx = 350;
+            // Now add the real columns which CAN be centered
+            col.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_FMT;
+            col.fmt = LVCFMT_CENTER;
+            
+            col.pszText = L"Hostname";
+            col.cx = 200;
             ListView_InsertColumn(hList, 1, &col);
+            
+            col.pszText = L"Description";
+            col.cx = listWidth - 200 - 5;  // Adjust for dummy column
+            ListView_InsertColumn(hList, 2, &col);
             
             // Load and display hosts
             if (LoadHosts(&hosts, &hostCount))
@@ -688,10 +748,11 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                     item.mask = LVIF_TEXT;
                     item.iItem = i;
                     item.iSubItem = 0;
-                    item.pszText = hosts[i].hostname;
+                    item.pszText = L"";  // Dummy column 0
                     ListView_InsertItem(hList, &item);
                     
-                    ListView_SetItemText(hList, i, 1, hosts[i].description);
+                    ListView_SetItemText(hList, i, 1, hosts[i].hostname);  // Hostname in column 1
+                    ListView_SetItemText(hList, i, 2, hosts[i].description);  // Description in column 2
                 }
             }
             
@@ -890,6 +951,11 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             return TRUE;
     }
 
+    // Handle dark mode color messages
+    INT_PTR result = HandleDarkModeMessages(hwnd, msg, wParam, lParam);
+    if (result != 0)
+        return result;
+
     UNREFERENCED_PARAMETER(lParam);
     return FALSE;
 }
@@ -909,6 +975,9 @@ INT_PTR CALLBACK AddHostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
             g_hwndAddHostDialog = hwnd;
             
             CenterWindow(hwnd);
+            
+            // Apply dark mode if enabled
+            ApplyDarkModeToDialog(hwnd);
             
             // Set dialog icon
             HICON hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_MAINICON));
@@ -963,6 +1032,11 @@ INT_PTR CALLBACK AddHostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
             g_hwndAddHostDialog = NULL;
             return TRUE;
     }
+
+    // Handle dark mode color messages
+    INT_PTR result = HandleDarkModeMessages(hwnd, msg, wParam, lParam);
+    if (result != 0)
+        return result;
 
     return FALSE;
 }

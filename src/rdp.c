@@ -82,7 +82,7 @@ BOOL CreateRDPFile(const wchar_t* hostname, const wchar_t* username,
     fwprintf(file, L"desktopwidth:i:1920\n");
     fwprintf(file, L"desktopheight:i:1080\n");
     fwprintf(file, L"session bpp:i:32\n");
-    fwprintf(file, L"full address:s:%s\n", hostname);
+    fwprintf(file, L"full address:s:%ls\n", hostname);
     fwprintf(file, L"compression:i:1\n");
     fwprintf(file, L"keyboardhook:i:2\n");
     fwprintf(file, L"audiocapturemode:i:0\n");
@@ -123,7 +123,7 @@ BOOL CreateRDPFile(const wchar_t* hostname, const wchar_t* username,
     // Add username if provided
     if (username != NULL && wcslen(username) > 0)
     {
-        fwprintf(file, L"username:s:%s\n", username);
+        fwprintf(file, L"username:s:%ls\n", username);
     }
     
     fclose(file);

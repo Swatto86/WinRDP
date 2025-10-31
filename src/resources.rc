@@ -58,15 +58,15 @@ FONT 9, "Segoe UI"
 BEGIN
     /* Username field with clean layout */
     LTEXT           "Username:", IDC_STATIC, 15, 18, 60, 10
-    EDITTEXT        IDC_EDIT_USERNAME, 85, 15, 220, 22, ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDIT_USERNAME, 85, 15, 220, 18, ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
     
     /* Password field */
-    LTEXT           "Password:", IDC_STATIC, 15, 48, 60, 10
-    EDITTEXT        IDC_EDIT_PASSWORD, 85, 45, 220, 22, ES_PASSWORD | ES_AUTOHSCROLL
+    LTEXT           "Password:", IDC_STATIC, 15, 45, 60, 10
+    EDITTEXT        IDC_EDIT_PASSWORD, 85, 42, 220, 18, ES_PASSWORD | ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
     
     /* Compact status line - only shown when credentials exist */
-    LTEXT           "", IDC_STATIC_STATUS, 15, 78, 200, 10
-    PUSHBUTTON      "Delete Saved", IDC_BTN_DELETE_CREDS, 220, 75, 85, 18
+    LTEXT           "", IDC_STATIC_STATUS, 15, 72, 200, 10
+    PUSHBUTTON      "Delete Saved", IDC_BTN_DELETE_CREDS, 220, 69, 85, 18
     
     /* Separator line for visual grouping */
     CONTROL         "", IDC_STATIC, "Static", SS_ETCHEDHORZ, 15, 103, 290, 1
@@ -89,9 +89,9 @@ STYLE DS_MODALFRAME | DS_CENTER | DS_SHELLFONT | WS_POPUP | WS_CAPTION | WS_SYSM
 CAPTION "WinRDP - Connect to Server"
 FONT 9, "Segoe UI"
 BEGIN
-    /* Search box - taller for better text centering */
+    /* Search box */
     LTEXT           "Search:", IDC_STATIC, 15, 15, 40, 10
-    EDITTEXT        IDC_EDIT_SEARCH, 60, 12, 420, 22, ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDIT_SEARCH, 60, 12, 420, 18, ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
     
     /* Server list with modern appearance */
     CONTROL         "", IDC_LIST_SERVERS, "SysListView32", 
@@ -141,12 +141,12 @@ FONT 9, "Segoe UI"
 BEGIN
     /* Hostname field - taller for better text centering */
     LTEXT           "Hostname:", IDC_STATIC, 15, 20, 65, 10
-    EDITTEXT        IDC_EDIT_HOSTNAME, 90, 17, 275, 22, ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDIT_HOSTNAME, 90, 17, 275, 22, ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
     
     /* Description field - multiline with modern appearance */
     LTEXT           "Description:", IDC_STATIC, 15, 50, 65, 10
     EDITTEXT        IDC_EDIT_DESCRIPTION, 90, 47, 275, 83, 
-                    ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN | WS_VSCROLL
+                    ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN | WS_VSCROLL, WS_EX_CLIENTEDGE
     
     /* Action buttons with modern spacing */
     DEFPUSHBUTTON   "Save", IDOK, 205, 145, 80, 20

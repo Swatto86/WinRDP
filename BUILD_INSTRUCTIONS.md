@@ -11,7 +11,6 @@ You need a C compiler. Choose one of the following:
 3. **Open MSYS2 MinGW 64-bit terminal** and run:
    ```bash
    pacman -S mingw-w64-x86_64-gcc
-   pacman -S mingw-w64-x86_64-make
    ```
 4. **Add to PATH**: Add `C:\msys64\mingw64\bin` to your Windows PATH
 
@@ -23,7 +22,7 @@ You need a C compiler. Choose one of the following:
 
 ## Building the Project
 
-### Method 1: Using the Build Script (Easiest)
+### Method 1: Using the Build Script (Recommended)
 
 Simply double-click `build.bat` or run in PowerShell/CMD:
 ```cmd
@@ -37,26 +36,7 @@ The script will:
 - Link the executable
 - Report success or errors
 
-### Method 2: Using Make (if installed)
-
-```bash
-# Clean previous builds
-make clean
-
-# Build
-make
-
-# Run
-make run
-
-# Build optimized release version
-make release
-
-# Build with debug symbols
-make debug
-```
-
-### Method 3: Manual Compilation
+### Method 2: Manual Compilation
 
 #### Using GCC (MinGW):
 ```cmd
@@ -97,7 +77,7 @@ cd ..
 
 ## Troubleshooting
 
-### "gcc: command not found" or "make: command not found"
+### "gcc: command not found"
 - Make sure MinGW bin directory is in your PATH
 - Or use `build.bat` which tries to detect compilers automatically
 
@@ -145,9 +125,6 @@ After making changes:
 
 ### Debugging with GDB
 ```bash
-# Build with debug symbols
-make debug
-
 # Run with GDB
 gdb build/WinRDP.exe
 ```
@@ -160,13 +137,13 @@ gdb build/WinRDP.exe
 
 ## Clean Build
 
-```cmd
-REM Using build script
-rmdir /s /q build
+To remove all compiled files and start fresh:
 
-REM Using make
-make clean
+```cmd
+rmdir /s /q build
 ```
+
+Then run `build.bat` again to rebuild.
 
 ## File Structure After Build
 
@@ -177,7 +154,6 @@ WinRDP/
 │   └── WinRDP.exe     <- Final executable
 ├── src/               <- Source code
 ├── build.bat          <- Build script
-├── Makefile           <- Make configuration
 └── README.md
 ```
 

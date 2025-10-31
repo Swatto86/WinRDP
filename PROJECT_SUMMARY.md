@@ -87,15 +87,11 @@ Simple CSV format for easy editing and portability.
 
 ## Build System
 
-### Makefile (MinGW)
+### build.bat (Windows)
+- Auto-detects compiler (GCC or MSVC)
 - Compiles all `.c` files
-- Links with required Windows libraries
-- Supports debug and release builds
-
-### build.bat (Universal)
-- Auto-detects GCC or MSVC
-- Fallback for systems without make
-- Simple one-command build
+- Links with required Windows libraries (including dark mode support)
+- Simple double-click or command-line execution
 
 ## Dependencies
 
@@ -225,7 +221,6 @@ WinRDP/
 │   ├── resources.rc        - UI resource definitions
 │   └── app.ico.txt        - Icon instructions
 ├── build/                  - Build output (created)
-├── Makefile               - Build configuration
 ├── build.bat              - Windows build script
 ├── .gitignore             - Git ignore rules
 ├── README.md              - Main documentation

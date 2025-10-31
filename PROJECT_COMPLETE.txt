@@ -30,8 +30,7 @@ Created as an educational resource for learning Windows programming
    ✅ PROJECT_SUMMARY.md      - Technical architecture overview
 
 🔧 BUILD SYSTEM:
-   ✅ Makefile     - For MinGW/GCC users
-   ✅ build.bat    - Universal build script (auto-detects compiler)
+   ✅ build.bat    - Universal build script (auto-detects GCC/MSVC)
    ✅ .gitignore   - Git configuration
 
 ================================================================================
