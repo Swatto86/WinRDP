@@ -29,6 +29,7 @@
 #include "rdp.h"
 #include "registry.h"
 #include "darkmode.h"
+#include "adscan.h"
 
 // Forward declarations of our functions
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -36,6 +37,8 @@ INT_PTR CALLBACK LoginDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
 INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 INT_PTR CALLBACK AddHostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+INT_PTR CALLBACK ScanDomainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+INT_PTR CALLBACK ScanResultsDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 BOOL InitSystemTray(HWND hwnd);
 BOOL ShowSystemTrayIcon(HWND hwnd);
@@ -52,6 +55,20 @@ static HWND g_hwndLoginDialog = NULL;
 static HWND g_hwndMainDialog = NULL;
 static HWND g_hwndHostDialog = NULL;
 static HWND g_hwndAddHostDialog = NULL;
+
+// Scan results tracking
+static int g_scanComputerCount = 0;
+
+// Scan domain parameters
+typedef struct {
+    wchar_t domain[256];
+    wchar_t username[256];
+    wchar_t password[256];
+    BOOL useCredentials;
+    BOOL includeWorkstations;
+    BOOL includeServers;
+    BOOL includeDomainControllers;
+} ScanParams;
 
 /*
  * WinMain - Entry point for Windows GUI applications
@@ -474,6 +491,77 @@ INT_PTR CALLBACK LoginDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
 }
 
 /*
+ * RefreshHostListView - Refresh the main ListView with optional filtering
+ * 
+ * Parameters:
+ *   hList - Handle to the ListView control
+ *   hosts - Array of hosts to display
+ *   hostCount - Number of hosts in array
+ *   searchText - Filter text (NULL or empty for no filtering)
+ * 
+ * This function refreshes the ListView with all hosts, optionally filtered
+ * by the search text (searches both hostname and description).
+ */
+void RefreshHostListView(HWND hList, Host* hosts, int hostCount, const wchar_t* searchText)
+{
+    // Clear existing items
+    ListView_DeleteAllItems(hList);
+    
+    if (hosts == NULL || hostCount == 0)
+        return;
+    
+    // Check if we have a search filter
+    BOOL hasFilter = (searchText != NULL && wcslen(searchText) > 0);
+    
+    // Convert search text to lowercase for case-insensitive search
+    wchar_t searchLower[256] = {0};
+    if (hasFilter)
+    {
+        wcsncpy_s(searchLower, 256, searchText, _TRUNCATE);
+        _wcslwr_s(searchLower, 256);
+    }
+    
+    // Add hosts to list, filtering if necessary
+    int displayIndex = 0;
+    for (int i = 0; i < hostCount; i++)
+    {
+        // If filtering, check if hostname or description matches
+        if (hasFilter)
+        {
+            wchar_t hostnameLower[256] = {0};
+            wchar_t descriptionLower[256] = {0};
+            
+            wcsncpy_s(hostnameLower, 256, hosts[i].hostname, _TRUNCATE);
+            _wcslwr_s(hostnameLower, 256);
+            
+            wcsncpy_s(descriptionLower, 256, hosts[i].description, _TRUNCATE);
+            _wcslwr_s(descriptionLower, 256);
+            
+            // Skip if neither hostname nor description contains the search text
+            if (wcsstr(hostnameLower, searchLower) == NULL && 
+                wcsstr(descriptionLower, searchLower) == NULL)
+            {
+                continue;
+            }
+        }
+        
+        // Add this host to the list
+        LVITEMW item = {0};
+        item.mask = LVIF_TEXT | LVIF_PARAM;
+        item.iItem = displayIndex;
+        item.iSubItem = 0;
+        item.pszText = L"";  // Dummy column 0
+        item.lParam = (LPARAM)i;  // Store original index for later reference
+        ListView_InsertItem(hList, &item);
+        
+        ListView_SetItemText(hList, displayIndex, 1, hosts[i].hostname);  // Hostname in column 1
+        ListView_SetItemText(hList, displayIndex, 2, hosts[i].description);  // Description in column 2
+        
+        displayIndex++;
+    }
+}
+
+/*
  * MainDialogProc - Main server list dialog
  */
 INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -538,18 +626,7 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             // Load and display hosts
             if (LoadHosts(&hosts, &hostCount))
             {
-                for (int i = 0; i < hostCount; i++)
-                {
-                    LVITEMW item = {0};
-                    item.mask = LVIF_TEXT;
-                    item.iItem = i;
-                    item.iSubItem = 0;
-                    item.pszText = L"";  // Dummy column 0
-                    ListView_InsertItem(hList, &item);
-                    
-                    ListView_SetItemText(hList, i, 1, hosts[i].hostname);  // Hostname in column 1
-                    ListView_SetItemText(hList, i, 2, hosts[i].description);  // Description in column 2
-                }
+                RefreshHostListView(hList, hosts, hostCount, NULL);
             }
             
             return TRUE;
@@ -564,11 +641,21 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                 HWND hList = GetDlgItem(hwnd, IDC_LIST_SERVERS);
                 int selected = ListView_GetNextItem(hList, -1, LVNI_SELECTED);
                 
-                if (selected >= 0 && selected < hostCount)
+                if (selected >= 0)
                 {
-                    if (LaunchRDPWithDefaults(hosts[selected].hostname))
+                    // Get the original host index from lParam
+                    LVITEMW item = {0};
+                    item.mask = LVIF_PARAM;
+                    item.iItem = selected;
+                    ListView_GetItem(hList, &item);
+                    int hostIndex = (int)item.lParam;
+                    
+                    if (hostIndex >= 0 && hostIndex < hostCount)
                     {
-                        EndDialog(hwnd, IDOK);
+                        if (LaunchRDPWithDefaults(hosts[hostIndex].hostname))
+                        {
+                            EndDialog(hwnd, IDOK);
+                        }
                     }
                 }
                 return TRUE;
@@ -599,6 +686,24 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                     return TRUE;
                 }
 
+                case IDC_EDIT_SEARCH:
+                {
+                    // Handle search text changes
+                    if (HIWORD(wParam) == EN_CHANGE)
+                    {
+                        HWND hList = GetDlgItem(hwnd, IDC_LIST_SERVERS);
+                        HWND hSearch = GetDlgItem(hwnd, IDC_EDIT_SEARCH);
+                        
+                        // Get search text
+                        wchar_t searchText[256] = {0};
+                        GetWindowTextW(hSearch, searchText, 256);
+                        
+                        // Refresh list with filter
+                        RefreshHostListView(hList, hosts, hostCount, searchText);
+                    }
+                    return TRUE;
+                }
+
                 case IDC_BTN_MANAGE:
                 {
                     // Show host management dialog (only if not already open)
@@ -615,7 +720,6 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                     
                     // Reload the list after managing hosts
                     HWND hList = GetDlgItem(hwnd, IDC_LIST_SERVERS);
-                    ListView_DeleteAllItems(hList);
                     
                     if (hosts != NULL)
                     {
@@ -626,17 +730,12 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                     
                     if (LoadHosts(&hosts, &hostCount))
                     {
-                        for (int i = 0; i < hostCount; i++)
-                        {
-                            LVITEMW item = {0};
-                            item.mask = LVIF_TEXT;
-                            item.iItem = i;
-                            item.iSubItem = 0;
-                            item.pszText = hosts[i].hostname;
-                            ListView_InsertItem(hList, &item);
-                            
-                            ListView_SetItemText(hList, i, 1, hosts[i].description);
-                        }
+                        // Get search text if any
+                        HWND hSearch = GetDlgItem(hwnd, IDC_EDIT_SEARCH);
+                        wchar_t searchText[256] = {0};
+                        GetWindowTextW(hSearch, searchText, 256);
+                        
+                        RefreshHostListView(hList, hosts, hostCount, searchText);
                     }
                     return TRUE;
                 }
@@ -908,19 +1007,75 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
                 case IDC_BTN_SCAN_DOMAIN:
                 {
-                    // Scan Active Directory domain for computers
-                    ShowInfoMessage(hwnd, 
-                        L"Domain Scanning:\n\n"
-                        L"This feature would scan your Active Directory domain for computers.\n\n"
-                        L"Implementation requires:\n"
-                        L"• NetAPI32 functions (NetServerEnum)\n"
-                        L"• Active Directory Service Interfaces (ADSI)\n"
-                        L"• WMI (Windows Management Instrumentation)\n\n"
-                        L"For this educational version, manually add hosts using 'Add Host'.\n\n"
-                        L"Example hosts to add:\n"
-                        L"• server.domain.com\n"
-                        L"• 192.168.1.100\n"
-                        L"• PC-NAME");
+                    // Show domain selection dialog
+                    ScanParams params = {0};
+                    INT_PTR result = DialogBoxParam(g_hInstance, MAKEINTRESOURCE(IDD_SCAN_DOMAIN),
+                                                   hwnd, ScanDomainDialogProc, (LPARAM)&params);
+                    
+                    if (result == IDOK)
+                    {
+                        // Scan Active Directory/network for computers
+                        ComputerInfo* computers = NULL;
+                        int computerCount = 0;
+                        
+                        // Show scanning message
+                        SetCursor(LoadCursor(NULL, IDC_WAIT));
+                        
+                        // Prepare credentials
+                        const wchar_t* username = params.useCredentials && wcslen(params.username) > 0 ? params.username : NULL;
+                        const wchar_t* password = params.useCredentials && wcslen(params.password) > 0 ? params.password : NULL;
+                        const wchar_t* domain = wcslen(params.domain) > 0 ? params.domain : NULL;
+                        
+                        if (ScanForComputers(domain, username, password, 
+                                           params.includeWorkstations, params.includeServers, params.includeDomainControllers,
+                                           &computers, &computerCount))
+                        {
+                            SetCursor(LoadCursor(NULL, IDC_ARROW));
+                            
+                            if (computerCount == 0)
+                            {
+                                ShowInfoMessage(hwnd, 
+                                    L"No computers found on the network.\n\n"
+                                    L"This could mean:\n"
+                                    L"• You're not connected to a network\n"
+                                    L"• Network discovery is disabled\n"
+                                    L"• Firewall is blocking discovery\n"
+                                    L"• The specified domain/workgroup doesn't exist\n\n"
+                                    L"You can still manually add hosts using 'Add Host'.");
+                            }
+                            else
+                            {
+                                // Auto-add all discovered computers
+                                int addedCount = 0;
+                                for (int i = 0; i < computerCount; i++)
+                                {
+                                    if (AddHost(computers[i].name, computers[i].comment))
+                                    {
+                                        addedCount++;
+                                    }
+                                }
+                                
+                                // Free the computer list
+                                FreeComputerList(computers);
+                                
+                                // Show success message
+                                wchar_t msg[512];
+                                swprintf_s(msg, 512, 
+                                    L"Network scan complete!\n\n"
+                                    L"Found: %d computer(s)\n"
+                                    L"Added: %d computer(s) to your hosts list\n\n"
+                                    L"Computers have been automatically added with their AD descriptions.",
+                                    computerCount, addedCount);
+                                ShowInfoMessage(hwnd, msg);
+                            }
+                        }
+                        else
+                        {
+                            SetCursor(LoadCursor(NULL, IDC_ARROW));
+                            ShowErrorMessage(hwnd, L"Failed to scan for computers.\n\nPlease check network connectivity and permissions.");
+                        }
+                    }
+                    
                     return TRUE;
                 }
 
@@ -1038,6 +1193,288 @@ INT_PTR CALLBACK AddHostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
     if (result != 0)
         return result;
 
+    return FALSE;
+}
+
+/*
+ * ScanDomainDialogProc - Get domain and credentials for scanning
+ * 
+ * Prompts user for domain name and optional credentials before scanning.
+ * The ScanParams structure is passed via lParam and filled on IDOK.
+ */
+INT_PTR CALLBACK ScanDomainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    static ScanParams* s_params = NULL;
+    
+    switch (msg)
+    {
+        case WM_INITDIALOG:
+        {
+            CenterWindow(hwnd);
+            ApplyDarkModeToDialog(hwnd);
+            
+            // Set dialog icon
+            HICON hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_MAINICON));
+            SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+            SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+            
+            // Store pointer to params structure
+            s_params = (ScanParams*)lParam;
+            
+            // Set default state - credentials disabled
+            CheckDlgButton(hwnd, IDC_CHECK_USE_CREDS, BST_UNCHECKED);
+            EnableWindow(GetDlgItem(hwnd, IDC_EDIT_SCAN_USERNAME), FALSE);
+            EnableWindow(GetDlgItem(hwnd, IDC_EDIT_SCAN_PASSWORD), FALSE);
+            
+            // Set default state - all computer types checked
+            CheckDlgButton(hwnd, IDC_CHECK_WORKSTATIONS, BST_CHECKED);
+            CheckDlgButton(hwnd, IDC_CHECK_SERVERS, BST_CHECKED);
+            CheckDlgButton(hwnd, IDC_CHECK_DOMAIN_CTRL, BST_CHECKED);
+            
+            // Focus on domain field
+            SetFocus(GetDlgItem(hwnd, IDC_EDIT_DOMAIN));
+            
+            return FALSE; // We set focus manually
+        }
+        
+        case WM_COMMAND:
+        {
+            switch (LOWORD(wParam))
+            {
+                case IDC_CHECK_USE_CREDS:
+                {
+                    // Enable/disable credential fields based on checkbox
+                    BOOL useCredentials = (IsDlgButtonChecked(hwnd, IDC_CHECK_USE_CREDS) == BST_CHECKED);
+                    EnableWindow(GetDlgItem(hwnd, IDC_EDIT_SCAN_USERNAME), useCredentials);
+                    EnableWindow(GetDlgItem(hwnd, IDC_EDIT_SCAN_PASSWORD), useCredentials);
+                    
+                    // Focus on username if enabled
+                    if (useCredentials)
+                    {
+                        SetFocus(GetDlgItem(hwnd, IDC_EDIT_SCAN_USERNAME));
+                    }
+                    return TRUE;
+                }
+                
+                case IDOK:
+                {
+                    if (s_params != NULL)
+                    {
+                        // Get computer type filters
+                        s_params->includeWorkstations = (IsDlgButtonChecked(hwnd, IDC_CHECK_WORKSTATIONS) == BST_CHECKED);
+                        s_params->includeServers = (IsDlgButtonChecked(hwnd, IDC_CHECK_SERVERS) == BST_CHECKED);
+                        s_params->includeDomainControllers = (IsDlgButtonChecked(hwnd, IDC_CHECK_DOMAIN_CTRL) == BST_CHECKED);
+                        
+                        // Validate that at least one type is selected
+                        if (!s_params->includeWorkstations && !s_params->includeServers && !s_params->includeDomainControllers)
+                        {
+                            ShowErrorMessage(hwnd, L"Please select at least one computer type to scan for.");
+                            return TRUE;
+                        }
+                        
+                        // Get domain name
+                        GetDlgItemTextW(hwnd, IDC_EDIT_DOMAIN, s_params->domain, 256);
+                        
+                        // Get credentials if checkbox is checked
+                        s_params->useCredentials = (IsDlgButtonChecked(hwnd, IDC_CHECK_USE_CREDS) == BST_CHECKED);
+                        
+                        if (s_params->useCredentials)
+                        {
+                            GetDlgItemTextW(hwnd, IDC_EDIT_SCAN_USERNAME, s_params->username, 256);
+                            GetDlgItemTextW(hwnd, IDC_EDIT_SCAN_PASSWORD, s_params->password, 256);
+                        }
+                        else
+                        {
+                            s_params->username[0] = L'\0';
+                            s_params->password[0] = L'\0';
+                        }
+                    }
+                    
+                    EndDialog(hwnd, IDOK);
+                    return TRUE;
+                }
+                
+                case IDCANCEL:
+                    EndDialog(hwnd, IDCANCEL);
+                    return TRUE;
+            }
+            break;
+        }
+        
+        // Handle dark mode messages
+        default:
+        {
+            INT_PTR result = HandleDarkModeMessages(hwnd, msg, wParam, lParam);
+            if (result != 0)
+                return result;
+            break;
+        }
+    }
+    
+    return FALSE;
+}
+
+/*
+ * ScanResultsDialogProc - Display network scan results
+ * 
+ * Shows discovered computers and allows user to select which to add.
+ * The computer list is passed via lParam in DialogBoxParam.
+ */
+INT_PTR CALLBACK ScanResultsDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    static ComputerInfo* s_computers = NULL;
+    static int s_computerCount = 0;
+    
+    switch (msg)
+    {
+        case WM_INITDIALOG:
+        {
+            CenterWindow(hwnd);
+            ApplyDarkModeToDialog(hwnd);
+            
+            // Set dialog icon
+            HICON hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_MAINICON));
+            SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+            SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+            
+            // Get computer list - need to extract both pointer and count
+            // Since we can only pass one parameter, we'll pass the pointer
+            // and the count needs to be embedded or passed differently
+            s_computers = (ComputerInfo*)lParam;
+            
+            // Get ListView handle
+            HWND hList = GetDlgItem(hwnd, IDC_LIST_SCAN_RESULTS);
+            
+            // Set extended styles with checkboxes
+            ListView_SetExtendedListViewStyle(hList,
+                LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES | LVS_EX_DOUBLEBUFFER | LVS_EX_CHECKBOXES);
+            
+            ApplyDarkModeToListView(hList);
+            
+            // Get ListView dimensions
+            RECT rcList;
+            GetClientRect(hList, &rcList);
+            int listWidth = rcList.right - rcList.left;
+            
+            // Create columns with dummy column for centering
+            LVCOLUMNW col = {0};
+            
+            // Dummy column
+            col.mask = LVCF_TEXT | LVCF_WIDTH;
+            col.pszText = L"";
+            col.cx = 1;
+            ListView_InsertColumn(hList, 0, &col);
+            
+            // Real columns (centered)
+            col.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_FMT;
+            col.fmt = LVCFMT_CENTER;
+            
+            col.pszText = L"Computer Name";
+            col.cx = 200;
+            ListView_InsertColumn(hList, 1, &col);
+            
+            col.pszText = L"Description";
+            col.cx = listWidth - 200 - 5;
+            ListView_InsertColumn(hList, 2, &col);
+            
+            // Get count from global variable
+            s_computerCount = g_scanComputerCount;
+            
+            for (int i = 0; i < s_computerCount && s_computers != NULL; i++)
+            {
+                LVITEMW item = {0};
+                item.mask = LVIF_TEXT;
+                item.iItem = i;
+                item.iSubItem = 0;
+                item.pszText = L"";  // Dummy column
+                ListView_InsertItem(hList, &item);
+                
+                ListView_SetItemText(hList, i, 1, s_computers[i].name);
+                ListView_SetItemText(hList, i, 2, s_computers[i].comment);
+                
+                // Check item by default
+                ListView_SetCheckState(hList, i, TRUE);
+            }
+            
+            // Update status
+            wchar_t status[256];
+            swprintf_s(status, 256, L"Found %d computer(s). Check the ones you want to add:", s_computerCount);
+            SetDlgItemTextW(hwnd, IDC_STATIC_SCAN_STATUS, status);
+            
+            return TRUE;
+        }
+        
+        case WM_COMMAND:
+            switch (LOWORD(wParam))
+            {
+                case IDC_BTN_ADD_SELECTED:
+                {
+                    // Add selected (checked) computers to hosts
+                    HWND hList = GetDlgItem(hwnd, IDC_LIST_SCAN_RESULTS);
+                    int itemCount = ListView_GetItemCount(hList);
+                    int addedCount = 0;
+                    
+                    for (int i = 0; i < itemCount; i++)
+                    {
+                        // Check if item is checked
+                        if (ListView_GetCheckState(hList, i))
+                        {
+                            wchar_t hostname[256];
+                            wchar_t description[256];
+                            
+                            ListView_GetItemText(hList, i, 1, hostname, 256);
+                            ListView_GetItemText(hList, i, 2, description, 256);
+                            
+                            if (AddHost(hostname, description))
+                            {
+                                addedCount++;
+                            }
+                        }
+                    }
+                    
+                    wchar_t msg[256];
+                    swprintf_s(msg, 256, L"Added %d computer(s) to your hosts list.", addedCount);
+                    ShowInfoMessage(hwnd, msg);
+                    
+                    // Free computers and close
+                    if (s_computers != NULL)
+                    {
+                        FreeComputerList(s_computers);
+                        s_computers = NULL;
+                    }
+                    
+                    EndDialog(hwnd, IDOK);
+                    return TRUE;
+                }
+                
+                case IDCANCEL:
+                    // Free computers and close
+                    if (s_computers != NULL)
+                    {
+                        FreeComputerList(s_computers);
+                        s_computers = NULL;
+                    }
+                    EndDialog(hwnd, IDCANCEL);
+                    return TRUE;
+            }
+            break;
+        
+        case WM_CLOSE:
+            // Free computers and close
+            if (s_computers != NULL)
+            {
+                FreeComputerList(s_computers);
+                s_computers = NULL;
+            }
+            EndDialog(hwnd, IDCANCEL);
+            return TRUE;
+    }
+    
+    // Handle dark mode
+    INT_PTR result = HandleDarkModeMessages(hwnd, msg, wParam, lParam);
+    if (result != 0)
+        return result;
+    
     return FALSE;
 }
 

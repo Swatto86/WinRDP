@@ -153,3 +153,44 @@ BEGIN
     PUSHBUTTON      "Cancel", IDCANCEL, 290, 145, 75, 20
 END
 
+/*
+ * Scan Domain Dialog
+ * 
+ * Prompts for domain name and optional credentials before scanning.
+ */
+IDD_SCAN_DOMAIN DIALOGEX 0, 0, 360, 220
+STYLE DS_MODALFRAME | DS_CENTER | DS_SHELLFONT | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "WinRDP - Scan Network for Computers"
+FONT 9, "Segoe UI"
+BEGIN
+    /* Domain field */
+    LTEXT           "Domain / Workgroup:", IDC_STATIC, 15, 20, 90, 10
+    EDITTEXT        IDC_EDIT_DOMAIN, 115, 17, 230, 18, ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
+    LTEXT           "(Leave empty to scan current domain/workgroup)", IDC_STATIC, 115, 38, 230, 10
+    
+    /* Optional credentials section */
+    AUTOCHECKBOX    "Use specific credentials (optional)", IDC_CHECK_USE_CREDS, 15, 60, 330, 12
+    
+    LTEXT           "Username:", IDC_STATIC, 30, 82, 75, 10
+    EDITTEXT        IDC_EDIT_SCAN_USERNAME, 115, 79, 230, 18, ES_AUTOHSCROLL | WS_DISABLED, WS_EX_CLIENTEDGE
+    
+    LTEXT           "Password:", IDC_STATIC, 30, 107, 75, 10
+    EDITTEXT        IDC_EDIT_SCAN_PASSWORD, 115, 104, 230, 18, ES_PASSWORD | ES_AUTOHSCROLL | WS_DISABLED, WS_EX_CLIENTEDGE
+    
+    /* Computer type filters */
+    GROUPBOX        "Computer Types to Add", IDC_STATIC, 15, 132, 330, 40
+    AUTOCHECKBOX    "Workstations", IDC_CHECK_WORKSTATIONS, 25, 148, 100, 12
+    AUTOCHECKBOX    "Servers", IDC_CHECK_SERVERS, 135, 148, 100, 12
+    AUTOCHECKBOX    "Domain Controllers", IDC_CHECK_DOMAIN_CTRL, 245, 148, 100, 12
+    
+    /* Info text */
+    LTEXT           "Discovered computers will be automatically added to your hosts.", IDC_STATIC, 15, 180, 330, 10
+    
+    /* Separator */
+    CONTROL         "", IDC_STATIC, "Static", SS_ETCHEDHORZ, 15, 195, 330, 1
+    
+    /* Action buttons */
+    DEFPUSHBUTTON   "Scan", IDOK, 180, 200, 80, 18
+    PUSHBUTTON      "Cancel", IDCANCEL, 265, 200, 80, 18
+END
+

@@ -2,6 +2,41 @@
 
 ## Latest Changes (October 31, 2025)
 
+### 🚀 **NEW FEATURE: Active Directory / Network Scanning (Enhanced!)**
+
+#### What It Does
+- ✅ Automatically scans your network for computers
+- ✅ Works with both domain-joined and workgroup computers  
+- ✅ Domain/workgroup selection dialog with optional credentials
+- ✅ **AUTO-ADDS discovered computers** with AD descriptions directly to CSV
+- ✅ Uses Windows NetAPI32 for computer enumeration
+
+#### How It Works
+1. Click "Scan Domain" button in Host Management
+2. Dialog appears asking for:
+   - Domain/Workgroup name (leave empty for current)
+   - Optional credentials (checkbox to enable)
+3. Application scans network using `NetServerEnum`
+4. **All discovered computers are automatically added** to your hosts CSV
+5. Success message shows how many computers were found and added
+6. Computer descriptions from Active Directory are preserved!
+
+#### Files Added
+- `src/adscan.h` - AD scanning API declarations
+- `src/adscan.c` - Network scanning implementation using NetAPI32
+- New dialog: `IDD_SCAN_DOMAIN` - Domain selection and credential input
+- New dialog: `IDD_SCAN_RESULTS` - Optional results display (currently simplified)
+
+#### Technical Details
+- Uses `NetServerEnum` from netapi32.dll
+- Domain parameter allows targeting specific domains/workgroups
+- Credential fields for optional authentication (checkbox-enabled)
+- Enumerates workstations and servers on the network
+- **Automatically extracts and saves AD computer descriptions**
+- Handles gracefully if not on a network
+- Properly frees NetAPI buffers
+- Includes computer type detection (Server/Workstation/DC)
+
 ### ✨ UI Improvements
 
 #### 1. **Dark Mode Implementation**
@@ -64,11 +99,12 @@
 
 ### 📊 Statistics
 
-**Lines of Code Added**: ~220 (dark mode implementation)
-**Files Modified**: 15+
-**Files Added**: 5 (darkmode.c, darkmode.h, 3 documentation files)
+**Lines of Code Added**: ~520 (dark mode + enhanced AD scanning with domain dialog)
+**Files Modified**: 17+
+**Files Added**: 7 (darkmode.c, darkmode.h, adscan.c, adscan.h, 3 documentation files)
 **Files Deleted**: 1 (Makefile)
 **Bugs Fixed**: 2 (RDP hostname, ListView columns)
+**Major Features Added**: 2 (Dark Mode, Enhanced AD Scanning with auto-add)
 
 ### 🎨 Visual Impact
 

@@ -20,6 +20,7 @@ This project demonstrates:
 - Secure credential storage using Windows Credential Manager
 - Quick connect to saved servers
 - Search functionality for hosts
+- **Network Computer Scanning** - Automatically discover computers on your network
 - System tray icon for quick access
 - Autostart with Windows (optional)
 - **Dark Mode Support** - Automatically follows Windows theme

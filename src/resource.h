@@ -20,6 +20,8 @@
 #define IDD_MAIN                101
 #define IDD_HOSTS               102
 #define IDD_ADD_HOST            103
+#define IDD_SCAN_RESULTS        104
+#define IDD_SCAN_DOMAIN         105
 
 // Control IDs - Login Dialog
 #define IDC_EDIT_USERNAME       200
@@ -45,6 +47,20 @@
 // Control IDs - Add/Edit Host Dialog
 #define IDC_EDIT_HOSTNAME       230
 #define IDC_EDIT_DESCRIPTION    231
+
+// Control IDs - Scan Results Dialog
+#define IDC_LIST_SCAN_RESULTS   240
+#define IDC_BTN_ADD_SELECTED    241
+#define IDC_STATIC_SCAN_STATUS  242
+
+// Control IDs - Scan Domain Dialog
+#define IDC_EDIT_DOMAIN         250
+#define IDC_EDIT_SCAN_USERNAME  251
+#define IDC_EDIT_SCAN_PASSWORD  252
+#define IDC_CHECK_USE_CREDS     253
+#define IDC_CHECK_WORKSTATIONS  254
+#define IDC_CHECK_SERVERS       255
+#define IDC_CHECK_DOMAIN_CTRL   256
 
 // Menu IDs
 #define IDM_OPEN                300
