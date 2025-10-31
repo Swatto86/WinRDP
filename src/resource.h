@@ -48,6 +48,11 @@
 // Control IDs - Add/Edit Host Dialog
 #define IDC_EDIT_HOSTNAME       230
 #define IDC_EDIT_DESCRIPTION    231
+#define IDC_CHECK_USE_HOST_CREDS 232
+#define IDC_EDIT_HOST_USERNAME  233
+#define IDC_EDIT_HOST_PASSWORD   234
+#define IDC_STATIC_HOST_USERNAME 235
+#define IDC_STATIC_HOST_PASSWORD 236
 
 // Control IDs - Scan Results Dialog
 #define IDC_LIST_SCAN_RESULTS   240

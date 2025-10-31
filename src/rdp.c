@@ -158,13 +158,25 @@ BOOL LaunchRDP(const wchar_t* hostname, const wchar_t* username,
     wchar_t actualUsername[MAX_USERNAME_LEN];
     wchar_t actualPassword[MAX_PASSWORD_LEN];
     
-    // If credentials not provided, try to load default credentials
+    // If credentials not provided, try to load credentials for this host
+    // Check per-host credentials first, then fall back to global credentials
     if (username == NULL || password == NULL)
     {
-        if (!LoadCredentials(NULL, actualUsername, actualPassword))
+        // First, try to load per-host credentials for this specific host
+        if (LoadRDPCredentials(hostname, actualUsername, actualPassword))
         {
+            // Per-host credentials found and loaded
+        }
+        // If per-host credentials not found, try global credentials
+        else if (LoadCredentials(NULL, actualUsername, actualPassword))
+        {
+            // Global credentials found and loaded
+        }
+        else
+        {
+            // No credentials available
             MessageBoxW(NULL, 
-                       L"No credentials provided and no default credentials saved.\n"
+                       L"No credentials provided and no credentials saved.\n"
                        L"Please enter credentials first.",
                        L"Error", MB_OK | MB_ICONERROR);
             return FALSE;

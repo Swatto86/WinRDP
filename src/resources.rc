@@ -137,8 +137,9 @@ END
  * 
  * Dialog for entering hostname and description for an RDP server.
  * The multiline description field allows for detailed notes.
+ * Optionally allows setting per-host credentials.
  */
-IDD_ADD_HOST DIALOGEX 0, 0, 380, 170
+IDD_ADD_HOST DIALOGEX 0, 0, 380, 270
 STYLE DS_MODALFRAME | DS_CENTER | DS_SHELLFONT | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "WinRDP - Add/Edit Host"
 FONT 9, "Segoe UI"
@@ -149,12 +150,27 @@ BEGIN
     
     /* Description field - multiline with modern appearance */
     LTEXT           "Description:", IDC_STATIC, 15, 50, 65, 10
-    EDITTEXT        IDC_EDIT_DESCRIPTION, 90, 47, 275, 83, 
+    EDITTEXT        IDC_EDIT_DESCRIPTION, 90, 47, 275, 45, 
                     ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN | WS_VSCROLL, WS_EX_CLIENTEDGE
     
+    /* Per-host credentials section */
+    GROUPBOX        "Per-Host Credentials (Optional)", IDC_STATIC, 15, 100, 350, 115
+    AUTOCHECKBOX    "Use custom credentials for this host", IDC_CHECK_USE_HOST_CREDS, 25, 115, 250, 12
+    
+    /* Per-host username field - shown when checkbox is checked */
+    LTEXT           "Username:", IDC_STATIC_HOST_USERNAME, 25, 135, 60, 10
+    EDITTEXT        IDC_EDIT_HOST_USERNAME, 90, 132, 270, 22, ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
+    
+    /* Per-host password field - shown when checkbox is checked */
+    LTEXT           "Password:", IDC_STATIC_HOST_PASSWORD, 25, 165, 60, 10
+    EDITTEXT        IDC_EDIT_HOST_PASSWORD, 90, 162, 270, 22, ES_PASSWORD | ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
+    
+    /* Help text */
+    LTEXT           "Leave unchecked to use global credentials", IDC_STATIC, 90, 190, 270, 10
+    
     /* Action buttons with modern spacing */
-    DEFPUSHBUTTON   "Save", IDOK, 205, 145, 80, 20
-    PUSHBUTTON      "Cancel", IDCANCEL, 290, 145, 75, 20
+    DEFPUSHBUTTON   "Save", IDOK, 205, 225, 80, 20
+    PUSHBUTTON      "Cancel", IDCANCEL, 290, 225, 75, 20
 END
 
 /*
