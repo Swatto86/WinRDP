@@ -6,114 +6,150 @@
  * - Menus
  * - Icons
  * - Strings
+ * - Application manifest (for modern Windows theming)
  * 
  * The resource compiler (windres) compiles this into binary format
  * that gets embedded in the executable.
+ * 
+ * UTF-8 Encoding: The #pragma ensures proper Unicode support
  */
+
+#pragma code_page(65001)
 
 #include <windows.h>
 #include "resource.h"
 
-// Application icon (we'll use the default for now)
-// Create app.ico and uncomment the line below to use a custom icon
-// IDI_MAINICON ICON "app.ico"
+/*
+ * Application Icon
+ * 
+ * Custom icon created using GDI+. Displays in:
+ * - Title bars of all dialogs
+ * - System tray notification area
+ * - Taskbar
+ * - Alt+Tab switcher
+ */
+IDI_MAINICON ICON "app.ico"
 
 /*
- * Login Dialog
+ * Application Manifest
+ * 
+ * The manifest enables modern Windows features:
+ * - Visual Styles (Windows XP+): Modern button/control rendering
+ * - DPI Awareness: Crisp display on high-DPI screens (4K, etc.)
+ * - Common Controls v6: Required for modern ListView appearance
+ * 
+ * Without this manifest, the app would look like Windows 95 era software!
+ */
+1 RT_MANIFEST "app.manifest"
+
+/*
+ * Login Dialog - Compact Modern Design
  * 
  * This is where users enter their default RDP credentials.
  * These credentials will be stored in Windows Credential Manager.
  * 
- * Dialog styles explained:
- *   DS_MODALFRAME  - Creates a modal dialog (blocks parent)
- *   DS_CENTER      - Centers the dialog on screen
- *   WS_POPUP       - Creates a popup window
- *   WS_CAPTION     - Adds title bar
- *   WS_SYSMENU     - Adds system menu (close button)
+ * Compact layout focuses on the essential input fields without
+ * unnecessary visual clutter or large group boxes.
  */
-IDD_LOGIN DIALOGEX 0, 0, 280, 160
-STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+IDD_LOGIN DIALOGEX 0, 0, 320, 145
+STYLE DS_MODALFRAME | DS_CENTER | DS_SHELLFONT | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "WinRDP - Enter Credentials"
 FONT 9, "Segoe UI"
 BEGIN
-    LTEXT           "Enter your default RDP credentials:", IDC_STATIC, 10, 10, 260, 10
+    /* Username field with clean layout */
+    LTEXT           "Username:", IDC_STATIC, 15, 18, 60, 10
+    EDITTEXT        IDC_EDIT_USERNAME, 85, 15, 220, 22, ES_AUTOHSCROLL
     
-    LTEXT           "Username:", IDC_STATIC, 10, 30, 60, 10
-    EDITTEXT        IDC_EDIT_USERNAME, 80, 28, 180, 14, ES_AUTOHSCROLL
+    /* Password field */
+    LTEXT           "Password:", IDC_STATIC, 15, 48, 60, 10
+    EDITTEXT        IDC_EDIT_PASSWORD, 85, 45, 220, 22, ES_PASSWORD | ES_AUTOHSCROLL
     
-    LTEXT           "Password:", IDC_STATIC, 10, 50, 60, 10
-    EDITTEXT        IDC_EDIT_PASSWORD, 80, 48, 180, 14, ES_PASSWORD | ES_AUTOHSCROLL
+    /* Compact status line - only shown when credentials exist */
+    LTEXT           "", IDC_STATIC_STATUS, 15, 78, 200, 10
+    PUSHBUTTON      "Delete Saved", IDC_BTN_DELETE_CREDS, 220, 75, 85, 18
     
-    GROUPBOX        "Saved Credentials", IDC_STATIC, 10, 70, 260, 50
-    LTEXT           "No credentials saved", IDC_STATIC, 20, 85, 240, 10
-    PUSHBUTTON      "Delete Saved Credentials", IDC_BTN_DELETE_CREDS, 20, 100, 120, 14
+    /* Separator line for visual grouping */
+    CONTROL         "", IDC_STATIC, "Static", SS_ETCHEDHORZ, 15, 103, 290, 1
     
-    DEFPUSHBUTTON   "Save && Continue", IDOK, 110, 135, 80, 14
-    PUSHBUTTON      "Cancel", IDCANCEL, 195, 135, 75, 14
+    /* Action buttons - aligned right for modern look */
+    DEFPUSHBUTTON   "Save && Continue", IDOK, 135, 115, 85, 22
+    PUSHBUTTON      "Cancel", IDCANCEL, 225, 115, 80, 22
 END
 
 /*
- * Main Server List Dialog
+ * Main Server List Dialog - Modern Styled
  * 
  * This shows the list of available RDP servers and allows
  * searching and connecting to them.
+ * 
+ * The ListView control displays servers in a clean, modern grid.
  */
-IDD_MAIN DIALOGEX 0, 0, 450, 350
-STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+IDD_MAIN DIALOGEX 0, 0, 500, 380
+STYLE DS_MODALFRAME | DS_CENTER | DS_SHELLFONT | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "WinRDP - Connect to Server"
 FONT 9, "Segoe UI"
 BEGIN
-    LTEXT           "Search:", IDC_STATIC, 10, 10, 40, 10
-    EDITTEXT        IDC_EDIT_SEARCH, 50, 8, 300, 14, ES_AUTOHSCROLL
+    /* Search box - taller for better text centering */
+    LTEXT           "Search:", IDC_STATIC, 15, 15, 40, 10
+    EDITTEXT        IDC_EDIT_SEARCH, 60, 12, 420, 22, ES_AUTOHSCROLL
     
-    CONTROL         "", IDC_LIST_SERVERS, WC_LISTVIEW, 
+    /* Server list with modern appearance */
+    CONTROL         "", IDC_LIST_SERVERS, "SysListView32", 
                     LVS_REPORT | LVS_SINGLESEL | WS_BORDER | WS_TABSTOP,
-                    10, 30, 430, 280
+                    15, 42, 470, 301
     
-    PUSHBUTTON      "Connect", IDC_BTN_CONNECT, 10, 320, 80, 20
-    PUSHBUTTON      "Manage Hosts", IDC_BTN_MANAGE, 100, 320, 80, 20
-    DEFPUSHBUTTON   "Close", IDCANCEL, 360, 320, 80, 20
+    /* Action buttons with modern spacing and sizing */
+    DEFPUSHBUTTON   "Connect", IDC_BTN_CONNECT, 15, 353, 90, 20
+    PUSHBUTTON      "Manage Hosts", IDC_BTN_MANAGE, 110, 353, 95, 20
+    PUSHBUTTON      "Close", IDCANCEL, 395, 353, 90, 20
 END
 
 /*
- * Host Management Dialog
+ * Host Management Dialog - Modern Styled
  * 
  * Add, edit, and delete RDP server entries.
+ * This dialog provides full CRUD operations for the host list.
  */
-IDD_HOSTS DIALOGEX 0, 0, 500, 400
-STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+IDD_HOSTS DIALOGEX 0, 0, 550, 430
+STYLE DS_MODALFRAME | DS_CENTER | DS_SHELLFONT | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "WinRDP - Manage Hosts"
 FONT 9, "Segoe UI"
 BEGIN
-    CONTROL         "", IDC_LIST_HOSTS, WC_LISTVIEW,
+    /* Host list with modern appearance and better sizing */
+    CONTROL         "", IDC_LIST_HOSTS, "SysListView32",
                     LVS_REPORT | LVS_SINGLESEL | WS_BORDER | WS_TABSTOP,
-                    10, 10, 480, 330
+                    15, 15, 520, 370
     
-    PUSHBUTTON      "Add Host", IDC_BTN_ADD_HOST, 10, 350, 80, 20
-    PUSHBUTTON      "Edit Host", IDC_BTN_EDIT_HOST, 95, 350, 80, 20
-    PUSHBUTTON      "Delete Host", IDC_BTN_DELETE_HOST, 180, 350, 80, 20
-    PUSHBUTTON      "Scan Domain", IDC_BTN_SCAN_DOMAIN, 265, 350, 80, 20
-    DEFPUSHBUTTON   "Close", IDCANCEL, 410, 350, 80, 20
+    /* Action buttons with modern spacing */
+    PUSHBUTTON      "Add Host", IDC_BTN_ADD_HOST, 15, 395, 90, 22
+    PUSHBUTTON      "Edit Host", IDC_BTN_EDIT_HOST, 110, 395, 90, 22
+    PUSHBUTTON      "Delete Host", IDC_BTN_DELETE_HOST, 205, 395, 90, 22
+    PUSHBUTTON      "Scan Domain", IDC_BTN_SCAN_DOMAIN, 300, 395, 95, 22
+    DEFPUSHBUTTON   "Close", IDCANCEL, 445, 395, 90, 22
 END
 
 /*
- * Add/Edit Host Dialog
+ * Add/Edit Host Dialog - Modern Styled
  * 
  * Dialog for entering hostname and description for an RDP server.
+ * The multiline description field allows for detailed notes.
  */
-IDD_ADD_HOST DIALOGEX 0, 0, 350, 150
-STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+IDD_ADD_HOST DIALOGEX 0, 0, 380, 170
+STYLE DS_MODALFRAME | DS_CENTER | DS_SHELLFONT | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "WinRDP - Add/Edit Host"
 FONT 9, "Segoe UI"
 BEGIN
-    LTEXT           "Hostname:", IDC_STATIC, 10, 15, 60, 10
-    EDITTEXT        IDC_EDIT_HOSTNAME, 80, 13, 250, 14, ES_AUTOHSCROLL
+    /* Hostname field - taller for better text centering */
+    LTEXT           "Hostname:", IDC_STATIC, 15, 20, 65, 10
+    EDITTEXT        IDC_EDIT_HOSTNAME, 90, 17, 275, 22, ES_AUTOHSCROLL
     
-    LTEXT           "Description:", IDC_STATIC, 10, 40, 60, 10
-    EDITTEXT        IDC_EDIT_DESCRIPTION, 80, 38, 250, 60, 
-                    ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL
+    /* Description field - multiline with modern appearance */
+    LTEXT           "Description:", IDC_STATIC, 15, 50, 65, 10
+    EDITTEXT        IDC_EDIT_DESCRIPTION, 90, 47, 275, 83, 
+                    ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN | WS_VSCROLL
     
-    DEFPUSHBUTTON   "Save", IDOK, 180, 120, 70, 20
-    PUSHBUTTON      "Cancel", IDCANCEL, 260, 120, 70, 20
+    /* Action buttons with modern spacing */
+    DEFPUSHBUTTON   "Save", IDOK, 205, 145, 80, 20
+    PUSHBUTTON      "Cancel", IDCANCEL, 290, 145, 75, 20
 END
 

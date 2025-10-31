@@ -26,6 +26,8 @@
 #define IDC_EDIT_PASSWORD       201
 #define IDC_BTN_SAVE_CREDS      202
 #define IDC_BTN_DELETE_CREDS    203
+#define IDC_STATIC_STATUS       204
+#define IDC_STATIC              -1
 
 // Control IDs - Main Dialog
 #define IDC_LIST_SERVERS        210

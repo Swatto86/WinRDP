@@ -46,6 +46,12 @@ HINSTANCE g_hInstance = NULL;
 NOTIFYICONDATA g_nid = {0};
 HWND g_hwndMain = NULL;
 
+// Dialog instance tracking
+static HWND g_hwndLoginDialog = NULL;
+static HWND g_hwndMainDialog = NULL;
+static HWND g_hwndHostDialog = NULL;
+static HWND g_hwndAddHostDialog = NULL;
+
 /*
  * WinMain - Entry point for Windows GUI applications
  * 
@@ -66,6 +72,22 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     UNREFERENCED_PARAMETER(lpCmdLine);
     UNREFERENCED_PARAMETER(nCmdShow);
 
+    // Check for single instance using a named mutex
+    HANDLE hMutex = CreateMutexW(NULL, TRUE, L"WinRDP_SingleInstance_Mutex");
+    if (GetLastError() == ERROR_ALREADY_EXISTS)
+    {
+        // Another instance is already running
+        MessageBoxW(NULL, 
+                   L"WinRDP is already running.\n\nPlease check the system tray for the running instance.",
+                   L"WinRDP - Already Running",
+                   MB_OK | MB_ICONINFORMATION);
+        
+        if (hMutex)
+            CloseHandle(hMutex);
+        
+        return 0;
+    }
+
     // Store instance handle globally for later use
     g_hInstance = hInstance;
 
@@ -84,12 +106,12 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     wc.cbClsExtra = 0;
     wc.cbWndExtra = 0;
     wc.hInstance = hInstance;
-    wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+    wc.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_MAINICON));
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
     wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
     wc.lpszMenuName = NULL;
     wc.lpszClassName = APP_CLASS_NAME;
-    wc.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
+    wc.hIconSm = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_MAINICON));
 
     if (!RegisterClassExW(&wc))
     {
@@ -128,7 +150,13 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     // UpdateWindow(g_hwndMain);
 
     // Show the login dialog
-    DialogBox(hInstance, MAKEINTRESOURCE(IDD_LOGIN), g_hwndMain, LoginDialogProc);
+    INT_PTR loginResult = DialogBox(hInstance, MAKEINTRESOURCE(IDD_LOGIN), g_hwndMain, LoginDialogProc);
+    
+    // If credentials were saved, show the main server list dialog
+    if (loginResult == IDOK)
+    {
+        DialogBox(hInstance, MAKEINTRESOURCE(IDD_MAIN), g_hwndMain, MainDialogProc);
+    }
 
     /*
      * The Message Loop
@@ -149,6 +177,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
     // Clean up system tray icon before exiting
     HideSystemTrayIcon(g_hwndMain);
+
+    // Release the mutex
+    if (hMutex)
+        CloseHandle(hMutex);
 
     return (int)msg.wParam;
 }
@@ -181,8 +213,16 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             {
                 case WM_LBUTTONUP:
                     // Left click - show main dialog
-                    DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_MAIN), 
-                             hwnd, MainDialogProc);
+                    if (g_hwndMainDialog == NULL)
+                    {
+                        DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_MAIN), 
+                                 hwnd, MainDialogProc);
+                    }
+                    else
+                    {
+                        // Bring existing dialog to front
+                        SetForegroundWindow(g_hwndMainDialog);
+                    }
                     break;
 
                 case WM_RBUTTONUP:
@@ -198,8 +238,16 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             {
                 case IDM_OPEN:
                     // Show main dialog
-                    DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_MAIN), 
-                             hwnd, MainDialogProc);
+                    if (g_hwndMainDialog == NULL)
+                    {
+                        DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_MAIN), 
+                                 hwnd, MainDialogProc);
+                    }
+                    else
+                    {
+                        // Bring existing dialog to front
+                        SetForegroundWindow(g_hwndMainDialog);
+                    }
                     break;
 
                 case IDM_ABOUT:
@@ -236,7 +284,7 @@ BOOL InitSystemTray(HWND hwnd)
     g_nid.uID = ID_TRAYICON;
     g_nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
     g_nid.uCallbackMessage = WM_TRAYICON;
-    g_nid.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+    g_nid.hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_MAINICON));
     StringCchCopyW(g_nid.szTip, ARRAYSIZE(g_nid.szTip), L"WinRDP Manager");
 
     return Shell_NotifyIcon(NIM_ADD, &g_nid);
@@ -305,8 +353,16 @@ INT_PTR CALLBACK LoginDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
     {
         case WM_INITDIALOG:
         {
+            // Track this dialog instance
+            g_hwndLoginDialog = hwnd;
+            
             // Dialog is being initialized
             CenterWindow(hwnd);
+            
+            // Set dialog icon
+            HICON hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_MAINICON));
+            SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+            SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
             
             // Try to load existing credentials
             wchar_t username[MAX_USERNAME_LEN];
@@ -318,8 +374,15 @@ INT_PTR CALLBACK LoginDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
                 SetDlgItemTextW(hwnd, IDC_EDIT_USERNAME, username);
                 SetDlgItemTextW(hwnd, IDC_EDIT_PASSWORD, password);
                 
-                // Update the status text
-                SetDlgItemTextW(hwnd, IDC_STATIC, L"Credentials are saved");
+                // Show compact status message
+                SetDlgItemTextW(hwnd, IDC_STATIC_STATUS, L"✓ Credentials are saved");
+                ShowWindow(GetDlgItem(hwnd, IDC_BTN_DELETE_CREDS), SW_SHOW);
+            }
+            else
+            {
+                // No credentials - hide the delete button
+                ShowWindow(GetDlgItem(hwnd, IDC_BTN_DELETE_CREDS), SW_HIDE);
+                SetDlgItemTextW(hwnd, IDC_STATIC_STATUS, L"");
             }
             
             return TRUE;
@@ -371,19 +434,27 @@ INT_PTR CALLBACK LoginDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
                     {
                         SetDlgItemTextW(hwnd, IDC_EDIT_USERNAME, L"");
                         SetDlgItemTextW(hwnd, IDC_EDIT_PASSWORD, L"");
+                        SetDlgItemTextW(hwnd, IDC_STATIC_STATUS, L"");
+                        ShowWindow(GetDlgItem(hwnd, IDC_BTN_DELETE_CREDS), SW_HIDE);
                         ShowInfoMessage(hwnd, L"Credentials deleted.");
                     }
                     return TRUE;
                 }
 
                 case IDCANCEL:
+                    g_hwndLoginDialog = NULL;
                     EndDialog(hwnd, IDCANCEL);
                     return TRUE;
             }
             break;
 
         case WM_CLOSE:
+            g_hwndLoginDialog = NULL;
             EndDialog(hwnd, IDCANCEL);
+            return TRUE;
+            
+        case WM_DESTROY:
+            g_hwndLoginDialog = NULL;
             return TRUE;
     }
 
@@ -402,7 +473,15 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
     {
         case WM_INITDIALOG:
         {
+            // Track this dialog instance
+            g_hwndMainDialog = hwnd;
+            
             CenterWindow(hwnd);
+            
+            // Set dialog icon
+            HICON hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_MAINICON));
+            SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+            SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
             
             // Get ListView handle
             HWND hList = GetDlgItem(hwnd, IDC_LIST_SERVERS);
@@ -488,9 +567,17 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
                 case IDC_BTN_MANAGE:
                 {
-                    // Show host management dialog
-                    DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_HOSTS),
-                             hwnd, HostDialogProc);
+                    // Show host management dialog (only if not already open)
+                    if (g_hwndHostDialog == NULL)
+                    {
+                        DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_HOSTS),
+                                 hwnd, HostDialogProc);
+                    }
+                    else
+                    {
+                        // Bring existing dialog to front
+                        SetForegroundWindow(g_hwndHostDialog);
+                    }
                     
                     // Reload the list after managing hosts
                     HWND hList = GetDlgItem(hwnd, IDC_LIST_SERVERS);
@@ -526,6 +613,7 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                         FreeHosts(hosts, hostCount);
                         hosts = NULL;
                     }
+                    g_hwndMainDialog = NULL;
                     EndDialog(hwnd, IDCANCEL);
                     return TRUE;
             }
@@ -537,7 +625,12 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                 FreeHosts(hosts, hostCount);
                 hosts = NULL;
             }
+            g_hwndMainDialog = NULL;
             EndDialog(hwnd, IDCANCEL);
+            return TRUE;
+            
+        case WM_DESTROY:
+            g_hwndMainDialog = NULL;
             return TRUE;
     }
 
@@ -557,7 +650,15 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
     {
         case WM_INITDIALOG:
         {
+            // Track this dialog instance
+            g_hwndHostDialog = hwnd;
+            
             CenterWindow(hwnd);
+            
+            // Set dialog icon
+            HICON hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_MAINICON));
+            SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+            SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
             
             // Get ListView handle
             HWND hList = GetDlgItem(hwnd, IDC_LIST_HOSTS);
@@ -602,7 +703,14 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             {
                 case IDC_BTN_ADD_HOST:
                 {
-                    // Show add host dialog
+                    // Show add host dialog (only if not already open)
+                    if (g_hwndAddHostDialog != NULL)
+                    {
+                        // Bring existing dialog to front
+                        SetForegroundWindow(g_hwndAddHostDialog);
+                        return TRUE;
+                    }
+                    
                     if (DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_ADD_HOST),
                                  hwnd, AddHostDialogProc) == IDOK)
                     {
@@ -631,6 +739,61 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                                 ListView_SetItemText(hList, i, 1, hosts[i].description);
                             }
                         }
+                    }
+                    return TRUE;
+                }
+
+                case IDC_BTN_EDIT_HOST:
+                {
+                    // Edit selected host
+                    HWND hList = GetDlgItem(hwnd, IDC_LIST_HOSTS);
+                    int selected = ListView_GetNextItem(hList, -1, LVNI_SELECTED);
+                    
+                    if (selected >= 0 && selected < hostCount)
+                    {
+                        // Pre-fill the Add/Edit dialog with existing data
+                        if (g_hwndAddHostDialog != NULL)
+                        {
+                            SetForegroundWindow(g_hwndAddHostDialog);
+                            return TRUE;
+                        }
+                        
+                        // Store the host to edit globally (simple approach for educational purposes)
+                        static wchar_t editHostname[MAX_HOSTNAME_LEN];
+                        static wchar_t editDescription[MAX_DESCRIPTION_LEN];
+                        wcsncpy_s(editHostname, MAX_HOSTNAME_LEN, hosts[selected].hostname, _TRUNCATE);
+                        wcsncpy_s(editDescription, MAX_DESCRIPTION_LEN, hosts[selected].description, _TRUNCATE);
+                        
+                        // Show edit dialog
+                        if (DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_ADD_HOST),
+                                     hwnd, AddHostDialogProc) == IDOK)
+                        {
+                            // Reload the list
+                            ListView_DeleteAllItems(hList);
+                            
+                            FreeHosts(hosts, hostCount);
+                            hosts = NULL;
+                            hostCount = 0;
+                            
+                            if (LoadHosts(&hosts, &hostCount))
+                            {
+                                for (int i = 0; i < hostCount; i++)
+                                {
+                                    LVITEMW item = {0};
+                                    item.mask = LVIF_TEXT;
+                                    item.iItem = i;
+                                    item.iSubItem = 0;
+                                    item.pszText = hosts[i].hostname;
+                                    ListView_InsertItem(hList, &item);
+                                    
+                                    ListView_SetItemText(hList, i, 1, hosts[i].description);
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        ShowErrorMessage(hwnd, L"Please select a host to edit.");
                     }
                     return TRUE;
                 }
@@ -682,12 +845,31 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                     return TRUE;
                 }
 
+                case IDC_BTN_SCAN_DOMAIN:
+                {
+                    // Scan Active Directory domain for computers
+                    ShowInfoMessage(hwnd, 
+                        L"Domain Scanning:\n\n"
+                        L"This feature would scan your Active Directory domain for computers.\n\n"
+                        L"Implementation requires:\n"
+                        L"• NetAPI32 functions (NetServerEnum)\n"
+                        L"• Active Directory Service Interfaces (ADSI)\n"
+                        L"• WMI (Windows Management Instrumentation)\n\n"
+                        L"For this educational version, manually add hosts using 'Add Host'.\n\n"
+                        L"Example hosts to add:\n"
+                        L"• server.domain.com\n"
+                        L"• 192.168.1.100\n"
+                        L"• PC-NAME");
+                    return TRUE;
+                }
+
                 case IDCANCEL:
                     if (hosts != NULL)
                     {
                         FreeHosts(hosts, hostCount);
                         hosts = NULL;
                     }
+                    g_hwndHostDialog = NULL;
                     EndDialog(hwnd, IDCANCEL);
                     return TRUE;
             }
@@ -699,7 +881,12 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                 FreeHosts(hosts, hostCount);
                 hosts = NULL;
             }
+            g_hwndHostDialog = NULL;
             EndDialog(hwnd, IDCANCEL);
+            return TRUE;
+            
+        case WM_DESTROY:
+            g_hwndHostDialog = NULL;
             return TRUE;
     }
 
@@ -717,8 +904,19 @@ INT_PTR CALLBACK AddHostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
     switch (msg)
     {
         case WM_INITDIALOG:
+        {
+            // Track this dialog instance
+            g_hwndAddHostDialog = hwnd;
+            
             CenterWindow(hwnd);
+            
+            // Set dialog icon
+            HICON hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_MAINICON));
+            SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+            SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+            
             return TRUE;
+        }
 
         case WM_COMMAND:
             switch (LOWORD(wParam))
@@ -739,6 +937,7 @@ INT_PTR CALLBACK AddHostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
                     
                     if (AddHost(hostname, description))
                     {
+                        g_hwndAddHostDialog = NULL;
                         EndDialog(hwnd, IDOK);
                     }
                     else
@@ -749,13 +948,19 @@ INT_PTR CALLBACK AddHostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
                 }
 
                 case IDCANCEL:
+                    g_hwndAddHostDialog = NULL;
                     EndDialog(hwnd, IDCANCEL);
                     return TRUE;
             }
             break;
 
         case WM_CLOSE:
+            g_hwndAddHostDialog = NULL;
             EndDialog(hwnd, IDCANCEL);
+            return TRUE;
+            
+        case WM_DESTROY:
+            g_hwndAddHostDialog = NULL;
             return TRUE;
     }
 
