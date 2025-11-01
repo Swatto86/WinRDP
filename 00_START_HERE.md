@@ -61,8 +61,6 @@ The app will:
 7. **MEMORY_MANAGEMENT.md** ← C memory guide
 8. **APPLICATION_FLOW_DIAGRAM.md** ← Architecture visualization
 9. **CHANGELOG.md** ← Version history
-10. **DARK_MODE.md** ← Dark mode implementation
-11. **FUNCTIONALITY_TEST.md** ← Testing procedures
 
 ## 🎯 What You'll Learn
 

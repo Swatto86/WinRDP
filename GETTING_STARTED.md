@@ -252,6 +252,48 @@ Every file in `src/` is heavily commented. Read the comments as you go—they ex
 - [ ] I can work with files using C file I/O
 - [ ] I can compile and debug my own changes
 
+## 🧪 Testing Your Changes
+
+### Quick Test Checklist
+
+**Application Startup:**
+- [x] Single instance enforcement works
+- [x] System tray icon appears
+- [x] Login dialog appears
+- [x] Modern UI enabled
+
+**Credential Management:**
+- [x] Save/load global credentials
+- [x] Save/load per-host credentials
+- [x] Delete credentials
+- [x] Per-host fallback to global
+
+**Host Management:**
+- [x] Add new hosts
+- [x] Edit existing hosts
+- [x] Delete hosts
+- [x] Search/filter works
+
+**Advanced Features:**
+- [x] Global hotkey (Ctrl+Shift+R)
+- [x] Bulk delete (Ctrl+Shift+Alt+D)
+- [x] Network discovery
+- [x] Dark mode detection
+
+**System Integration:**
+- [x] Autostart toggle works
+- [x] RDP connections launch
+- [x] CSV file persists data
+- [x] Registry operations
+
+### Testing Dark Mode
+1. Open Windows Settings → Personalization → Colors
+2. Choose "Dark" as app mode
+3. Launch WinRDP
+4. Verify all dialogs display in dark mode
+
+---
+
 ## 🚀 What's Next?
 
 Once you're comfortable with this codebase:

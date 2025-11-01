@@ -80,8 +80,6 @@ pacman -S mingw-w64-x86_64-gcc
 
 **Reference:**
 - **CHANGELOG.md** - Version history and changes
-- **DARK_MODE.md** - Dark mode implementation
-- **FUNCTIONALITY_TEST.md** - Testing procedures
 
 **All files are heavily commented for educational purposes!**
 

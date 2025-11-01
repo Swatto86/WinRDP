@@ -610,6 +610,61 @@ EDITTEXT IDC_EDIT, 10, 10, 200, 22
 
 ---
 
+## Dark Mode Implementation
+
+### Detection
+WinRDP automatically detects Windows dark mode by reading:
+```
+HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize
+Value: AppsUseLightTheme
+```
+- **0** = Dark Mode enabled
+- **1** = Light Mode enabled (default)
+
+### Files
+- `src/darkmode.h` - Dark mode API declarations
+- `src/darkmode.c` - Dark mode implementation
+
+### Key Functions
+1. **`IsDarkModeEnabled()`** - Detects Windows dark mode setting
+2. **`InitDarkMode()`** - Initializes dark mode (called once at startup)
+3. **`ApplyDarkModeToDialog()`** - Applies dark mode to a dialog
+4. **`HandleDarkModeMessages()`** - Processes dark mode messages
+
+### Message Handling
+Dark mode requires special handling of Windows messages:
+- `WM_CTLCOLORDLG` - Dark background
+- `WM_CTLCOLORSTATIC` - Dark labels
+- `WM_CTLCOLOREDIT` - Dark text boxes
+- `WM_CTLCOLORLISTBOX` - Dark list boxes
+
+### Implementation Example
+```c
+// In dialog WM_INITDIALOG:
+case WM_INITDIALOG:
+    ApplyDarkModeToDialog(hwnd);
+    return TRUE;
+
+// Add after main message processing:
+INT_PTR result = HandleDarkModeMessages(hwnd, msg, wParam, lParam);
+if (result != 0)
+    return result;
+```
+
+### API Functions
+- `RegGetValueW` - Read registry safely
+- `CreateSolidBrush` - Create dark background brushes
+- `SetClassLongPtr` - Set dialog background
+- `GetProcAddress` - Load Windows 10+ dark mode APIs
+- `DwmSetWindowAttribute` - Dark title bars (Windows 10 1809+)
+
+### Compatibility
+- **Windows 7+** - Basic dark mode support
+- **Windows 10 1809+** - Full support including dark title bars
+- **Windows 11** - Full support with native theming
+
+---
+
 ## Further Learning
 
 1. **Charles Petzold - "Programming Windows"**: The Bible of Windows programming
