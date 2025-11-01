@@ -205,3 +205,36 @@ BEGIN
     PUSHBUTTON      "Cancel", IDCANCEL, 325, 148, 75, 22
 END
 
+/*
+ * About Dialog - Application Information
+ * 
+ * Displays application information, version, and author attribution.
+ */
+IDD_ABOUT DIALOGEX 0, 0, 370, 220
+STYLE DS_MODALFRAME | DS_CENTER | DS_SHELLFONT | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "About WinRDP"
+FONT 9, "Segoe UI"
+BEGIN
+    /* Application title */
+    LTEXT           "WinRDP", IDC_STATIC, 20, 20, 100, 16
+    LTEXT           "Version 1.0.0", IDC_STATIC, 20, 40, 100, 10
+    
+    /* Separator */
+    CONTROL         "", IDC_STATIC, "Static", SS_ETCHEDHORZ, 20, 60, 330, 1
+    
+    /* Description */
+    LTEXT           "A lightweight RDP connection manager written in pure C.", IDC_STATIC, 20, 75, 330, 10
+    
+    /* Author attribution */
+    LTEXT           "Created by Swatto", IDC_STATIC, 20, 105, 330, 10
+    
+    /* Features list */
+    LTEXT           "Features:", IDC_STATIC, 20, 130, 330, 10
+    LTEXT           "• Secure credential management", IDC_STATIC, 30, 148, 310, 10
+    LTEXT           "• Global hotkey support (Ctrl+Shift+R)", IDC_STATIC, 30, 163, 310, 10
+    LTEXT           "• Network computer discovery", IDC_STATIC, 30, 178, 310, 10
+    
+    /* OK button */
+    DEFPUSHBUTTON   "OK", IDOK, 265, 185, 85, 25
+END
+

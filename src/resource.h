@@ -22,6 +22,7 @@
 #define IDD_ADD_HOST            103
 #define IDD_SCAN_RESULTS        104
 #define IDD_SCAN_DOMAIN         105
+#define IDD_ABOUT               106
 
 // Control IDs - Login Dialog
 #define IDC_EDIT_USERNAME       200
@@ -68,9 +69,10 @@
 // Menu IDs
 #define IDM_OPEN                300
 #define IDM_EXIT                301
-#define IDM_ABOUT               302
+#define IDM_ABOUT               302  // Used for autostart menu item
 #define IDM_DELETE_ALL          303
 #define IDM_GLOBAL_HOTKEY       304
+#define IDM_ABOUT_DIALOG        305  // About dialog menu item
 
 // System Tray
 #define ID_TRAYICON             400

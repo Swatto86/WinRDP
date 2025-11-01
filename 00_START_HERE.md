@@ -2,7 +2,17 @@
 
 Welcome to **WinRDP**, an educational project for learning **Windows API programming in pure C**!
 
-## 🚀 Quick Start (3 Steps)
+## 🚀 Quick Start
+
+### For End Users
+
+**Already compiled?** Just run the installer:
+1. Download `WinRDP-Setup-1.0.0.exe`
+2. Double-click to install
+3. Launch from Start Menu or system tray
+4. Right-click tray icon → "About" for details
+
+### For Developers (3 Steps)
 
 ### 1️⃣ Install a Compiler
 
@@ -42,11 +52,17 @@ The app will:
 
 **Read these in order:**
 
-1. **C_LANGUAGE_PRIMER.md** ← ⭐ NEW! C language concepts explained (START HERE if new to C)
-2. **BUILD_INSTRUCTIONS.md** ← How to compile the project
+1. **BUILD.md** ← Installation and build instructions
+2. **C_LANGUAGE_PRIMER.md** ← C language concepts (START HERE if new to C)
 3. **README.md** ← Overview and features
 4. **GETTING_STARTED.md** ← Learning path and exercises
 5. **PROJECT_SUMMARY.md** ← Architecture and technical details
+6. **CODE_COMMENTARY.md** ← Windows API deep-dive
+7. **MEMORY_MANAGEMENT.md** ← C memory guide
+8. **APPLICATION_FLOW_DIAGRAM.md** ← Architecture visualization
+9. **CHANGELOG.md** ← Version history
+10. **DARK_MODE.md** ← Dark mode implementation
+11. **FUNCTIONALITY_TEST.md** ← Testing procedures
 
 ## 🎯 What You'll Learn
 
@@ -107,7 +123,14 @@ WinRDP/
 - Launch `build\WinRDP.exe`
 - Try adding a server and connecting
 
-### Step 2: Read the Code
+### Step 2: Create the Installer (Optional)
+To build a professional installer:
+```cmd
+build-installer.bat
+```
+Creates `WinRDP-Setup-1.0.0.exe` ready for distribution!
+
+### Step 3: Read the Code
 Start with these files in order:
 1. `C_LANGUAGE_PRIMER.md` - Understand C concepts (if you haven't already)
 2. `src/hosts.c` - **Best file for learning pointers!** Read LoadHosts() thoroughly
@@ -116,14 +139,14 @@ Start with these files in order:
 5. `src/credentials.c` - Learn Credential Manager
 6. `src/rdp.c` - RDP file generation
 
-### Step 3: Make Changes
+### Step 4: Make Changes
 Try these exercises:
 - Change the window title
 - Add a new button to a dialog
 - Add a new column to the host list
 - Save an additional setting
 
-### Step 4: Explore Advanced Topics
+### Step 5: Explore Advanced Topics
 - Add connection history (already implemented: search functionality ✓)
 - Create host groups
 - Add custom RDP settings per host
@@ -226,7 +249,10 @@ Happy coding! 🖥️
 
 **Next Steps:**
 1. Open `build.bat` and run it
-2. Read `GETTING_STARTED.md` for the learning path
-3. Explore `src/main.c` to understand the code
-4. Try the exercises and build your own features!
+2. Try building the installer with `build-installer.bat`
+3. Read `GETTING_STARTED.md` for the learning path
+4. Explore `src/main.c` to understand the code
+5. Try the exercises and build your own features!
+
+**Credits:** Created by Swatto - A professional Windows API learning project
 

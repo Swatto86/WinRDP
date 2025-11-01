@@ -11,7 +11,7 @@
  * - Registry operations
  * - Process launching
  * 
- * Author: Learning WinAPI
+ * Author: Swatto
  * License: Public Domain
  */
 
@@ -40,6 +40,7 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 INT_PTR CALLBACK AddHostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 INT_PTR CALLBACK ScanDomainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 INT_PTR CALLBACK ScanResultsDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+INT_PTR CALLBACK AboutDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 BOOL InitSystemTray(HWND hwnd);
 BOOL ShowSystemTrayIcon(HWND hwnd);
@@ -285,6 +286,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
                     }
                     break;
 
+                case IDM_ABOUT_DIALOG:
+                    // Show About dialog
+                    DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_ABOUT), 
+                             hwnd, AboutDialogProc);
+                    break;
+
                 case IDM_ABOUT:
                     // Toggle autostart
                     ToggleAutostart();
@@ -402,6 +409,7 @@ void ShowContextMenu(HWND hwnd)
         AppendMenuW(hMenu, autostartFlags, IDM_ABOUT, L"Start with Windows");
         
         AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
+        AppendMenuW(hMenu, MF_STRING, IDM_ABOUT_DIALOG, L"About");
         AppendMenuW(hMenu, MF_STRING, IDM_EXIT, L"Exit");
 
         // Required to make menu disappear when clicking outside
@@ -1761,6 +1769,54 @@ INT_PTR CALLBACK ScanResultsDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
                 FreeComputerList(s_computers);
                 s_computers = NULL;
             }
+            EndDialog(hwnd, IDCANCEL);
+            return TRUE;
+    }
+    
+    // Handle dark mode
+    INT_PTR result = HandleDarkModeMessages(hwnd, msg, wParam, lParam);
+    if (result != 0)
+        return result;
+    
+    return FALSE;
+}
+
+/*
+ * AboutDialogProc - Dialog procedure for the About dialog
+ * 
+ * Displays application information, version, and author credits.
+ */
+INT_PTR CALLBACK AboutDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    UNREFERENCED_PARAMETER(lParam);
+    
+    switch (msg)
+    {
+        case WM_INITDIALOG:
+            // Center the dialog on the screen
+            CenterWindow(hwnd);
+            
+            // Apply dark mode if enabled
+            ApplyDarkModeToDialog(hwnd);
+            
+            // Set dialog icon
+            HICON hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_MAINICON));
+            SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+            SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+            
+            return TRUE;
+        
+        case WM_COMMAND:
+            switch (LOWORD(wParam))
+            {
+                case IDOK:
+                case IDCANCEL:
+                    EndDialog(hwnd, IDOK);
+                    return TRUE;
+            }
+            break;
+        
+        case WM_CLOSE:
             EndDialog(hwnd, IDCANCEL);
             return TRUE;
     }

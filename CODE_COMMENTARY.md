@@ -559,6 +559,57 @@ MessageBoxA(NULL, L"Wide string", ...);  // A = narrow function
 MessageBoxW(NULL, L"Wide string", ...);  // W = wide function
 ```
 
+## UI Modernization Techniques
+
+### Application Manifest
+
+The `app.manifest` file is critical for modern appearance:
+
+```xml
+<!-- Enables modern visual styles (Windows themes) -->
+<dependency>
+  <dependentAssembly>
+    <assemblyIdentity
+      name="Microsoft.Windows.Common-Controls"
+      version="6.0.0.0"
+    />
+  </dependentAssembly>
+</dependency>
+```
+
+**What this does:**
+- Enables modern Windows theme rendering
+- Makes buttons look smooth and modern (not Win95 style)
+- ListView controls get gradient headers
+- Proper hover effects on buttons
+- Modern scrollbars
+
+**Without it:** Your app looks like Windows 95!
+
+### Vertical Text Centering
+
+**Problem:** Single-line edit controls don't support vertical text alignment.
+
+**Solution:** Make controls taller (22-24px instead of 14px)
+
+```rc
+// Standard 14px height - text appears high
+EDITTEXT IDC_EDIT, 10, 10, 200, 14
+
+// Modern 22px height - better visual centering
+EDITTEXT IDC_EDIT, 10, 10, 200, 22
+```
+
+**Benefits:**
+- No code changes needed
+- Looks more modern
+- Easier to click
+- Better touch support
+
+**Other options:** Custom owner-drawing, subclassing controls (more complex)
+
+---
+
 ## Further Learning
 
 1. **Charles Petzold - "Programming Windows"**: The Bible of Windows programming

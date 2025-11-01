@@ -2,6 +2,8 @@
 
 A lightweight Remote Desktop (RDP) connection manager written in **pure C** using the **Windows API**. This project is designed as a learning resource for understanding Windows programming concepts.
 
+**Created by Swatto**
+
 ## 🎯 Learning Objectives
 
 This project demonstrates:
@@ -25,18 +27,28 @@ This project demonstrates:
 
 ## 📋 Features
 
+### Core Features
 - Store and manage RDP server connections
-- **Per-Host Credentials** - Set individual credentials for specific hosts, or use global credentials
+- **Global Credentials** - Set once, use for all hosts
+- **Per-Host Credentials** - Individual credentials per server
 - Secure credential storage using Windows Credential Manager
 - Quick connect to saved servers
-- Search functionality for hosts
-- **Network Computer Scanning** - Automatically discover computers on your network
-- **Global Hotkey (Ctrl+Shift+R)** - Instantly open WinRDP from anywhere in Windows
-- **Bulk Delete** - Secret hotkey (Ctrl+Shift+Alt+D) to delete all hosts and credentials at once
-- System tray icon for quick access
+- Search functionality to filter servers
+- System tray icon for background operation
 - Autostart with Windows (optional)
+- **About Dialog** - Professional information and author credit
+
+### Advanced Features
+- **Global Hotkey (Ctrl+Shift+R)** - Instantly open WinRDP from anywhere in Windows
+- **Bulk Delete (Ctrl+Shift+Alt+D)** - Secret hotkey to delete all data at once
+- **Network Computer Scanning** - Automatically discover computers on your network
 - **Dark Mode Support** - Automatically follows Windows theme
+
+### Technical
 - Pure C with no external dependencies (except Windows SDK)
+- Professional NSIS installer
+- 64-bit architecture support
+- Memory-safe implementation
 
 ## 🔧 Prerequisites
 
@@ -54,19 +66,24 @@ pacman -S mingw-w64-x86_64-gcc
 
 ## 📚 Documentation
 
-**New to C or need a refresher?** Start with:
-- **C_LANGUAGE_PRIMER.md** - Comprehensive guide to all C concepts used in this project
-  - Pointers and memory management
-  - Structures and typedef
-  - Function pointers and callbacks
-  - Wide character strings
-  - Windows-specific C patterns
-
-**Other documentation:**
+**Getting Started:**
 - **00_START_HERE.md** - Quick start guide
+- **BUILD.md** - Installation and build instructions
 - **GETTING_STARTED.md** - Learning path and exercises
-- **BUILD_INSTRUCTIONS.md** - Detailed build instructions
+
+**Learning Resources:**
+- **C_LANGUAGE_PRIMER.md** - Comprehensive C concepts guide
 - **PROJECT_SUMMARY.md** - Architecture overview
+- **CODE_COMMENTARY.md** - Windows API deep-dive and implementation details
+- **MEMORY_MANAGEMENT.md** - C memory management guide
+- **APPLICATION_FLOW_DIAGRAM.md** - Architecture visualization
+
+**Reference:**
+- **CHANGELOG.md** - Version history and changes
+- **DARK_MODE.md** - Dark mode implementation
+- **FUNCTIONALITY_TEST.md** - Testing procedures
+
+**All files are heavily commented for educational purposes!**
 
 ## 🏗️ Building the Project
 
@@ -83,6 +100,16 @@ cd WinRDP
 ```
 
 The `build.bat` script will automatically detect whether you have GCC (MinGW) or MSVC installed and use the appropriate compiler.
+
+### Creating the Installer
+```bash
+# Build application and create installer
+.\build-installer.bat
+```
+
+This creates `WinRDP-Setup-1.0.0.exe` - a professional installer ready for distribution.
+
+See [BUILD.md](BUILD.md) for detailed installation and build instructions.
 
 ## 📚 Code Structure
 
@@ -103,6 +130,9 @@ WinRDP/
 │   └── *.h            - Header files
 ├── build/             - Compiled output (created by build.bat)
 ├── build.bat          - Windows build script
+├── build-installer.bat - Build application + installer
+├── installer.nsi      - NSIS installer script
+├── hosts.csv          - Sample host list
 └── README.md          - This file
 ```
 
@@ -281,6 +311,16 @@ DwmSetWindowAttribute(hwnd, 20, &darkMode, sizeof(darkMode));
 
 This is a learning project released into the public domain. Feel free to use, modify, and distribute as you wish.
 
+## 📦 Distribution
+
+WinRDP includes a professional NSIS installer for easy distribution:
+- Download `WinRDP-Setup-1.0.0.exe`
+- Double-click to install
+- Access via system tray or Start Menu
+- View "About" from tray menu for author credit
+
+See [BUILD.md](BUILD.md) for build and distribution details.
+
 ## 🎯 Future Exercise Ideas
 
 Want to extend your learning? Try adding:
@@ -302,6 +342,8 @@ Want to extend your learning? Try adding:
 ## 🙏 Acknowledgments
 
 This project was created as an educational resource for learning Windows API programming in C. It's inspired by the need for a simple, transparent RDP manager that demonstrates core Windows programming concepts.
+
+**Created by Swatto** - A professional Windows API learning project.
 
 Happy coding! 🚀
 
