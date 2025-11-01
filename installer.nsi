@@ -85,8 +85,8 @@ Section "MainSection" SEC01
     ; Copy the application files
     File "build\${EXE_NAME}"
     
-    ; Copy additional files if needed
-    ; File "hosts.csv"
+    ; Copy hosts.csv with example entries for first-time users
+    File "hosts.csv"
     
     ; Create uninstaller
     WriteUninstaller "$INSTDIR\Uninstall.exe"
