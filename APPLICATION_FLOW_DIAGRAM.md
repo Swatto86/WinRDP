@@ -15,64 +15,26 @@ This document visualizes how all components of WinRDP link together, helping you
 ## Application Startup Flow
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     Application Starts                        │
-│                    (wWinMain Entry Point)                    │
-└────────────────────────────┬────────────────────────────────┘
-                             │
-                             ▼
-                 ┌───────────────────────┐
-                 │  Check Single Instance │
-                 │    (Create Mutex)      │
-                 └───────────┬────────────┘
-                             │
-                             ▼
-                 ┌───────────────────────┐
-                 │ Initialize Common      │
-                 │ Controls (ListView)    │
-                 └───────────┬────────────┘
-                             │
-                             ▼
-                 ┌───────────────────────┐
-                 │  Initialize Dark Mode  │
-                 │   (darkmode.c)         │
-                 └───────────┬────────────┘
-                             │
-                             ▼
-                 ┌───────────────────────┐
-                 │  Register Window Class │
-                 │     (WndProc)          │
-                 └───────────┬────────────┘
-                             │
-                             ▼
-                 ┌───────────────────────┐
-                 │  Create Main Window   │
-                 │  (Hidden, for msgs)   │
-                 └───────────┬────────────┘
-                             │
-                             ▼
-                 ┌───────────────────────┐
-                 │ Initialize System Tray │
-                 │    Icon (ShellAPI)    │
-                 └───────────┬────────────┘
-                             │
-                             ▼
-                 ┌───────────────────────┐
-                 │  Register Global      │
-                 │  Hotkey (Ctrl+Shift+R)│
-                 └───────────┬────────────┘
-                             │
-                             ▼
-                 ┌───────────────────────┐
-                 │  Show Login Dialog     │
-                 │  (LoginDialogProc)     │
-                 └───────────┬────────────┘
-                             │
-                             ▼
-                 ┌───────────────────────┐
-                 │  Enter Message Loop    │
-                 │  (GetMessage/Translate)│
-                 └───────────────────────┘
+Application Starts (wWinMain Entry Point)
+    │
+    ├─> Check Single Instance (Create Mutex)
+    │
+    ├─> Initialize Common Controls (ListView)
+    │
+    ├─> Initialize Dark Mode (darkmode.c)
+    │
+    ├─> Register Window Class (WndProc)
+    │
+    ├─> Create Main Window (Hidden, for messages)
+    │
+    ├─> Initialize System Tray Icon (ShellAPI)
+    │
+    ├─> Register Global Hotkey (Ctrl+Shift+R)
+    │
+    ├─> Show Login Dialog (LoginDialogProc)
+    │
+    └─> Enter Message Loop (GetMessage/Translate)
+        └─> Application runs and processes messages
 ```
 
 ---
@@ -80,66 +42,86 @@ This document visualizes how all components of WinRDP link together, helping you
 ## Component Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           WINRDP APPLICATION                             │
-│                                                                           │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │                        MAIN MODULE (main.c)                        │   │
-│  │  ┌───────────────────────────────────────────────────────────┐   │   │
-│  │  │ • wWinMain() - Entry point                                 │   │   │
-│  │  │ • WndProc() - Main window message handler                  │   │   │
-│  │  │ • LoginDialogProc() - Credentials dialog                  │   │   │
-│  │  │ • MainDialogProc() - Server list dialog                   │   │   │
-│  │  │ • HostDialogProc() - Host management dialog               │   │   │
-│  │  │ • AddHostDialogProc() - Add/edit host dialog              │   │   │
-│  │  │ • ScanDomainDialogProc() - Network scan options           │   │   │
-│  │  │ • Message loop (GetMessage/DispatchMessage)               │   │   │
-│  │  │ • System tray management                                   │   │   │
-│  │  └───────────────────────────────────────────────────────────┘   │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
-│                                                                           │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐│
-│  │ credentials.c│  │   hosts.c     │  │    rdp.c     │  │  registry.c  ││
-│  │              │  │              │  │              │  │              ││
-│  │ • Save       │  │ • Load       │  │ • Create     │  │ • Enable     ││
-│  │ • Load       │  │ • Add        │  │ • Launch     │  │ • Disable    ││
-│  │ • Delete     │  │ • Delete     │  │ • Cleanup    │  │ • Check      ││
-│  │ • Global     │  │ • Free       │  │              │  │              ││
-│  │ • Per-Host   │  │              │  │              │  │              ││
-│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘│
-│                                                                           │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                  │
-│  │  darkmode.c  │  │  adscan.c    │  │   utils.c     │                  │
-│  │              │  │              │  │              │                  │
-│  │ • Init       │  │ • Scan       │  │ • Center     │                  │
-│  │ • Apply      │  │ • Free       │  │ • Show Msg   │                  │
-│  │ • Handle     │  │              │  │              │                  │
-│  └──────────────┘  └──────────────┘  └──────────────┘                  │
-│                                                                           │
-└─────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                      EXTERNAL SYSTEMS                                   │
-│                                                                          │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐│
-│  │ Windows      │  │   CSV File   │  │   Windows    │  │   Registry  ││
-│  │ Credential   │  │  (hosts.csv) │  │  Credential  │  │  (Autostart)││
-│  │ Manager      │  │              │  │  Manager     │  │             ││
-│  │              │  │              │  │              │  │             ││
-│  │ • Global     │  │ • Read       │  │ • Per-Host   │  │ • HKCU\...  ││
-│  │   Creds      │  │ • Write      │  │   Creds      │  │   Run       ││
-│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘│
-│                                                                          │
-│  ┌──────────────┐  ┌──────────────┐                                     │
-│  │   System     │  │   mstsc.exe  │                                     │
-│  │   Tray       │  │  (RDP Client)│                                     │
-│  │              │  │              │                                     │
-│  │ • Icon       │  │ • Launch     │                                     │
-│  │ • Context    │  │ • .rdp file  │                                     │
-│  │   Menu       │  │              │                                     │
-│  └──────────────┘  └──────────────┘                                     │
-└─────────────────────────────────────────────────────────────────────────┘
+WINRDP APPLICATION
+│
+├── MAIN MODULE (main.c)
+│   │
+│   ├── Entry Point & Window Management
+│   │   • wWinMain() - Application entry point
+│   │   • WndProc() - Main window message handler
+│   │   • Message loop (GetMessage/DispatchMessage)
+│   │
+│   └── Dialog Procedures
+│       • LoginDialogProc() - Credentials dialog
+│       • MainDialogProc() - Server list dialog
+│       • HostDialogProc() - Host management dialog
+│       • AddHostDialogProc() - Add/edit host dialog
+│       • ScanDomainDialogProc() - Network scan options
+│       • System tray management
+│
+├── Core Modules
+│   │
+│   ├── credentials.c
+│   │   • SaveCredentials() - Save global credentials
+│   │   • LoadCredentials() - Load global credentials
+│   │   • SaveRDPCredentials() - Save per-host credentials
+│   │   • LoadRDPCredentials() - Load per-host credentials
+│   │   • DeleteCredentials() - Delete credentials
+│   │
+│   ├── hosts.c
+│   │   • LoadHosts() - Read hosts from CSV
+│   │   • AddHost() - Add new host
+│   │   • DeleteHost() - Remove host
+│   │   • FreeHosts() - Free memory
+│   │
+│   ├── rdp.c
+│   │   • CreateRDPFile() - Generate RDP connection file
+│   │   • LaunchRDPWithDefaults() - Launch RDP connection
+│   │
+│   └── registry.c
+│       • EnableAutostart() - Add to Windows startup
+│       • DisableAutostart() - Remove from startup
+│       • IsAutostartEnabled() - Check status
+│       • ToggleAutostart() - Toggle state
+│
+├── Support Modules
+│   │
+│   ├── darkmode.c
+│   │   • InitDarkMode() - Initialize dark mode support
+│   │   • ApplyDarkModeToDialog() - Apply to dialog
+│   │   • ApplyDarkModeToListView() - Apply to ListView
+│   │   • HandleDarkModeMessages() - Handle color messages
+│   │
+│   ├── adscan.c
+│   │   • ScanForComputers() - Discover network computers
+│   │   • FreeComputerList() - Free scan results
+│   │
+│   └── utils.c
+│       • CenterWindow() - Center dialog on screen
+│       • ShowErrorMessage() - Display error dialog
+│       • ShowInfoMessage() - Display info dialog
+│
+└── External Systems
+    │
+    ├── Windows Credential Manager
+    │   • Global Credentials: "WinRDP:DefaultCredentials"
+    │   • Per-Host Credentials: "WinRDP:TERMSRV/hostname"
+    │
+    ├── File System
+    │   • hosts.csv - Host list storage
+    │   • %TEMP%\WinRDP_*.rdp - Temporary RDP files
+    │
+    ├── Windows Registry
+    │   • HKCU\Software\Microsoft\Windows\CurrentVersion\Run
+    │   • Autostart configuration
+    │
+    ├── System Tray
+    │   • Notification area icon
+    │   • Context menu
+    │
+    └── mstsc.exe
+        • Remote Desktop client
+        • Launched with generated RDP files
 ```
 
 ---
@@ -150,168 +132,84 @@ This document visualizes how all components of WinRDP link together, helping you
 
 ```
 User Enters Username/Password
-         │
-         ▼
-┌────────────────────────┐
-│  LoginDialogProc       │
-│  (IDOK button click)   │
-└───────────┬────────────┘
+    │
+    └─> LoginDialogProc (IDOK button click)
+        │
+        └─> GetDlgItemTextW() - Get username/password from dialog
             │
-            ▼
-┌────────────────────────┐
-│  GetDlgItemTextW()      │
-│  (Get username/password)│
-└───────────┬────────────┘
-            │
-            ▼
-┌────────────────────────┐
-│  SaveCredentials()     │
-│  (credentials.c)        │
-└───────────┬────────────┘
-            │
-            ▼
-┌────────────────────────┐
-│  CredWriteW()          │
-│  (Windows API)         │
-└───────────┬────────────┘
-            │
-            ▼
-┌────────────────────────┐
-│  Windows Credential    │
-│  Manager (Encrypted)   │
-│  Target: "WinRDP:      │
-│  DefaultCredentials"   │
-└────────────────────────┘
+            └─> SaveCredentials() (credentials.c)
+                │
+                └─> CredWriteW() (Windows API)
+                    │
+                    └─> Windows Credential Manager (Encrypted)
+                        Target: "WinRDP:DefaultCredentials"
 ```
 
 ### 2. Loading and Displaying Hosts Flow
 
 ```
 User Opens Main Dialog
-         │
-         ▼
-┌────────────────────────┐
-│  MainDialogProc       │
-│  (WM_INITDIALOG)      │
-└───────────┬────────────┘
+    │
+    └─> MainDialogProc (WM_INITDIALOG)
+        │
+        └─> LoadHosts() (hosts.c)
             │
-            ▼
-┌────────────────────────┐
-│  LoadHosts()           │
-│  (hosts.c)             │
-└───────────┬────────────┘
-            │
-            ▼
-┌────────────────────────┐
-│  _wfopen_s()           │
-│  (Open hosts.csv)      │
-└───────────┬────────────┘
-            │
-            ▼
-┌────────────────────────┐
-│  fgetws() - Read lines │
-│  parse_csv_line()      │
-│  malloc/realloc()      │
-└───────────┬────────────┘
-            │
-            ▼
-┌────────────────────────┐
-│  Return Host* array    │
-└───────────┬────────────┘
-            │
-            ▼
-┌────────────────────────┐
-│  RefreshHostListView() │
-│  ListView_InsertItem() │
-└────────────────────────┘
+            └─> _wfopen_s() - Open hosts.csv file
+                │
+                └─> fgetws() - Read lines from CSV
+                    │
+                    └─> parse_csv_line() - Parse each line
+                        │
+                        └─> malloc/realloc() - Allocate memory for Host array
+                            │
+                            └─> Return Host* array to caller
+                                │
+                                └─> RefreshHostListView()
+                                    └─> ListView_InsertItem() - Display in UI
 ```
 
 ### 3. Connecting to RDP Server Flow
 
 ```
 User Clicks Connect
-         │
-         ▼
-┌────────────────────────┐
-│  MainDialogProc        │
-│  (IDC_BTN_CONNECT)     │
-└───────────┬────────────┘
+    │
+    └─> MainDialogProc (IDC_BTN_CONNECT)
+        │
+        └─> LaunchRDPWithDefaults() (rdp.c)
             │
-            ▼
-┌────────────────────────┐
-│  LaunchRDPWithDefaults()│
-│  (rdp.c)               │
-└───────────┬────────────┘
+            ├─> LoadRDPCredentials() - Check for per-host credentials
             │
-            ├──────────────────────┐
-            │                      │
-            ▼                      ▼
-┌──────────────────┐    ┌──────────────────┐
-│ LoadRDPCredentials│    │ LoadCredentials() │
-│ (Per-Host)       │    │ (Global)         │
-└────────┬─────────┘    └────────┬─────────┘
-         │                      │
-         │                      │
-         └──────────┬───────────┘
+            └─> If not found: LoadCredentials() - Use global credentials
+                │
+                └─> Credentials found?
                     │
-                    ▼
-         ┌──────────────────┐
-         │ Credential Found? │
-         └────────┬──────────┘
-                  │
-                  ▼
-         ┌──────────────────┐
-         │ CreateRDPFile()  │
-         │ (Write .rdp file)│
-         └──────────┬────────┘
+                    ├─> Yes ──> CreateRDPFile() - Write .rdp file to %TEMP%
+                    │          │
+                    │          └─> ShellExecuteW() - Launch mstsc.exe
                     │
-                    ▼
-         ┌──────────────────┐
-         │ ShellExecuteW()   │
-         │ (Launch mstsc.exe)│
-         └──────────────────┘
+                    └─> No ──> Show error message
 ```
 
 ### 4. Adding a New Host Flow
 
 ```
 User Clicks "Add Host"
-         │
-         ▼
-┌────────────────────────┐
-│  HostDialogProc        │
-│  (IDC_BTN_ADD_HOST)    │
-└───────────┬────────────┘
+    │
+    └─> HostDialogProc (IDC_BTN_ADD_HOST)
+        │
+        └─> AddHostDialogProc - Dialog opens
             │
-            ▼
-┌────────────────────────┐
-│  AddHostDialogProc      │
-│  (Dialog opens)         │
-└───────────┬────────────┘
-            │
-            ▼
-┌────────────────────────┐
-│  User Enters:          │
-│  • Hostname            │
-│  • Description         │
-│  • (Optional) Per-Host │
-│    Credentials         │
-└───────────┬────────────┘
-            │
-            ▼
-┌────────────────────────┐
-│  AddHost()             │
-│  (hosts.c)             │
-└───────────┬────────────┘
-            │
-            ├──────────────────────┐
-            │                      │
-            ▼                      ▼
-┌──────────────────┐    ┌──────────────────┐
-│ Append to CSV    │    │ If per-host creds│
-│ (_wfopen_s,      │    │ SaveRDPCredentials│
-│  fwprintf)       │    │ (credentials.c)  │
-└──────────────────┘    └──────────────────┘
+            └─> User Enters:
+                • Hostname
+                • Description
+                • (Optional) Per-Host Credentials
+                │
+                └─> AddHost() (hosts.c)
+                    │
+                    ├─> Append to CSV (_wfopen_s, fwprintf)
+                    │
+                    └─> If per-host credentials enabled:
+                        └─> SaveRDPCredentials() (credentials.c)
 ```
 
 ---
@@ -481,95 +379,52 @@ main.c
 ### Windows Message Routing
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                  Windows OS                              │
-│  (Sends messages to application window)                 │
-└───────────────────┬─────────────────────────────────────┘
+Windows OS
+    │ (Sends messages to application window)
+    │
+    └─> Message Queue
+        • WM_CREATE
+        • WM_COMMAND
+        • WM_HOTKEY
+        • WM_TRAYICON
+        • WM_TIMER
+        • WM_NOTIFY
+        • etc.
+        │
+        └─> GetMessage() - Message Loop (main.c, wWinMain)
+            │
+            └─> TranslateMessage() - Keyboard input translation
+                │
+                └─> DispatchMessage() - Route to appropriate window procedure
                     │
-                    ▼
-┌─────────────────────────────────────────────────────────┐
-│              Message Queue                                │
-│  • WM_CREATE                                             │
-│  • WM_COMMAND                                            │
-│  • WM_HOTKEY                                             │
-│  • WM_TRAYICON                                           │
-│  • WM_TIMER                                              │
-│  • WM_NOTIFY                                             │
-│  • etc.                                                  │
-└───────────────────┬─────────────────────────────────────┘
+                    ├─> WndProc() (Main Window)
+                    │   Handles: WM_HOTKEY, WM_TRAYICON, WM_COMMAND, WM_DESTROY
                     │
-                    ▼
-┌─────────────────────────────────────────────────────────┐
-│         GetMessage() - Message Loop                     │
-│         (main.c, wWinMain)                               │
-└───────────────────┬─────────────────────────────────────┘
-                    │
-                    ▼
-┌─────────────────────────────────────────────────────────┐
-│         TranslateMessage()                                │
-│         (Keyboard input translation)                     │
-└───────────────────┬─────────────────────────────────────┘
-                    │
-                    ▼
-┌─────────────────────────────────────────────────────────┐
-│         DispatchMessage()                                 │
-│         (Routes to appropriate window procedure)         │
-└───────────────────┬─────────────────────────────────────┘
-                    │
-        ┌───────────┴───────────┐
-        │                       │
-        ▼                       ▼
-┌───────────────┐    ┌────────────────────┐
-│  WndProc()    │    │  Dialog Procedures  │
-│  (Main Window)│    │  • LoginDialogProc │
-│               │    │  • MainDialogProc  │
-│  Handles:     │    │  • HostDialogProc  │
-│  • WM_HOTKEY  │    │  • etc.            │
-│  • WM_TRAYICON│    │                     │
-│  • WM_COMMAND │    │  Handle:           │
-│  • WM_DESTROY │    │  • WM_INITDIALOG   │
-│               │    │  • WM_COMMAND      │
-│               │    │  • WM_NOTIFY       │
-│               │    │  • WM_TIMER        │
-└───────────────┘    └────────────────────┘
+                    └─> Dialog Procedures
+                        • LoginDialogProc
+                        • MainDialogProc
+                        • HostDialogProc
+                        • etc.
+                        Handle: WM_INITDIALOG, WM_COMMAND, WM_NOTIFY, WM_TIMER
 ```
 
 ### Example: Button Click Message Flow
 
 ```
 User Clicks "Connect" Button
-         │
-         ▼
-┌────────────────────────┐
-│ Windows Generates      │
-│ WM_COMMAND Message     │
-└───────────┬────────────┘
+    │
+    └─> Windows Generates WM_COMMAND Message
+        │
+        └─> GetMessage() Receives Message from Queue
             │
-            ▼
-┌────────────────────────┐
-│ GetMessage() Receives  │
-│ Message from Queue     │
-└───────────┬────────────┘
-            │
-            ▼
-┌────────────────────────┐
-│ DispatchMessage()      │
-│ Routes to Dialog Proc  │
-└───────────┬────────────┘
-            │
-            ▼
-┌────────────────────────┐
-│ MainDialogProc()       │
-│ WM_COMMAND Handler     │
-└───────────┬────────────┘
-            │
-            ▼
-┌────────────────────────┐
-│ Case IDC_BTN_CONNECT   │
-│ • Get selected item    │
-│ • Get hostname         │
-│ • Call LaunchRDP()     │
-└────────────────────────┘
+            └─> DispatchMessage() Routes to Dialog Procedure
+                │
+                └─> MainDialogProc() - WM_COMMAND Handler
+                    │
+                    └─> Case IDC_BTN_CONNECT:
+                        • Get selected item from ListView
+                        • Get hostname
+                        • Call LaunchRDP()
 ```
 
 ---
@@ -605,75 +460,44 @@ User Clicks "Connect" Button
 
 ## File and Data Structure Flow
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    hosts.csv                             │
-│  (Plain text, UTF-8, editable)                          │
-│                                                           │
-│  hostname,description                                    │
-│  server01.example.com,Production Server                  │
-│  dc01.domain.local,Domain Controller                     │
-└───────────────────┬─────────────────────────────────────┘
-                    │
-                    ▼
-         ┌──────────────────┐
-         │  LoadHosts()      │
-         │  (hosts.c)         │
-         └────────┬───────────┘
-                  │
-                  ▼
-         ┌──────────────────┐
-         │  Host* Array      │
-         │  (malloc/realloc) │
-         └────────┬───────────┘
-                  │
-                  ▼
-         ┌──────────────────┐
-         │  ListView        │
-         │  (Display)       │
-         └──────────────────┘
-```
+### Hosts CSV File Flow
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│         Windows Credential Manager                      │
-│         (Encrypted by OS)                               │
-│                                                          │
-│  Global Credentials:                                    │
-│    Target: "WinRDP:DefaultCredentials"                  │
-│    Username: "domain\user"                              │
-│    Password: [encrypted blob]                           │
-│                                                          │
-│  Per-Host Credentials:                                  │
-│    Target: "WinRDP:TERMSRV/server01"                   │
-│    Username: "admin"                                     │
-│    Password: [encrypted blob]                           │
-└───────────────────┬─────────────────────────────────────┘
+hosts.csv (Plain text, UTF-8, editable)
+    hostname,description
+    server01.example.com,Production Server
+    dc01.domain.local,Domain Controller
+    │
+    └─> LoadHosts() (hosts.c)
+        │
+        └─> Host* Array (malloc/realloc) - In memory
+            │
+            └─> ListView - Display in UI
+```
+
+### Credentials Flow
+
+```
+Windows Credential Manager (Encrypted by OS)
+    │
+    ├─> Global Credentials:
+    │   Target: "WinRDP:DefaultCredentials"
+    │   Username: "domain\user"
+    │   Password: [encrypted blob]
+    │
+    └─> Per-Host Credentials:
+        Target: "WinRDP:TERMSRV/server01"
+        Username: "admin"
+        Password: [encrypted blob]
+        │
+        └─> CredReadW() (credentials.c)
+            │
+            └─> Username/Password (In Memory)
+                │
+                └─> CreateRDPFile() (rdp.c)
                     │
-                    ▼
-         ┌──────────────────┐
-         │  CredReadW()       │
-         │  (credentials.c)  │
-         └────────┬───────────┘
-                  │
-                  ▼
-         ┌──────────────────┐
-         │  Username/Password│
-         │  (In Memory)      │
-         └────────┬───────────┘
-                  │
-                  ▼
-         ┌──────────────────┐
-         │  CreateRDPFile()  │
-         │  (rdp.c)          │
-         └────────┬───────────┘
-                  │
-                  ▼
-         ┌──────────────────┐
-         │  %TEMP%\          │
-         │  WinRDP_*.rdp     │
-         │  (Temporary file)  │
-         └──────────────────┘
+                    └─> %TEMP%\WinRDP_*.rdp (Temporary file)
+                        └─> Used by mstsc.exe for connection
 ```
 
 ---
