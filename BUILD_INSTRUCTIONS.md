@@ -50,12 +50,14 @@ gcc -Wall -Wextra -std=c11 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE -c src/cre
 gcc -Wall -Wextra -std=c11 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE -c src/hosts.c -o build/obj/hosts.o
 gcc -Wall -Wextra -std=c11 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE -c src/rdp.c -o build/obj/rdp.o
 gcc -Wall -Wextra -std=c11 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE -c src/registry.c -o build/obj/registry.o
+gcc -Wall -Wextra -std=c11 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE -c src/darkmode.c -o build/obj/darkmode.o
+gcc -Wall -Wextra -std=c11 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE -c src/adscan.c -o build/obj/adscan.o
 
 REM Compile resources
 windres src/resources.rc -o build/obj/resources.o
 
 REM Link everything
-gcc -mwindows -municode -o build/WinRDP.exe build/obj/*.o -lcomctl32 -lole32 -lshell32 -ladvapi32 -lcredui -lcomdlg32
+gcc -mwindows -municode -o build/WinRDP.exe build/obj/*.o -lcomctl32 -lole32 -lshell32 -ladvapi32 -lcredui -lcomdlg32 -ldwmapi -luxtheme -lnetapi32
 ```
 
 #### Using Visual Studio:
@@ -68,7 +70,7 @@ cl /W4 /D_UNICODE /DUNICODE /D_WIN32_WINNT=0x0601 /c *.c resources.rc
 
 REM Link
 link /OUT:..\build\WinRDP.exe /SUBSYSTEM:WINDOWS *.obj resources.res ^
-     user32.lib gdi32.lib shell32.lib comctl32.lib advapi32.lib credui.lib comdlg32.lib ole32.lib
+     user32.lib gdi32.lib shell32.lib comctl32.lib advapi32.lib credui.lib comdlg32.lib ole32.lib dwmapi.lib uxtheme.lib netapi32.lib
 
 REM Clean up
 del *.obj *.res

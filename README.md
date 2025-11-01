@@ -95,6 +95,7 @@ WinRDP/
 │   ├── rdp.c          - RDP file generation and launching
 │   ├── registry.c      - Windows Registry operations
 │   ├── darkmode.c      - Dark mode detection and theming
+│   ├── adscan.c        - Active Directory/network computer discovery
 │   ├── utils.c         - Utility functions (centering windows, etc.)
 │   ├── resources.rc    - Dialog definitions, menus, strings
 │   ├── resource.h      - Resource identifiers
@@ -290,10 +291,13 @@ Want to extend your learning? Try adding:
 4. **Custom RDP Settings** - Per-host resolution, color depth, etc.
 5. **LDAP Integration** - Scan Active Directory for servers
 6. ✅ **Dark Mode** - Support Windows dark theme (IMPLEMENTED!)
-7. **Hotkeys** - Global hotkeys to show/hide window
-8. **Multi-monitor Support** - Choose which monitor for RDP
-9. **Port Scanning** - Check if port 3389 is open
-10. **Encryption** - Additional encryption layer for CSV file
+7. ✅ **Global Hotkeys** - Instantly open from anywhere (IMPLEMENTED!)
+8. ✅ **Network Scanning** - Auto-discover computers (IMPLEMENTED!)
+9. ✅ **Per-Host Credentials** - Individual credentials per server (IMPLEMENTED!)
+10. **Multi-monitor Support** - Choose which monitor for RDP
+11. **Port Scanning** - Check if port 3389 is open
+12. **Encryption** - Additional encryption layer for CSV file
+13. **Connection Status** - Show online/offline indicators
 
 ## 🙏 Acknowledgments
 

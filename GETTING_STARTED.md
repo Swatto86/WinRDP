@@ -110,6 +110,39 @@ By studying and building this project, you'll understand:
 - Add more RDP options (screen resolution, color depth)
 - Create a preview of RDP settings
 
+#### Global Hotkeys (`src/main.c`)
+**Learn:**
+- `RegisterHotKey()` / `UnregisterHotKey()` APIs
+- `WM_HOTKEY` message handling
+- System-wide keyboard shortcuts
+
+**Try this:**
+- Add more global hotkeys for different actions
+- Customize hotkey combinations
+- Handle hotkey conflicts gracefully
+
+#### Dark Mode (`src/darkmode.c`)
+**Learn:**
+- Registry detection of Windows theme
+- `DwmSetWindowAttribute()` for dark title bars
+- `WM_CTLCOLOR*` message handling for control theming
+
+**Try this:**
+- Add custom dark mode colors
+- Support per-dialog theming
+- Add theme toggle
+
+#### Network Discovery (`src/adscan.c`)
+**Learn:**
+- `NetServerEnum()` API from NetAPI32
+- Computer enumeration on domain/workgroup
+- `NetApiBufferFree()` for proper memory cleanup
+
+**Try this:**
+- Filter computers by type
+- Add more network scan options
+- Display scan progress
+
 ### Phase 5: Advanced Topics
 
 #### File I/O (`src/hosts.c`)
@@ -151,10 +184,10 @@ By studying and building this project, you'll understand:
 ### Advanced
 9. **Multi-monitor support** - Choose which monitor for RDP
 10. **Port scanning** - Check if RDP port (3389) is open before connecting
-11. **Active Directory integration** - Scan AD for servers (LDAP)
-12. **Encrypted storage** - Encrypt the hosts.csv file
-13. **Global hotkey** - Press Ctrl+Alt+R to show window from anywhere
-14. **Connection profiles** - Multiple credential sets
+11. **Encrypted storage** - Encrypt the hosts.csv file
+12. **Connection profiles** - Multiple credential sets
+13. **Custom hotkeys** - Add more global hotkeys for different actions
+14. **Connection status** - Show online/offline status of hosts
 
 ## 🐛 Debugging Tips
 

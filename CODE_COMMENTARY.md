@@ -302,7 +302,128 @@ RegCloseKey(hKey);  // ALWAYS close!
 - Use appropriate hive (HKCU vs HKLM)
 - Don't write to system areas
 
-### 13. **Error Handling**
+### 13. **Dark Mode Support**
+
+Modern Windows applications should support dark mode. Here's how WinRDP implements it:
+
+```c
+// Detect Windows dark mode from registry
+BOOL IsDarkModeEnabled(void)
+{
+    HKEY hKey;
+    DWORD dwValue = 1; // Default to light mode
+    DWORD dwSize = sizeof(DWORD);
+    
+    if (RegOpenKeyExW(HKEY_CURRENT_USER,
+                      L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+                      0, KEY_READ, &hKey) == ERROR_SUCCESS)
+    {
+        RegQueryValueExW(hKey, L"AppsUseLightTheme", NULL, NULL, 
+                         (LPBYTE)&dwValue, &dwSize);
+        RegCloseKey(hKey);
+    }
+    
+    return (dwValue == 0); // 0 = Dark mode
+}
+
+// Apply dark title bar (Windows 10+)
+BOOL ApplyDarkModeToDialog(HWND hwnd)
+{
+    BOOL darkMode = IsDarkModeEnabled();
+    DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, 
+                          &darkMode, sizeof(darkMode));
+    
+    // Create brushes for dark backgrounds
+    if (darkMode) {
+        g_hBrushDialogBg = CreateSolidBrush(RGB(43, 43, 43));
+        g_hBrushControlBg = CreateSolidBrush(RGB(55, 55, 55));
+    }
+}
+
+// Handle control color messages
+HBRUSH Callback WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg) {
+        case WM_CTLCOLORDLG:
+            return g_hBrushDialogBg;  // Dialog background
+        case WM_CTLCOLORSTATIC:
+            SetTextColor((HDC)wParam, RGB(220, 220, 220));
+            SetBkColor((HDC)wParam, RGB(43, 43, 43));
+            return g_hBrushDialogBg;
+        case WM_CTLCOLOREDIT:
+            SetTextColor((HDC)wParam, RGB(220, 220, 220));
+            SetBkColor((HDC)wParam, RGB(55, 55, 55));
+            return g_hBrushControlBg;
+    }
+}
+```
+
+**Key concepts:**
+- **Registry Detection**: Reads `AppsUseLightTheme` from registry
+- **DwmSetWindowAttribute**: Modern API for dark title bars (Windows 10 1809+)
+- **WM_CTLCOLOR*** messages: Intercept control painting for custom colors
+- **GDI Brushes**: Create solid color brushes for backgrounds
+- **SetTextColor/SetBkColor**: Change text and background colors
+
+**Best practices:**
+- Detect system preference automatically
+- Use `GetProcAddress` for newer APIs (compatibility)
+- Create brushes once, reuse them
+- Clean up brushes on exit
+- Works without dark mode (graceful degradation)
+
+**Files**: `darkmode.c`, `darkmode.h`
+
+### 14. **Network Discovery**
+
+WinRDP can scan the network for computers using NetAPI32:
+
+```c
+// Scan for computers in domain/workgroup
+BOOL ScanForComputers(const wchar_t* domain, BOOL includeWorkstations,
+                      BOOL includeServers, BOOL includeDomainControllers,
+                      ComputerInfo** computers, int* count)
+{
+    SERVER_INFO_101* buffer = NULL;
+    DWORD entriesRead, totalEntries, resumeHandle = 0;
+    
+    // Call NetAPI32 to enumerate servers
+    NET_API_STATUS status = NetServerEnum(NULL, 101, (LPBYTE*)&buffer,
+                                           MAX_PREFERRED_LENGTH,
+                                           &entriesRead, &totalEntries,
+                                           SV_TYPE_ALL, NULL, &resumeHandle);
+    
+    if (status == NERR_Success) {
+        // Process the buffer...
+        // Filter by type (workstation, server, DC)
+        // Convert to ComputerInfo structures
+    }
+    
+    // ALWAYS free NetAPI buffers
+    if (buffer != NULL)
+        NetApiBufferFree(buffer);
+    
+    return TRUE;
+}
+```
+
+**Key concepts:**
+- **NetServerEnum**: Enumerates servers/computers in domain/workgroup
+- **SERVER_INFO_101**: Structure containing server information
+- **NetApiBufferFree**: Required cleanup for NetAPI buffers
+- **SV_TYPE_***: Flags for filtering server types
+- **MAX_PREFERRED_LENGTH**: Tells API to allocate buffer for all results
+
+**Best practices:**
+- Always call `NetApiBufferFree` for allocated buffers
+- Filter results by server type as needed
+- Handle NERR_Success and other return codes
+- Use MAX_PREFERRED_LENGTH for large networks
+- Resume handle for large result sets
+
+**Files**: `adscan.c`, `adscan.h`
+
+### 15. **Error Handling**
 
 ```c
 // Windows functions return different things:
@@ -325,7 +446,7 @@ if (hFile == INVALID_HANDLE_VALUE) {
 - `GetLastError()`: Gets detailed error code
 - Always check return values!
 
-### 14. **Single Instance (Mutex)**
+### 16. **Single Instance (Mutex)**
 
 ```c
 HANDLE hMutex = CreateMutexW(NULL, TRUE, L"MyApp_Mutex");
@@ -346,7 +467,7 @@ CloseHandle(hMutex);  // Release on exit
 - `CreateMutex` with same name returns handle but sets `ERROR_ALREADY_EXISTS`
 - Check error even if handle is valid!
 
-### 15. **Memory Management**
+### 17. **Memory Management**
 
 ```c
 // Allocate:
@@ -374,7 +495,7 @@ hosts = NULL;  // Good practice
 - Always `free` what you `malloc`
 - Set pointer to NULL after freeing (prevents double-free)
 
-### 16. **String Safety**
+### 18. **String Safety**
 
 ```c
 // UNSAFE:

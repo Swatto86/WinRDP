@@ -220,7 +220,51 @@ This document provides a comprehensive test plan for all WinRDP features.
 2. **Expected**: Dialogs use system theme
 3. **Expected**: Proper contrast
 
-### 7. **System Tray**
+### 7. **Global Hotkeys**
+
+#### Global Open Hotkey (Ctrl+Shift+R):
+1. Launch WinRDP (runs in system tray)
+2. From anywhere in Windows, press **Ctrl+Shift+R**
+3. **Expected**: Appropriate dialog appears:
+   - If global credentials exist: Connect to Server dialog
+   - If no credentials: Enter Credentials dialog
+4. Press **Ctrl+Shift+R** again while dialog is open
+5. **Expected**: Dialog brought to front (not duplicated)
+
+#### Bulk Delete Hotkey (Ctrl+Shift+Alt+D):
+1. Open WinRDP Main dialog
+2. Click "Manage" to open Host Management
+3. Add 3-5 test hosts
+4. Save some credentials
+5. With Host Management dialog focused, press **Ctrl+Shift+Alt+D**
+6. **Expected**: First warning dialog appears with details
+7. Click "Yes" to confirm
+8. **Expected**: Final warning dialog appears
+9. Click "Yes" to confirm
+10. **Expected**: All hosts deleted from list
+11. **Expected**: All credentials deleted
+12. **Expected**: Success message displayed
+
+### 8. **Network Scanning**
+
+#### Scan Domain:
+1. Open "Manage Hosts" dialog
+2. Click "Scan Domain" button
+3. **Expected**: Scan Domain dialog appears
+4. Enter domain/workgroup name (or leave empty for current)
+5. Choose what to include (workstations, servers, DCs)
+6. Click "Scan"
+7. **Expected**: Scanning dialog shows progress
+8. **Expected**: All discovered computers added to host list automatically
+9. **Expected**: AD descriptions preserved
+10. **Expected**: Success message shows count of computers added
+
+#### Network Scan Error Handling:
+1. Click "Scan Domain" with no network connection
+2. **Expected**: Appropriate error message shown
+3. Expected**: Host Management dialog remains open
+
+### 9. **System Tray**
 
 #### Left Click:
 1. Click tray icon
@@ -248,7 +292,7 @@ This document provides a comprehensive test plan for all WinRDP features.
 7. **Expected**: Checkmark removed
 8. **Expected**: Registry entry deleted
 
-### 8. **Error Handling**
+### 10. **Error Handling**
 
 #### Empty Fields:
 1. Try adding host with empty hostname
@@ -270,7 +314,7 @@ This document provides a comprehensive test plan for all WinRDP features.
 3. **Expected**: Error message about save failure
 4. Remove read-only attribute
 
-### 9. **Data Persistence**
+### 11. **Data Persistence**
 
 #### Restart Test:
 1. Add 5 hosts
@@ -290,7 +334,7 @@ This document provides a comprehensive test plan for all WinRDP features.
 5. **Expected**: No credentials loaded
 6. **Expected**: No errors
 
-### 10. **Performance**
+### 12. **Performance**
 
 #### Large List:
 1. Add 50+ hosts programmatically (edit CSV)
@@ -309,12 +353,6 @@ This document provides a comprehensive test plan for all WinRDP features.
 7. **Expected**: Memory released
 
 ## 🐛 Known Limitations
-
-### Scan Domain:
-- **Not Fully Implemented**: Shows informational dialog
-- **Reason**: Requires complex network APIs (NetAPI32, ADSI)
-- **Workaround**: Manually add hosts using "Add Host"
-- **Educational Note**: Implementation would require 200+ lines of network code
 
 ### Password in RDP:
 - **Limitation**: `mstsc.exe` doesn't accept password via command line (security)
@@ -339,6 +377,7 @@ Feature                  | Status | Notes
 Credential Save         | ✓/✗   |
 Credential Load         | ✓/✗   |
 Credential Delete       | ✓/✗   |
+Per-Host Credentials    | ✓/✗   |
 Add Host                | ✓/✗   |
 Edit Host               | ✓/✗   |
 Delete Host             | ✓/✗   |
@@ -348,6 +387,10 @@ Single Instance (App)   | ✓/✗   |
 Single Instance (Dialogs)| ✓/✗   |
 System Tray             | ✓/✗   |
 Autostart               | ✓/✗   |
+Global Hotkey (Ctrl+Shift+R) | ✓/✗   |
+Bulk Delete (Ctrl+Shift+Alt+D) | ✓/✗   |
+Network Scanning        | ✓/✗   |
+Dark Mode              | ✓/✗   |
 Modern UI (Manifest)    | ✓/✗   |
 DPI Awareness           | ✓/✗   |
 Custom Icon             | ✓/✗   |

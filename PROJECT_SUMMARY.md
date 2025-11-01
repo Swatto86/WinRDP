@@ -29,6 +29,8 @@
 | **Hosts** | `hosts.c` | CSV file I/O for server list |
 | **RDP Launch** | `rdp.c` | RDP file generation and mstsc.exe launching |
 | **Registry** | `registry.c` | Autostart configuration |
+| **Dark Mode** | `darkmode.c` | Dark mode detection and theming support |
+| **Network Scan** | `adscan.c` | Active Directory/network computer discovery |
 | **Resources** | `resources.rc` | UI definitions (dialogs, menus) |
 
 ### Data Flow
