@@ -3,8 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WinRDP - Windows RDP Manager by Swatto</title>
-    <meta name="description" content="Lightweight RDP connection manager written in pure C using Windows API. Created by Swatto.">
+    <title>WinRDP - Windows RDP Manager</title>
+    <meta name="description" content="Lightweight RDP connection manager written in pure C using Windows API.">
+    <meta name="keywords" content="RDP manager, Windows RDP, remote desktop, C programming, Windows API, RDP connection, WinRDP, Swatto">
+    <meta name="author" content="Swatto">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://swatto.co.uk/">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://swatto.co.uk/">
+    <meta property="og:title" content="WinRDP - Windows RDP Manager">
+    <meta property="og:description" content="Lightweight RDP connection manager written in pure C using Windows API.">
+    <meta property="og:site_name" content="Swatto">
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://swatto.co.uk/">
+    <meta name="twitter:title" content="WinRDP - Windows RDP Manager">
+    <meta name="twitter:description" content="Lightweight RDP connection manager written in pure C using Windows API.">
     <style>
         * {
             margin: 0;
@@ -26,7 +43,7 @@
         }
         
         header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
             color: white;
             padding: 60px 0;
             text-align: center;
@@ -62,7 +79,7 @@
         
         .download-button {
             display: inline-block;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
             color: white;
             padding: 18px 50px;
             border-radius: 8px;
@@ -70,13 +87,13 @@
             font-size: 1.2em;
             font-weight: 600;
             margin: 20px 0;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
             transition: transform 0.2s, box-shadow 0.2s;
         }
         
         .download-button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
         }
         
         .version-info {
@@ -100,7 +117,7 @@
         }
         
         .info-card h3 {
-            color: #667eea;
+            color: #3b82f6;
             margin-bottom: 15px;
             font-size: 1.3em;
         }
@@ -135,10 +152,10 @@
         }
         
         .section h2 {
-            color: #667eea;
+            color: #3b82f6;
             margin-bottom: 20px;
             font-size: 2em;
-            border-bottom: 3px solid #667eea;
+            border-bottom: 3px solid #3b82f6;
             padding-bottom: 10px;
         }
         
@@ -162,16 +179,16 @@
         }
         
         .tech-tag:hover {
-            background: #667eea;
+            background: #3b82f6;
             color: white;
-            border-color: #667eea;
+            border-color: #3b82f6;
             transform: translateY(-2px);
         }
         
         .tech-tag.primary {
-            background: #667eea;
+            background: #3b82f6;
             color: white;
-            border-color: #667eea;
+            border-color: #3b82f6;
         }
         
         .github-section {
@@ -229,8 +246,55 @@
             .container {
                 padding: 10px;
             }
+            
+            .section {
+                padding: 25px 20px;
+            }
+            
+            .tech-stack {
+                gap: 10px;
+                justify-content: center;
+            }
+            
+            .tech-tag {
+                font-size: 0.95em;
+                padding: 10px 18px;
+            }
         }
     </style>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "WinRDP",
+      "applicationCategory": "UtilityApplication",
+      "operatingSystem": "Windows",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "description": "Lightweight RDP connection manager written in pure C using Windows API. Educational Windows API project with complete documentation.",
+      "url": "https://swatto.co.uk/",
+      "author": {
+        "@type": "Person",
+        "name": "Swatto",
+        "url": "https://swatto.co.uk"
+      },
+      "softwareVersion": "1.0.0",
+      "screenshot": "https://swatto.co.uk/",
+      "featureList": [
+        "RDP connection management",
+        "Secure credential storage",
+        "Global hotkeys",
+        "Network discovery",
+        "Dark mode support",
+        "Search and filter"
+      ],
+      "programmingLanguage": "C",
+      "license": "https://github.com/Swatto86/WinRDP/blob/main/LICENSE"
+    }
+    </script>
 </head>
 <body>
     <header>
@@ -246,13 +310,30 @@
     <div class="container">
         <div class="download-section">
             <h2 style="margin: 0 0 20px 0; color: #333;">📥 Download</h2>
-            <p style="font-size: 1.1em; margin-bottom: 20px;">Professional installer ready to use</p>
-            <a href="https://github.com/Swatto86/WinRDP/releases/latest/download/WinRDP-Setup-1.0.0.exe" class="download-button">
+            <p style="font-size: 1.1em; margin-bottom: 20px;">Click to download the installer</p>
+            <a href="https://github.com/Swatto86/WinRDP/releases/download/1.0.0/WinRDP-Setup-1.0.0.exe" class="download-button">
                 Download WinRDP v1.0.0
             </a>
             <div class="version-info">
                 Windows 7+ (64-bit) • ~140 KB installer • NSIS-powered
             </div>
+        </div>
+        
+        <div class="section">
+            <h2>💼 How WinRDP Saves Time for System Administrators</h2>
+            <p style="margin-bottom: 20px; font-size: 1.1em; color: #555;">
+                <strong>Stop wasting time on repetitive RDP logins.</strong> WinRDP makes connecting to multiple servers seamless:
+            </p>
+            <ul style="line-height: 2.2; font-size: 1.05em;">
+                <li>✓ <strong>Automatic credential storage</strong> in Windows Credential Manager - set once, never enter passwords again</li>
+                <li>✓ <strong>Seamless connections</strong> - one-click RDP launches without any login prompts</li>
+                <li>✓ <strong>Smart credential fallback</strong> - global default credentials with per-server overrides when needed</li>
+                <li>✓ <strong>Centralized server management</strong> - all your hosts organized in one list</li>
+                <li>✓ <strong>Instant access</strong> - global hotkey (Ctrl+Shift+R) opens WinRDP from anywhere</li>
+            </ul>
+            <p style="margin-top: 25px; padding: 15px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #3b82f6; font-size: 1.05em;">
+                <strong>Result:</strong> Connect to any server in seconds instead of minutes. No more retyping credentials, memorizing hostnames, or fumbling with sticky notes.
+            </p>
         </div>
         
         <div class="info-grid">
@@ -293,20 +374,15 @@
             
             <div class="tech-stack">
                 <a href="https://github.com/Swatto86/WinRDP/blob/main/C_LANGUAGE_PRIMER.md" class="tech-tag primary">C Programming</a>
-                <a href="https://github.com/Swatto86/WinRDP/blob/main/CODE_COMMENTARY.md" class="tech-tag">Windows API</a>
-                <a href="https://github.com/Swatto86/WinRDP/blob/main/MEMORY_MANAGEMENT.md" class="tech-tag">Pointers & Memory</a>
-                <a href="https://github.com/Swatto86/WinRDP/blob/main/CODE_COMMENTARY.md" class="tech-tag">Message Handling</a>
-                <a href="https://github.com/Swatto86/WinRDP/blob/main/CODE_COMMENTARY.md" class="tech-tag">Dialog Boxes</a>
-                <a href="https://github.com/Swatto86/WinRDP/blob/main/CODE_COMMENTARY.md" class="tech-tag">System Integration</a>
-                <a href="https://github.com/Swatto86/WinRDP/blob/main/CODE_COMMENTARY.md" class="tech-tag">Credential Manager</a>
-                <a href="https://github.com/Swatto86/WinRDP/blob/main/CODE_COMMENTARY.md" class="tech-tag">Registry API</a>
-                <a href="https://github.com/Swatto86/WinRDP/blob/main/CODE_COMMENTARY.md" class="tech-tag">Network Enumeration</a>
-                <a href="https://github.com/Swatto86/WinRDP/blob/main/CODE_COMMENTARY.md#dark-mode-implementation" class="tech-tag">Dark Mode</a>
+                <a href="https://github.com/Swatto86/WinRDP/blob/main/CODE_COMMENTARY.md" class="tech-tag">Windows API Guide</a>
+                <a href="https://github.com/Swatto86/WinRDP/blob/main/MEMORY_MANAGEMENT.md" class="tech-tag">Memory Management</a>
+                <a href="https://github.com/Swatto86/WinRDP/blob/main/CODE_COMMENTARY.md#dark-mode-implementation" class="tech-tag">Dark Mode Support</a>
             </div>
             
             <p style="margin-top: 20px;">
-                <strong>Complete with:</strong> Extensive documentation, code commentary, learning exercises, 
-                and step-by-step guides. Perfect for understanding Windows programming fundamentals.
+                <strong>Complete with:</strong> Extensive documentation covering Message Handling, Dialog Boxes, 
+                System Integration, Credential Manager, Registry API, Network Enumeration, and more. 
+                Perfect for understanding Windows programming fundamentals.
             </p>
         </div>
         
@@ -314,7 +390,7 @@
             <h2>🚀 Features</h2>
             <div class="info-grid">
                 <div>
-                    <h3 style="color: #667eea; margin-bottom: 15px;">Core Features</h3>
+                    <h3 style="color: #3b82f6; margin-bottom: 15px;">Core Features</h3>
                     <ul>
                         <li>RDP connection management</li>
                         <li>Global & per-host credentials</li>
@@ -325,7 +401,7 @@
                     </ul>
                 </div>
                 <div>
-                    <h3 style="color: #667eea; margin-bottom: 15px;">Advanced Features</h3>
+                    <h3 style="color: #3b82f6; margin-bottom: 15px;">Advanced Features</h3>
                     <ul>
                         <li>Global hotkey (Ctrl+Shift+R)</li>
                         <li>Bulk delete (Ctrl+Shift+Alt+D)</li>
@@ -373,10 +449,11 @@
                 Educational Windows API Project • Public Domain License
             </p>
             <p style="margin-top: 20px; font-size: 0.85em;">
-                <a href="https://swatto.co.uk" style="color: #667eea; text-decoration: none;">swatto.co.uk</a>
+                <a href="https://swatto.co.uk" style="color: #3b82f6; text-decoration: none;">swatto.co.uk</a>
             </p>
         </div>
     </footer>
 </body>
 </html>
+
 
