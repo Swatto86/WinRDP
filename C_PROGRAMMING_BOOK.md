@@ -6110,13 +6110,3774 @@ int* ptr = &x;    // ptr points to x
 
 ---
 
-*End of Part I Preview*
+# Part III: Windows Programming Basics
 
-This book continues with comprehensive coverage of strings, structures, dynamic memory, Windows programming, and step-by-step construction of the WinRDP application. Each chapter includes:
-- Clear explanations with diagrams
-- Working code examples
-- Hands-on exercises
-- Common pitfalls to avoid
-- Building blocks toward the final application
+Welcome to Part III! You now have a solid foundation in C programming. In this part, you'll learn how to create Windows applications using the Win32 API. These chapters prepare you to build the complete WinRDP application in Parts IV and V.
 
-The complete book is approximately 800-1000 pages and takes you from absolute beginner to building a professional Windows application!
+---
+
+# Chapter 13: Introduction to Windows Programming
+
+## Welcome to Windows Development
+
+Congratulations on completing Parts I and II! You now understand C fundamentals and advanced concepts. Now it's time to apply that knowledge to build **real Windows applications**.
+
+In this chapter, you'll learn:
+- How Windows applications differ from console programs
+- The Win32 API architecture
+- The message-driven programming model
+- Key Windows concepts and terminology
+- How WinRDP fits into the Windows ecosystem
+
+## Console vs. Windows Applications
+
+### Console Programs (What You've Been Writing)
+
+```c
+#include <stdio.h>
+
+int main(void)
+{
+    printf("Hello, World!\n");
+    return 0;
+}
+```
+
+**Characteristics:**
+- Text-based interface
+- Sequential execution (top to bottom)
+- Simple input/output (printf/scanf)
+- Exits when main() returns
+
+### Windows GUI Applications
+
+Windows applications are fundamentally different:
+- **Graphical** interface (windows, buttons, menus)
+- **Event-driven** (responds to user actions)
+- **Message-based** (operating system communicates via messages)
+- **Persistent** (runs until user closes the window)
+
+**Example of Windows program structure:**
+```c
+#include <windows.h>
+
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+                   LPSTR lpCmdLine, int nCmdShow)
+{
+    // Create and register window class
+    // Create window
+    // Message loop (stays running)
+    
+    return 0;
+}
+```
+
+## The Win32 API
+
+### What is Win32 API?
+
+The **Windows API** (Application Programming Interface), also called **Win32 API**, is a collection of functions provided by Windows for building applications.
+
+**Key areas:**
+- **Window management** - Creating and managing windows
+- **Graphics** - Drawing and painting
+- **Input** - Keyboard, mouse, touch
+- **File system** - Files and directories
+- **Networking** - Network communication
+- **System services** - Registry, processes, threads
+
+### Header Files
+
+The main header for Windows programming:
+
+```c
+#include <windows.h>
+```
+
+This single header includes everything you need:
+- Window functions
+- Message definitions
+- Standard controls
+- System functions
+- Data types
+
+### Windows Data Types
+
+Windows defines special data types (they're all based on standard C types):
+
+| Windows Type | C Equivalent | Description |
+|--------------|--------------|-------------|
+| `HWND` | Pointer | Handle to a window |
+| `HINSTANCE` | Pointer | Handle to an instance (program) |
+| `LPSTR` | `char*` | Long pointer to string (ANSI) |
+| `LPWSTR` | `wchar_t*` | Long pointer to wide string (Unicode) |
+| `DWORD` | `unsigned long` | 32-bit unsigned integer |
+| `UINT` | `unsigned int` | Unsigned integer |
+| `BOOL` | `int` | Boolean (TRUE or FALSE) |
+| `LPARAM` | Long | Message parameter |
+| `WPARAM` | Word | Message parameter |
+
+**Why special types?**
+- **Portability** - Can adapt to different Windows versions
+- **Clarity** - Type names indicate purpose (HWND = window handle)
+- **Legacy** - Some names come from 16-bit Windows days
+
+### Example: Basic Windows Types
+
+```c
+HWND hwnd;              // Handle to a window
+HINSTANCE hInstance;    // Handle to current program instance
+BOOL success;           // Boolean value
+DWORD flags;            // 32-bit flags/options
+LPWSTR text;            // Pointer to wide string (Unicode)
+```
+
+## The Message-Driven Model
+
+### How Console Programs Work
+
+```
+Start → Execute line 1 → Execute line 2 → ... → End
+```
+
+Simple, sequential flow.
+
+### How Windows Programs Work
+
+```
+Start → Create Window → Enter Message Loop → Process Events → Exit
+                              ↑                    ↓
+                              └────────────────────┘
+                              (Runs until app closes)
+```
+
+**Windows programs are event-driven:**
+1. Program creates a window
+2. Enters a **message loop**
+3. Windows sends **messages** (user clicks, types, moves mouse, etc.)
+4. Program **handles** messages and responds
+5. Loop continues until user closes the application
+
+### What Are Messages?
+
+**Messages** are notifications from Windows about events:
+
+| Message | Meaning |
+|---------|---------|
+| `WM_CREATE` | Window is being created |
+| `WM_DESTROY` | Window is being destroyed |
+| `WM_PAINT` | Window needs to be redrawn |
+| `WM_LBUTTONDOWN` | Left mouse button clicked |
+| `WM_KEYDOWN` | Keyboard key pressed |
+| `WM_COMMAND` | Menu item or button clicked |
+| `WM_CLOSE` | User clicked the X button |
+
+**Message structure:**
+```c
+typedef struct {
+    HWND   hwnd;      // Window that receives the message
+    UINT   message;   // Message type (WM_PAINT, WM_KEYDOWN, etc.)
+    WPARAM wParam;    // Additional info (depends on message)
+    LPARAM lParam;    // Additional info (depends on message)
+    DWORD  time;      // When message was posted
+    POINT  pt;        // Mouse cursor position
+} MSG;
+```
+
+### The Message Loop
+
+Every Windows application has a message loop:
+
+```c
+MSG msg;
+
+// Message loop
+while (GetMessage(&msg, NULL, 0, 0))
+{
+    TranslateMessage(&msg);   // Translate keyboard input
+    DispatchMessage(&msg);    // Send message to window procedure
+}
+```
+
+**What happens:**
+1. `GetMessage()` - Gets next message from queue (blocks if no messages)
+2. `TranslateMessage()` - Converts keyboard messages to character messages
+3. `DispatchMessage()` - Sends message to your **window procedure** for handling
+
+### Window Procedure (WndProc)
+
+The **window procedure** is a callback function that handles messages:
+
+```c
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    switch (uMsg)
+    {
+        case WM_DESTROY:
+            PostQuitMessage(0);  // Exit the application
+            return 0;
+            
+        case WM_PAINT:
+            // Draw in the window
+            return 0;
+            
+        case WM_LBUTTONDOWN:
+            // Handle mouse click
+            return 0;
+    }
+    
+    // Let Windows handle unprocessed messages
+    return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
+```
+
+**Pattern:**
+1. Switch on message type
+2. Handle messages you care about
+3. Call `DefWindowProc()` for everything else
+
+## Basic Windows Program Structure
+
+Here's the skeleton of every Windows program:
+
+```c
+#include <windows.h>
+
+// Window procedure (handles messages)
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+                   LPSTR lpCmdLine, int nCmdShow)
+{
+    // 1. REGISTER WINDOW CLASS
+    WNDCLASS wc = {0};
+    wc.lpfnWndProc = WindowProc;        // Our window procedure
+    wc.hInstance = hInstance;           // Current instance
+    wc.lpszClassName = L"MyWindowClass";
+    
+    RegisterClass(&wc);
+    
+    // 2. CREATE WINDOW
+    HWND hwnd = CreateWindowEx(
+        0,                           // Extended styles
+        L"MyWindowClass",            // Class name
+        L"My Application",           // Window title
+        WS_OVERLAPPEDWINDOW,         // Window style
+        CW_USEDEFAULT, CW_USEDEFAULT, // Position
+        800, 600,                    // Size
+        NULL, NULL,                  // Parent, Menu
+        hInstance, NULL              // Instance, Extra
+    );
+    
+    // 3. SHOW WINDOW
+    ShowWindow(hwnd, nCmdShow);
+    UpdateWindow(hwnd);
+    
+    // 4. MESSAGE LOOP
+    MSG msg;
+    while (GetMessage(&msg, NULL, 0, 0))
+    {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    
+    return (int)msg.wParam;
+}
+
+// Window procedure implementation
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    switch (uMsg)
+    {
+        case WM_DESTROY:
+            PostQuitMessage(0);
+            return 0;
+    }
+    
+    return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
+```
+
+### The Four Steps
+
+Every Windows program follows these steps:
+
+1. **Register Window Class** - Defines window properties
+2. **Create Window** - Creates the actual window
+3. **Show Window** - Makes window visible
+4. **Message Loop** - Processes events
+
+## Understanding WinMain
+
+### WinMain vs main
+
+Console programs use `main()`:
+```c
+int main(void)
+```
+
+Windows GUI programs use `WinMain()`:
+```c
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+                   LPSTR lpCmdLine, int nCmdShow)
+```
+
+### WinMain Parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| `hInstance` | Handle to current instance of your program |
+| `hPrevInstance` | Obsolete (always NULL in modern Windows) |
+| `lpCmdLine` | Command-line arguments as a string |
+| `nCmdShow` | How window should be displayed (normal, minimized, etc.) |
+
+### WINAPI and Calling Conventions
+
+`WINAPI` is a calling convention (`__stdcall`):
+```c
+int WINAPI WinMain(...)
+```
+
+It specifies how parameters are passed and cleaned up. You'll see it on Windows API functions:
+```c
+BOOL WINAPI ShowWindow(HWND hWnd, int nCmdShow);
+```
+
+## Windows Handles
+
+### What is a Handle?
+
+A **handle** is an identifier for a Windows resource:
+
+```c
+HWND hwnd;           // Handle to a window
+HDC hdc;             // Handle to a device context (for drawing)
+HINSTANCE hInstance; // Handle to program instance
+HICON hIcon;         // Handle to an icon
+HBRUSH hBrush;       // Handle to a brush
+HMENU hMenu;         // Handle to a menu
+```
+
+**Think of handles as:**
+- Reference numbers (like a ticket number)
+- Windows uses them to track resources
+- You pass handles to Windows functions
+
+### Using Handles
+
+```c
+// Get a window handle
+HWND hwnd = CreateWindowEx(...);
+
+// Use it to show the window
+ShowWindow(hwnd, SW_SHOW);
+
+// Use it to set window text
+SetWindowText(hwnd, L"New Title");
+
+// Use it to destroy the window
+DestroyWindow(hwnd);
+```
+
+## Unicode vs. ANSI
+
+### Two String Types
+
+Windows supports two character encodings:
+
+**ANSI (8-bit characters):**
+```c
+char* str = "Hello";
+```
+
+**Unicode (16-bit characters):**
+```c
+wchar_t* str = L"Hello";  // Note the L prefix
+```
+
+### Windows String Functions
+
+Most Windows functions have two versions:
+
+```c
+// ANSI version
+int MessageBoxA(HWND hWnd, const char* lpText, const char* lpCaption, UINT uType);
+
+// Unicode version  
+int MessageBoxW(HWND hWnd, const wchar_t* lpText, const wchar_t* lpCaption, UINT uType);
+```
+
+**The generic macro:**
+```c
+MessageBox  // Becomes MessageBoxA or MessageBoxW depending on settings
+```
+
+### Modern Recommendation: Use Unicode
+
+**WinRDP uses Unicode** (all wide strings and W versions):
+
+```c
+#define UNICODE
+#define _UNICODE
+#include <windows.h>
+
+// Now use wchar_t strings with L prefix
+wchar_t title[] = L"WinRDP";
+MessageBoxW(NULL, L"Hello, Unicode!", L"Title", MB_OK);
+```
+
+**Why Unicode?**
+- ✅ Supports all languages (Chinese, Arabic, emoji, etc.)
+- ✅ Required for modern Windows APIs
+- ✅ Recommended by Microsoft
+- ✅ WinRDP is fully Unicode
+
+## Common Windows API Functions
+
+Here are some functions you'll use frequently:
+
+### Message Boxes
+
+```c
+MessageBoxW(NULL, L"Hello, World!", L"Greeting", MB_OK);
+```
+
+Types:
+- `MB_OK` - OK button
+- `MB_OKCANCEL` - OK and Cancel buttons
+- `MB_YESNO` - Yes and No buttons
+- `MB_ICONERROR` - Error icon
+- `MB_ICONINFORMATION` - Info icon
+
+### Window Functions
+
+```c
+// Show/hide window
+ShowWindow(hwnd, SW_SHOW);      // Show
+ShowWindow(hwnd, SW_HIDE);      // Hide
+
+// Set window text
+SetWindowTextW(hwnd, L"New Title");
+
+// Get window text
+wchar_t buffer[256];
+GetWindowTextW(hwnd, buffer, 256);
+
+// Enable/disable window
+EnableWindow(hwnd, TRUE);   // Enable
+EnableWindow(hwnd, FALSE);  // Disable
+```
+
+### Drawing Functions
+
+```c
+// Get device context for drawing
+HDC hdc = GetDC(hwnd);
+
+// Draw text
+TextOutW(hdc, 10, 10, L"Hello", 5);
+
+// Draw line
+MoveToEx(hdc, 0, 0, NULL);
+LineTo(hdc, 100, 100);
+
+// Release device context
+ReleaseDC(hwnd, hdc);
+```
+
+## How WinRDP Uses Windows API
+
+Let's see how WinRDP uses concepts you've just learned:
+
+### 1. WinMain Entry Point
+
+```c
+// main.c
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+                    PWSTR pCmdLine, int nCmdShow)
+{
+    // Create system tray icon
+    // Show login dialog
+    // Enter message loop
+    return 0;
+}
+```
+
+Note: `wWinMain` is the Unicode version of `WinMain`.
+
+### 2. Message Handling
+
+```c
+// main.c
+LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+        case WM_COMMAND:
+            // Handle button clicks, menu items
+            break;
+            
+        case WM_DESTROY:
+            PostQuitMessage(0);
+            break;
+            
+        case WM_TRAYICON:  // Custom message for system tray
+            // Handle tray icon clicks
+            break;
+    }
+    
+    return DefWindowProc(hwnd, msg, wParam, lParam);
+}
+```
+
+### 3. Creating Dialogs
+
+```c
+// main.c
+HWND hDlg = CreateDialogParam(
+    hInstance,
+    MAKEINTRESOURCE(IDD_MAIN_DIALOG),  // Dialog resource ID
+    hwnd,
+    MainDialogProc,                     // Dialog procedure
+    0
+);
+```
+
+### 4. Windows Credential Manager API
+
+```c
+// credentials.c
+BOOL SaveCredentials(const wchar_t* target, const wchar_t* username, 
+                     const wchar_t* password)
+{
+    CREDENTIALW cred = {0};
+    cred.Type = CRED_TYPE_GENERIC;
+    cred.TargetName = (LPWSTR)target;
+    cred.UserName = (LPWSTR)username;
+    // ...
+    
+    return CredWriteW(&cred, 0);
+}
+```
+
+### 5. System Tray Integration
+
+```c
+// main.c
+NOTIFYICONDATAW nid = {0};
+nid.cbSize = sizeof(nid);
+nid.hWnd = hwnd;
+nid.uID = 1;
+nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
+nid.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APP_ICON));
+wcscpy(nid.szTip, L"WinRDP");
+
+Shell_NotifyIconW(NIM_ADD, &nid);
+```
+
+## Development Environment
+
+### Compilers
+
+**Option 1: MinGW-w64 (Recommended for this book)**
+```bash
+gcc -o winrdp.exe main.c -mwindows -lcomctl32 -ladvapi32
+```
+
+**Option 2: Visual Studio**
+- Full IDE with visual designers
+- Integrated debugger
+- IntelliSense (autocomplete)
+
+### Compilation Flags
+
+For Windows GUI programs:
+```bash
+gcc program.c -o program.exe -mwindows
+```
+
+**Flags explained:**
+- `-mwindows` - Creates Windows GUI app (not console)
+- `-lcomctl32` - Link common controls library
+- `-ladvapi32` - Link advanced Windows APIs
+- `-lgdi32` - Link graphics library
+
+### WinRDP Build Command
+
+```bash
+gcc src/*.c -o winrdp.exe -mwindows ^
+    -lcomctl32 -ladvapi32 -lgdi32 -lshell32 ^
+    -lnetapi32 -lcredui -ldwmapi -municode
+```
+
+## Resource Files
+
+Windows programs use **resource files** (.rc) to define:
+- Icons
+- Dialogs
+- Menus
+- Strings
+
+### Example: Dialog Resource
+
+```rc
+IDD_MAIN_DIALOG DIALOG 0, 0, 400, 300
+STYLE DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "WinRDP - Host Manager"
+FONT 9, "Segoe UI"
+BEGIN
+    CONTROL "", IDC_HOST_LIST, "SysListView32", 
+            LVS_REPORT | WS_BORDER, 10, 10, 380, 250
+    PUSHBUTTON "Connect", IDC_BTN_CONNECT, 10, 270, 70, 24
+END
+```
+
+### Compiling Resources
+
+```bash
+windres resources.rc -o resources.o
+gcc main.c resources.o -o program.exe -mwindows
+```
+
+WinRDP's resource file is `src/resources.rc`.
+
+## Error Handling
+
+### Windows API Error Codes
+
+Most Windows functions return:
+- `TRUE`/`FALSE` for success/failure
+- `NULL` for invalid handles
+- `0` for errors
+
+**Get error details:**
+```c
+DWORD error = GetLastError();
+```
+
+### Example: Error Handling
+
+```c
+HWND hwnd = CreateWindowEx(...);
+if (hwnd == NULL)
+{
+    DWORD error = GetLastError();
+    MessageBoxW(NULL, L"Failed to create window!", L"Error", MB_ICONERROR);
+    return 1;
+}
+```
+
+### Formatted Error Messages
+
+```c
+void ShowError(const wchar_t* message)
+{
+    DWORD error = GetLastError();
+    wchar_t buffer[512];
+    
+    FormatMessageW(
+        FORMAT_MESSAGE_FROM_SYSTEM,
+        NULL,
+        error,
+        0,
+        buffer,
+        512,
+        NULL
+    );
+    
+    MessageBoxW(NULL, buffer, message, MB_ICONERROR);
+}
+```
+
+WinRDP has a `ShowError()` function in `utils.c`.
+
+## Key Concepts Summary
+
+Let's review the key concepts:
+
+### 1. Message-Driven Architecture
+Windows apps don't execute sequentially - they **respond to messages** (events).
+
+### 2. Handles
+Everything in Windows is referenced by a **handle** (HWND, HDC, HINSTANCE, etc.).
+
+### 3. Window Procedure
+Every window has a **callback function** that processes messages.
+
+### 4. Message Loop
+The heart of every Windows app - continuously processes messages.
+
+### 5. Unicode
+Modern Windows apps should use **wide strings** (`wchar_t`, L"text").
+
+### 6. Win32 API
+A massive library of functions for everything Windows-related.
+
+## A Simple Example
+
+Let's see a minimal but complete Windows program:
+
+```c
+#include <windows.h>
+
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    switch (uMsg)
+    {
+        case WM_CLOSE:
+            if (MessageBoxW(hwnd, L"Really quit?", L"Confirm", 
+                           MB_OKCANCEL) == IDOK)
+            {
+                DestroyWindow(hwnd);
+            }
+            return 0;
+            
+        case WM_DESTROY:
+            PostQuitMessage(0);
+            return 0;
+            
+        case WM_PAINT:
+        {
+            PAINTSTRUCT ps;
+            HDC hdc = BeginPaint(hwnd, &ps);
+            
+            TextOutW(hdc, 10, 10, L"Hello, Windows!", 15);
+            
+            EndPaint(hwnd, &ps);
+            return 0;
+        }
+    }
+    
+    return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
+
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+                    PWSTR pCmdLine, int nCmdShow)
+{
+    const wchar_t CLASS_NAME[] = L"SimpleWindowClass";
+    
+    WNDCLASSW wc = {0};
+    wc.lpfnWndProc = WindowProc;
+    wc.hInstance = hInstance;
+    wc.lpszClassName = CLASS_NAME;
+    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+    
+    RegisterClassW(&wc);
+    
+    HWND hwnd = CreateWindowExW(
+        0,
+        CLASS_NAME,
+        L"Simple Window",
+        WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT, CW_USEDEFAULT, 500, 300,
+        NULL, NULL, hInstance, NULL
+    );
+    
+    if (hwnd == NULL)
+    {
+        return 1;
+    }
+    
+    ShowWindow(hwnd, nCmdShow);
+    
+    MSG msg = {0};
+    while (GetMessage(&msg, NULL, 0, 0))
+    {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    
+    return (int)msg.wParam;
+}
+```
+
+**Compile it:**
+```bash
+gcc simple.c -o simple.exe -mwindows -municode
+```
+
+**What it does:**
+- Creates a window
+- Displays "Hello, Windows!" text
+- Asks for confirmation before closing
+- Demonstrates the four-step process
+
+## Exercises
+
+### Exercise 1: Compile and Run
+1. Type the simple example above into a file called `simple.c`
+2. Compile it with gcc
+3. Run it and observe the window
+
+### Exercise 2: Modify the Text
+Change the `WM_PAINT` handler to display:
+- Your name
+- The current date
+- Multiple lines of text
+
+### Exercise 3: Add a Button
+Research the `CreateWindowEx()` function and try adding a button to the window.
+
+**Hint:**
+```c
+CreateWindowExW(0, L"BUTTON", L"Click Me!", 
+                WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+                10, 50, 100, 30,
+                hwnd, (HMENU)1, hInstance, NULL);
+```
+
+### Exercise 4: Handle Button Click
+Handle the `WM_COMMAND` message to detect button clicks.
+
+**Hint:**
+```c
+case WM_COMMAND:
+    if (LOWORD(wParam) == 1)  // Button ID
+    {
+        MessageBoxW(hwnd, L"Button clicked!", L"Info", MB_OK);
+    }
+    return 0;
+```
+
+## Common Mistakes
+
+### Mistake 1: Forgetting to Handle WM_DESTROY
+
+```c
+// WRONG - program won't exit
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    // Missing WM_DESTROY handler!
+    return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
+
+// CORRECT
+case WM_DESTROY:
+    PostQuitMessage(0);
+    return 0;
+```
+
+### Mistake 2: Forgetting L Prefix for Wide Strings
+
+```c
+// WRONG with Unicode
+CreateWindowExW(..., "MyClass", ...);  // char*, should be wchar_t*
+
+// CORRECT
+CreateWindowExW(..., L"MyClass", ...);  // wchar_t*
+```
+
+### Mistake 3: Not Checking for NULL
+
+```c
+// WRONG - no error checking
+HWND hwnd = CreateWindowExW(...);
+ShowWindow(hwnd, SW_SHOW);  // Crashes if hwnd is NULL!
+
+// CORRECT
+HWND hwnd = CreateWindowExW(...);
+if (hwnd == NULL)
+{
+    MessageBoxW(NULL, L"Failed to create window!", L"Error", MB_ICONERROR);
+    return 1;
+}
+ShowWindow(hwnd, SW_SHOW);
+```
+
+### Mistake 4: Using ANSI Functions with Unicode
+
+```c
+// WRONG - mixing A and W versions
+#define UNICODE
+CreateWindowExA(...);  // ANSI function with Unicode defined!
+
+// CORRECT - use W versions consistently
+CreateWindowExW(...);
+```
+
+## Resources and Documentation
+
+### Official Documentation
+- **MSDN (Microsoft Developer Network)**: https://docs.microsoft.com/windows/win32/
+- Search for any Windows function, constant, or structure
+
+### Recommended Reading
+- **theForger's Win32 Tutorial**: Excellent beginner-friendly tutorial
+- **Programming Windows** by Charles Petzold: Classic Windows programming book
+- **Windows via C/C++** by Jeffrey Richter: Advanced Windows internals
+
+### WinRDP Source Code
+Study these files to see real-world Windows API usage:
+- `src/main.c` - WinMain, message loop, window creation
+- `src/utils.c` - Helper functions
+- `src/resources.rc` - Dialog definitions
+
+## Summary
+
+You've learned:
+- ✅ Difference between console and Windows GUI programs
+- ✅ Win32 API basics and common data types
+- ✅ Message-driven programming model
+- ✅ Window procedures and message handling
+- ✅ WinMain entry point
+- ✅ Handles and how they work
+- ✅ Unicode vs. ANSI strings (use Unicode!)
+- ✅ Basic Windows API functions
+- ✅ How WinRDP uses these concepts
+- ✅ Compilation and error handling
+
+**Next Chapter**: Creating your first real Windows application with proper window classes, controls, and event handling!
+
+---
+
+# Chapter 14: Your First Windows Application
+
+## Building a Complete Windows Program
+
+In Chapter 13, you learned the theory behind Windows programming. Now it's time to build a complete, functional Windows application from scratch!
+
+In this chapter, you'll:
+- Create a proper window class with all necessary properties
+- Build a window with controls (buttons, text fields)
+- Handle user events (button clicks, keyboard input)
+- Understand window styles and extended styles
+- Create a real calculator program
+
+## Project: Simple Calculator
+
+We'll build a simple calculator with:
+- A text display showing the current number
+- Number buttons (0-9)
+- Operation buttons (+, -, *, /, =)
+- Clear button (C)
+
+**Why a calculator?**
+- Demonstrates multiple controls
+- Handles user input
+- Shows state management
+- Real-world functionality
+- Not too simple, not too complex
+
+## Step 1: Project Setup
+
+### Create the File
+
+Create `calculator.c`:
+
+```c
+#include <windows.h>
+#include <stdio.h>
+
+// Function prototypes
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+                    PWSTR pCmdLine, int nCmdShow)
+{
+    // We'll fill this in step by step
+    return 0;
+}
+
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    // We'll fill this in step by step
+    return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
+```
+
+### Compile Command
+
+```bash
+gcc calculator.c -o calculator.exe -mwindows -municode
+```
+
+**Note**: We'll add more code incrementally and test as we go.
+
+## Step 2: Registering the Window Class
+
+The window class defines properties for all windows of that type.
+
+### WNDCLASSW Structure
+
+```c
+typedef struct {
+    UINT        style;           // Class styles (CS_* constants)
+    WNDPROC     lpfnWndProc;     // Pointer to window procedure
+    int         cbClsExtra;      // Extra bytes for class (usually 0)
+    int         cbWndExtra;      // Extra bytes for window (usually 0)
+    HINSTANCE   hInstance;       // Instance handle
+    HICON       hIcon;           // Icon handle
+    HCURSOR     hCursor;         // Cursor handle
+    HBRUSH      hbrBackground;   // Background brush
+    LPCWSTR     lpszMenuName;    // Menu name (NULL if no menu)
+    LPCWSTR     lpszClassName;   // Class name
+} WNDCLASSW;
+```
+
+### Fill in WinMain - Part 1
+
+```c
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+                    PWSTR pCmdLine, int nCmdShow)
+{
+    const wchar_t CLASS_NAME[] = L"CalculatorWindowClass";
+    
+    // 1. DEFINE WINDOW CLASS
+    WNDCLASSW wc = {0};
+    wc.lpfnWndProc = WindowProc;              // Our message handler
+    wc.hInstance = hInstance;                 // Current instance
+    wc.lpszClassName = CLASS_NAME;            // Class name
+    wc.hCursor = LoadCursor(NULL, IDC_ARROW); // Standard arrow cursor
+    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1); // White background
+    wc.style = CS_HREDRAW | CS_VREDRAW;       // Redraw on resize
+    
+    // 2. REGISTER WINDOW CLASS
+    if (!RegisterClassW(&wc))
+    {
+        MessageBoxW(NULL, L"Window Registration Failed!", L"Error",
+                   MB_ICONERROR | MB_OK);
+        return 0;
+    }
+    
+    // More code to come...
+    
+    return 0;
+}
+```
+
+**Key points:**
+- `CS_HREDRAW | CS_VREDRAW` - Redraws entire window when resized
+- `LoadCursor(NULL, IDC_ARROW)` - Loads standard arrow cursor
+- `(HBRUSH)(COLOR_WINDOW + 1)` - Uses system window color
+- Always check if `RegisterClassW` succeeds!
+
+### Common Window Class Styles
+
+| Style | Description |
+|-------|-------------|
+| `CS_HREDRAW` | Redraw when width changes |
+| `CS_VREDRAW` | Redraw when height changes |
+| `CS_DBLCLKS` | Enable double-click messages |
+| `CS_OWNDC` | Allocates unique device context |
+
+## Step 3: Creating the Window
+
+Now create the actual window:
+
+### CreateWindowExW Function
+
+```c
+HWND CreateWindowExW(
+    DWORD dwExStyle,        // Extended window style
+    LPCWSTR lpClassName,    // Window class name
+    LPCWSTR lpWindowName,   // Window title
+    DWORD dwStyle,          // Window style
+    int x,                  // X position
+    int y,                  // Y position
+    int nWidth,             // Width
+    int nHeight,            // Height
+    HWND hWndParent,        // Parent window (NULL = top-level)
+    HMENU hMenu,            // Menu or child ID
+    HINSTANCE hInstance,    // Instance handle
+    LPVOID lpParam          // Creation parameters
+);
+```
+
+### Fill in WinMain - Part 2
+
+```c
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+                    PWSTR pCmdLine, int nCmdShow)
+{
+    // ... previous code (register window class) ...
+    
+    // 3. CREATE WINDOW
+    HWND hwnd = CreateWindowExW(
+        0,                                  // Optional extended styles
+        CLASS_NAME,                         // Window class
+        L"Simple Calculator",               // Window title
+        WS_OVERLAPPEDWINDOW & ~(WS_THICKFRAME | WS_MAXIMIZEBOX), // Style
+        CW_USEDEFAULT, CW_USEDEFAULT,      // Position (default)
+        320, 400,                           // Size (320x400)
+        NULL,                               // Parent window
+        NULL,                               // Menu
+        hInstance,                          // Instance handle
+        NULL                                // Additional data
+    );
+    
+    if (hwnd == NULL)
+    {
+        MessageBoxW(NULL, L"Window Creation Failed!", L"Error",
+                   MB_ICONERROR | MB_OK);
+        return 0;
+    }
+    
+    // More code to come...
+    
+    return 0;
+}
+```
+
+**Window style explained:**
+```c
+WS_OVERLAPPEDWINDOW & ~(WS_THICKFRAME | WS_MAXIMIZEBOX)
+```
+
+- `WS_OVERLAPPEDWINDOW` - Standard window (title bar, borders, min/max/close)
+- `~(WS_THICKFRAME | WS_MAXIMIZEBOX)` - Remove resizing and maximize button
+- Result: Fixed-size window (perfect for calculator!)
+
+### Common Window Styles
+
+| Style | Description |
+|-------|-------------|
+| `WS_OVERLAPPEDWINDOW` | Standard window with all decorations |
+| `WS_POPUP` | Pop-up window (no decorations) |
+| `WS_VISIBLE` | Initially visible |
+| `WS_CHILD` | Child window |
+| `WS_BORDER` | Window with border |
+| `WS_CAPTION` | Window with title bar |
+| `WS_THICKFRAME` | Resizable border |
+| `WS_MINIMIZEBOX` | Minimize button |
+| `WS_MAXIMIZEBOX` | Maximize button |
+
+### Extended Window Styles
+
+| Extended Style | Description |
+|----------------|-------------|
+| `WS_EX_TOPMOST` | Always on top |
+| `WS_EX_CLIENTEDGE` | 3D sunken border |
+| `WS_EX_TOOLWINDOW` | Tool window (thin title bar) |
+| `WS_EX_LAYERED` | Layered window (transparency) |
+
+## Step 4: Show Window and Message Loop
+
+### Fill in WinMain - Part 3 (Complete)
+
+```c
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+                    PWSTR pCmdLine, int nCmdShow)
+{
+    // ... previous code (register class, create window) ...
+    
+    // 4. SHOW WINDOW
+    ShowWindow(hwnd, nCmdShow);
+    UpdateWindow(hwnd);
+    
+    // 5. MESSAGE LOOP
+    MSG msg = {0};
+    while (GetMessage(&msg, NULL, 0, 0) > 0)
+    {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    
+    return (int)msg.wParam;
+}
+```
+
+**Why `UpdateWindow()`?**
+- Sends an immediate `WM_PAINT` message
+- Ensures window is drawn right away
+- Without it, window might not appear until first event
+
+**Message loop explained:**
+```c
+while (GetMessage(&msg, NULL, 0, 0) > 0)
+```
+- Returns 0 when `WM_QUIT` received (exit program)
+- Returns -1 on error
+- Returns positive value for all other messages
+
+## Step 5: Basic Window Procedure
+
+Now let's handle basic window messages:
+
+```c
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    switch (uMsg)
+    {
+        case WM_CREATE:
+        {
+            // Window is being created
+            // We'll add controls here later
+            return 0;
+        }
+        
+        case WM_DESTROY:
+        {
+            // Window is being destroyed
+            PostQuitMessage(0);
+            return 0;
+        }
+        
+        case WM_PAINT:
+        {
+            // Window needs to be drawn
+            PAINTSTRUCT ps;
+            HDC hdc = BeginPaint(hwnd, &ps);
+            
+            // Background is painted automatically (white)
+            
+            EndPaint(hwnd, &ps);
+            return 0;
+        }
+        
+        case WM_CLOSE:
+        {
+            // User clicked X button
+            if (MessageBoxW(hwnd, L"Really quit?", L"Calculator",
+                           MB_OKCANCEL) == IDOK)
+            {
+                DestroyWindow(hwnd);
+            }
+            return 0;
+        }
+    }
+    
+    return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
+```
+
+**Test it now!** You should see an empty window with a confirmation dialog when closing.
+
+## Step 6: Adding Controls
+
+Windows controls are just child windows. Let's add the calculator display:
+
+### Control IDs
+
+Define constants for control IDs:
+
+```c
+#define IDC_DISPLAY 1001
+#define IDC_BTN_0   2000
+#define IDC_BTN_1   2001
+// ... we'll add more later
+```
+
+### Creating the Display
+
+Add to `WM_CREATE` handler:
+
+```c
+case WM_CREATE:
+{
+    // Display (read-only edit control)
+    HWND hDisplay = CreateWindowExW(
+        WS_EX_CLIENTEDGE,              // Sunken 3D border
+        L"EDIT",                       // Edit control class
+        L"0",                          // Initial text
+        WS_CHILD | WS_VISIBLE | ES_RIGHT | ES_READONLY, // Styles
+        10, 10, 280, 30,               // Position and size
+        hwnd,                          // Parent window
+        (HMENU)IDC_DISPLAY,            // Control ID
+        GetModuleHandle(NULL),         // Instance handle
+        NULL                           // No extra data
+    );
+    
+    // Set larger font for display
+    HFONT hFont = CreateFontW(
+        24,                     // Height
+        0,                      // Width (auto)
+        0, 0,                   // Escapement, orientation
+        FW_NORMAL,              // Weight
+        FALSE, FALSE, FALSE,    // Italic, underline, strikeout
+        DEFAULT_CHARSET,
+        OUT_DEFAULT_PRECIS,
+        CLIP_DEFAULT_PRECIS,
+        DEFAULT_QUALITY,
+        DEFAULT_PITCH | FF_DONTCARE,
+        L"Arial"                // Font name
+    );
+    
+    SendMessage(hDisplay, WM_SETFONT, (WPARAM)hFont, TRUE);
+    
+    return 0;
+}
+```
+
+**Edit control styles:**
+- `ES_RIGHT` - Right-aligned text (like calculators)
+- `ES_READONLY` - Can't type in it directly
+- `WS_CHILD` - Child window
+- `WS_VISIBLE` - Visible immediately
+
+### Creating Buttons
+
+Let's add number buttons 0-9:
+
+```c
+case WM_CREATE:
+{
+    // ... display creation code ...
+    
+    // Button layout: 4 columns x 5 rows
+    int btnWidth = 60;
+    int btnHeight = 50;
+    int btnX = 10;
+    int btnY = 50;
+    int spacing = 5;
+    
+    // Number buttons (layout like a calculator)
+    const wchar_t* labels[] = {
+        L"7", L"8", L"9", L"/",
+        L"4", L"5", L"6", L"*",
+        L"1", L"2", L"3", L"-",
+        L"C", L"0", L"=", L"+"
+    };
+    
+    int id = IDC_BTN_0;
+    for (int row = 0; row < 4; row++)
+    {
+        for (int col = 0; col < 4; col++)
+        {
+            int x = btnX + col * (btnWidth + spacing);
+            int y = btnY + row * (btnHeight + spacing);
+            
+            CreateWindowExW(
+                0,
+                L"BUTTON",
+                labels[row * 4 + col],
+                WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+                x, y, btnWidth, btnHeight,
+                hwnd,
+                (HMENU)(LONG_PTR)(id++),
+                GetModuleHandle(NULL),
+                NULL
+            );
+        }
+    }
+    
+    return 0;
+}
+```
+
+**Button styles:**
+- `BS_PUSHBUTTON` - Standard push button
+- `BS_DEFPUSHBUTTON` - Default button (thick border)
+- `BS_CHECKBOX` - Checkbox
+- `BS_RADIOBUTTON` - Radio button
+
+## Step 7: Handling Button Clicks
+
+Buttons send `WM_COMMAND` messages when clicked:
+
+```c
+// Global variables for calculator state
+double g_value = 0.0;
+double g_operand = 0.0;
+wchar_t g_operator = L'\0';
+BOOL g_newNumber = TRUE;
+
+// Helper function to update display
+void UpdateDisplay(HWND hwnd)
+{
+    wchar_t buffer[32];
+    swprintf(buffer, 32, L"%.10g", g_value);
+    SetWindowTextW(GetDlgItem(hwnd, IDC_DISPLAY), buffer);
+}
+
+// Handle button clicks
+case WM_COMMAND:
+{
+    int id = LOWORD(wParam);
+    
+    // Number buttons (0-9)
+    if (id >= IDC_BTN_0 && id <= IDC_BTN_9)
+    {
+        int digit = id - IDC_BTN_0;
+        
+        if (g_newNumber)
+        {
+            g_value = digit;
+            g_newNumber = FALSE;
+        }
+        else
+        {
+            g_value = g_value * 10 + digit;
+        }
+        
+        UpdateDisplay(hwnd);
+    }
+    // Clear button
+    else if (id == IDC_BTN_CLEAR)
+    {
+        g_value = 0.0;
+        g_operand = 0.0;
+        g_operator = L'\0';
+        g_newNumber = TRUE;
+        UpdateDisplay(hwnd);
+    }
+    // Operator buttons (+, -, *, /)
+    else if (id == IDC_BTN_PLUS || id == IDC_BTN_MINUS ||
+             id == IDC_BTN_MULTIPLY || id == IDC_BTN_DIVIDE)
+    {
+        g_operand = g_value;
+        
+        switch (id)
+        {
+            case IDC_BTN_PLUS:     g_operator = L'+'; break;
+            case IDC_BTN_MINUS:    g_operator = L'-'; break;
+            case IDC_BTN_MULTIPLY: g_operator = L'*'; break;
+            case IDC_BTN_DIVIDE:   g_operator = L'/'; break;
+        }
+        
+        g_newNumber = TRUE;
+    }
+    // Equals button
+    else if (id == IDC_BTN_EQUALS)
+    {
+        switch (g_operator)
+        {
+            case L'+': g_value = g_operand + g_value; break;
+            case L'-': g_value = g_operand - g_value; break;
+            case L'*': g_value = g_operand * g_value; break;
+            case L'/':
+                if (g_value != 0.0)
+                    g_value = g_operand / g_value;
+                else
+                    MessageBoxW(hwnd, L"Cannot divide by zero!",
+                               L"Error", MB_ICONERROR);
+                break;
+        }
+        
+        g_operator = L'\0';
+        g_newNumber = TRUE;
+        UpdateDisplay(hwnd);
+    }
+    
+    return 0;
+}
+```
+
+**WM_COMMAND explained:**
+```c
+int id = LOWORD(wParam);      // Control ID
+int notifyCode = HIWORD(wParam); // Notification code (BN_CLICKED, etc.)
+HWND hControl = (HWND)lParam;    // Handle to control
+```
+
+## Complete Calculator Code
+
+Here's the full working calculator:
+
+```c
+#include <windows.h>
+#include <stdio.h>
+
+// Control IDs
+#define IDC_DISPLAY       1001
+#define IDC_BTN_0         2000
+#define IDC_BTN_1         2001
+#define IDC_BTN_2         2002
+#define IDC_BTN_3         2003
+#define IDC_BTN_4         2004
+#define IDC_BTN_5         2005
+#define IDC_BTN_6         2006
+#define IDC_BTN_7         2007
+#define IDC_BTN_8         2008
+#define IDC_BTN_9         2009
+#define IDC_BTN_PLUS      2010
+#define IDC_BTN_MINUS     2011
+#define IDC_BTN_MULTIPLY  2012
+#define IDC_BTN_DIVIDE    2013
+#define IDC_BTN_EQUALS    2014
+#define IDC_BTN_CLEAR     2015
+
+// Calculator state
+double g_value = 0.0;
+double g_operand = 0.0;
+wchar_t g_operator = L'\0';
+BOOL g_newNumber = TRUE;
+
+// Function prototypes
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+void UpdateDisplay(HWND hwnd);
+
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+                    PWSTR pCmdLine, int nCmdShow)
+{
+    const wchar_t CLASS_NAME[] = L"CalculatorWindowClass";
+    
+    WNDCLASSW wc = {0};
+    wc.lpfnWndProc = WindowProc;
+    wc.hInstance = hInstance;
+    wc.lpszClassName = CLASS_NAME;
+    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+    wc.style = CS_HREDRAW | CS_VREDRAW;
+    
+    if (!RegisterClassW(&wc))
+    {
+        MessageBoxW(NULL, L"Window Registration Failed!", L"Error",
+                   MB_ICONERROR | MB_OK);
+        return 0;
+    }
+    
+    HWND hwnd = CreateWindowExW(
+        0,
+        CLASS_NAME,
+        L"Simple Calculator",
+        WS_OVERLAPPEDWINDOW & ~(WS_THICKFRAME | WS_MAXIMIZEBOX),
+        CW_USEDEFAULT, CW_USEDEFAULT,
+        320, 400,
+        NULL, NULL, hInstance, NULL
+    );
+    
+    if (hwnd == NULL)
+    {
+        MessageBoxW(NULL, L"Window Creation Failed!", L"Error",
+                   MB_ICONERROR | MB_OK);
+        return 0;
+    }
+    
+    ShowWindow(hwnd, nCmdShow);
+    UpdateWindow(hwnd);
+    
+    MSG msg = {0};
+    while (GetMessage(&msg, NULL, 0, 0) > 0)
+    {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    
+    return (int)msg.wParam;
+}
+
+void UpdateDisplay(HWND hwnd)
+{
+    wchar_t buffer[32];
+    swprintf(buffer, 32, L"%.10g", g_value);
+    SetWindowTextW(GetDlgItem(hwnd, IDC_DISPLAY), buffer);
+}
+
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    switch (uMsg)
+    {
+        case WM_CREATE:
+        {
+            // Display
+            HWND hDisplay = CreateWindowExW(
+                WS_EX_CLIENTEDGE,
+                L"EDIT",
+                L"0",
+                WS_CHILD | WS_VISIBLE | ES_RIGHT | ES_READONLY,
+                10, 10, 280, 30,
+                hwnd,
+                (HMENU)IDC_DISPLAY,
+                GetModuleHandle(NULL),
+                NULL
+            );
+            
+            HFONT hFont = CreateFontW(
+                24, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+                DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Arial"
+            );
+            
+            SendMessage(hDisplay, WM_SETFONT, (WPARAM)hFont, TRUE);
+            
+            // Buttons
+            typedef struct {
+                const wchar_t* text;
+                int id;
+            } ButtonInfo;
+            
+            ButtonInfo buttons[] = {
+                {L"7", IDC_BTN_7}, {L"8", IDC_BTN_8}, {L"9", IDC_BTN_9}, {L"/", IDC_BTN_DIVIDE},
+                {L"4", IDC_BTN_4}, {L"5", IDC_BTN_5}, {L"6", IDC_BTN_6}, {L"*", IDC_BTN_MULTIPLY},
+                {L"1", IDC_BTN_1}, {L"2", IDC_BTN_2}, {L"3", IDC_BTN_3}, {L"-", IDC_BTN_MINUS},
+                {L"C", IDC_BTN_CLEAR}, {L"0", IDC_BTN_0}, {L"=", IDC_BTN_EQUALS}, {L"+", IDC_BTN_PLUS}
+            };
+            
+            int btnWidth = 60;
+            int btnHeight = 50;
+            int btnX = 10;
+            int btnY = 50;
+            int spacing = 5;
+            
+            for (int i = 0; i < 16; i++)
+            {
+                int row = i / 4;
+                int col = i % 4;
+                int x = btnX + col * (btnWidth + spacing);
+                int y = btnY + row * (btnHeight + spacing);
+                
+                CreateWindowExW(
+                    0,
+                    L"BUTTON",
+                    buttons[i].text,
+                    WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+                    x, y, btnWidth, btnHeight,
+                    hwnd,
+                    (HMENU)(LONG_PTR)buttons[i].id,
+                    GetModuleHandle(NULL),
+                    NULL
+                );
+            }
+            
+            return 0;
+        }
+        
+        case WM_COMMAND:
+        {
+            int id = LOWORD(wParam);
+            
+            if (id >= IDC_BTN_0 && id <= IDC_BTN_9)
+            {
+                int digit = id - IDC_BTN_0;
+                
+                if (g_newNumber)
+                {
+                    g_value = digit;
+                    g_newNumber = FALSE;
+                }
+                else
+                {
+                    g_value = g_value * 10 + digit;
+                }
+                
+                UpdateDisplay(hwnd);
+            }
+            else if (id == IDC_BTN_CLEAR)
+            {
+                g_value = 0.0;
+                g_operand = 0.0;
+                g_operator = L'\0';
+                g_newNumber = TRUE;
+                UpdateDisplay(hwnd);
+            }
+            else if (id == IDC_BTN_PLUS || id == IDC_BTN_MINUS ||
+                     id == IDC_BTN_MULTIPLY || id == IDC_BTN_DIVIDE)
+            {
+                g_operand = g_value;
+                
+                switch (id)
+                {
+                    case IDC_BTN_PLUS:     g_operator = L'+'; break;
+                    case IDC_BTN_MINUS:    g_operator = L'-'; break;
+                    case IDC_BTN_MULTIPLY: g_operator = L'*'; break;
+                    case IDC_BTN_DIVIDE:   g_operator = L'/'; break;
+                }
+                
+                g_newNumber = TRUE;
+            }
+            else if (id == IDC_BTN_EQUALS)
+            {
+                switch (g_operator)
+                {
+                    case L'+': g_value = g_operand + g_value; break;
+                    case L'-': g_value = g_operand - g_value; break;
+                    case L'*': g_value = g_operand * g_value; break;
+                    case L'/':
+                        if (g_value != 0.0)
+                            g_value = g_operand / g_value;
+                        else
+                            MessageBoxW(hwnd, L"Cannot divide by zero!",
+                                       L"Error", MB_ICONERROR);
+                        break;
+                }
+                
+                g_operator = L'\0';
+                g_newNumber = TRUE;
+                UpdateDisplay(hwnd);
+            }
+            
+            return 0;
+        }
+        
+        case WM_DESTROY:
+        {
+            PostQuitMessage(0);
+            return 0;
+        }
+        
+        case WM_CLOSE:
+        {
+            if (MessageBoxW(hwnd, L"Really quit?", L"Calculator",
+                           MB_OKCANCEL) == IDOK)
+            {
+                DestroyWindow(hwnd);
+            }
+            return 0;
+        }
+    }
+    
+    return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
+```
+
+**Compile and run:**
+```bash
+gcc calculator.c -o calculator.exe -mwindows -municode
+calculator.exe
+```
+
+## Understanding Control Positioning
+
+### Absolute Positioning
+
+We used absolute pixel coordinates:
+
+```c
+CreateWindowExW(..., 10, 10, 280, 30, ...);
+//                   ^   ^    ^   ^
+//                   X   Y    W   H
+```
+
+**Coordinate system:**
+- (0, 0) is top-left corner of parent window
+- X increases to the right
+- Y increases downward
+
+### Better Approach: Calculate Positions
+
+```c
+RECT clientRect;
+GetClientRect(hwnd, &clientRect);
+
+int clientWidth = clientRect.right - clientRect.left;
+int clientHeight = clientRect.bottom - clientRect.top;
+
+// Center a button
+int btnWidth = 100;
+int btnHeight = 30;
+int x = (clientWidth - btnWidth) / 2;
+int y = (clientHeight - btnHeight) / 2;
+```
+
+### Handle Window Resize
+
+```c
+case WM_SIZE:
+{
+    int width = LOWORD(lParam);
+    int height = HIWORD(lParam);
+    
+    // Reposition controls based on new size
+    HWND hDisplay = GetDlgItem(hwnd, IDC_DISPLAY);
+    SetWindowPos(hDisplay, NULL, 10, 10, width - 20, 30,
+                 SWP_NOZORDER);
+    
+    return 0;
+}
+```
+
+## Common Control Types
+
+### Edit Controls
+
+```c
+CreateWindowExW(0, L"EDIT", L"Initial text",
+                WS_CHILD | WS_VISIBLE | WS_BORDER,
+                x, y, width, height,
+                hwnd, (HMENU)ID, hInstance, NULL);
+```
+
+**Styles:**
+- `ES_LEFT`, `ES_CENTER`, `ES_RIGHT` - Text alignment
+- `ES_MULTILINE` - Multiple lines
+- `ES_READONLY` - Read-only
+- `ES_PASSWORD` - Hide text with *
+- `ES_NUMBER` - Only numbers allowed
+
+### Static Controls (Labels)
+
+```c
+CreateWindowExW(0, L"STATIC", L"Label text:",
+                WS_CHILD | WS_VISIBLE,
+                x, y, width, height,
+                hwnd, NULL, hInstance, NULL);
+```
+
+### Checkboxes
+
+```c
+CreateWindowExW(0, L"BUTTON", L"Enable feature",
+                WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+                x, y, width, height,
+                hwnd, (HMENU)ID, hInstance, NULL);
+```
+
+**Check state:**
+```c
+BOOL isChecked = (SendMessage(hCheckbox, BM_GETCHECK, 0, 0) == BST_CHECKED);
+```
+
+### List Boxes
+
+```c
+HWND hList = CreateWindowExW(WS_EX_CLIENTEDGE, L"LISTBOX", NULL,
+                              WS_CHILD | WS_VISIBLE | LBS_NOTIFY,
+                              x, y, width, height,
+                              hwnd, (HMENU)ID, hInstance, NULL);
+
+// Add items
+SendMessage(hList, LB_ADDSTRING, 0, (LPARAM)L"Item 1");
+SendMessage(hList, LB_ADDSTRING, 0, (LPARAM)L"Item 2");
+```
+
+### Combo Boxes (Drop-down lists)
+
+```c
+HWND hCombo = CreateWindowExW(0, L"COMBOBOX", NULL,
+                               WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST,
+                               x, y, width, height,
+                               hwnd, (HMENU)ID, hInstance, NULL);
+
+// Add items
+SendMessage(hCombo, CB_ADDSTRING, 0, (LPARAM)L"Option 1");
+SendMessage(hCombo, CB_ADDSTRING, 0, (LPARAM)L"Option 2");
+```
+
+## Exercises
+
+### Exercise 1: Add Decimal Point
+Add a decimal point button to make the calculator support floating-point numbers.
+
+**Hint:**
+- Add `IDC_BTN_DECIMAL` constant
+- Create button with L"." text
+- In WM_COMMAND, append a decimal point if not already present
+
+### Exercise 2: Keyboard Input
+Make the calculator respond to keyboard input (number keys, operators).
+
+**Hint:**
+- Handle `WM_KEYDOWN` message
+- Check `wParam` for virtual key codes (VK_0 through VK_9)
+- Call same logic as button clicks
+
+```c
+case WM_KEYDOWN:
+{
+    if (wParam >= '0' && wParam <= '9')
+    {
+        // Same logic as number button
+    }
+    return 0;
+}
+```
+
+### Exercise 3: Memory Functions
+Add M+, M-, MR, MC buttons for memory functions.
+
+### Exercise 4: Better Layout
+Use `WM_SIZE` to dynamically resize controls when window is resized.
+
+### Exercise 5: Scientific Calculator
+Add square root, power, sin, cos, tan functions.
+
+## Common Mistakes
+
+### Mistake 1: Forgetting WS_CHILD
+
+```c
+// WRONG - control won't appear
+CreateWindowExW(0, L"BUTTON", L"Click", WS_VISIBLE, ...);
+
+// CORRECT
+CreateWindowExW(0, L"BUTTON", L"Click", WS_CHILD | WS_VISIBLE, ...);
+```
+
+### Mistake 2: Wrong Control ID Type
+
+```c
+// WRONG - ID might be truncated
+HMENU hMenu = (HMENU)IDC_BUTTON;  // If IDC_BUTTON > 16 bits
+
+// CORRECT (for 64-bit compatibility)
+HMENU hMenu = (HMENU)(LONG_PTR)IDC_BUTTON;
+```
+
+### Mistake 3: Not Handling WM_COMMAND
+
+```c
+// WRONG - buttons won't do anything
+case WM_COMMAND:
+{
+    return 0;  // Missing button logic!
+}
+
+// CORRECT
+case WM_COMMAND:
+{
+    int id = LOWORD(wParam);
+    // Handle each button ID
+    return 0;
+}
+```
+
+### Mistake 4: Hard-coding Positions
+
+```c
+// WRONG - won't adapt to different window sizes
+CreateWindowExW(..., 100, 200, 50, 30, ...);
+
+// BETTER - calculate based on window size
+RECT rc;
+GetClientRect(hwnd, &rc);
+int x = (rc.right - 50) / 2;  // Center horizontally
+```
+
+## Summary
+
+You've learned:
+- ✅ How to register a window class with `RegisterClassW`
+- ✅ Creating windows with `CreateWindowExW`
+- ✅ Window styles and extended styles
+- ✅ Adding controls (buttons, edit controls)
+- ✅ Handling `WM_COMMAND` for button clicks
+- ✅ State management (calculator state)
+- ✅ Common control types and their uses
+- ✅ Building a complete functional application
+
+**Next Chapter**: Understanding the Windows message system in depth, including custom messages, message queues, and advanced event handling!
+
+---
+
+# Chapter 15: Windows Message System
+
+## Deep Dive into Windows Messages
+
+In Chapters 13 and 14, you learned the basics of Windows messages. Now let's explore the message system in depth to understand how Windows applications truly work.
+
+In this chapter, you'll learn:
+- How the message queue works
+- Different types of messages (queued vs sent)
+- Custom messages and WM_USER
+- Message parameters (wParam and lParam)
+- PostMessage vs SendMessage
+- How WinRDP uses messages for communication
+
+## Message Flow Architecture
+
+### The Complete Picture
+
+```
+User Action (click, keypress)
+         ↓
+   Windows OS
+         ↓
+  Message Queue ← PostMessage() adds messages here
+         ↓
+   GetMessage() retrieves from queue
+         ↓
+  TranslateMessage() translates keyboard messages
+         ↓
+  DispatchMessage() sends to window procedure
+         ↓
+   WindowProc() processes the message
+         ↓ (if SendMessage used)
+   Returns immediately to sender
+```
+
+### Message Queue
+
+Each thread that creates windows has its own **message queue**:
+
+```c
+// Message loop
+MSG msg;
+while (GetMessage(&msg, NULL, 0, 0) > 0)  // Blocks until message arrives
+{
+    TranslateMessage(&msg);
+    DispatchMessage(&msg);
+}
+```
+
+**What GetMessage does:**
+1. Checks if there are messages in the queue
+2. If yes, retrieves the next message
+3. If no, **blocks** (waits) until a message arrives
+4. Returns 0 when WM_QUIT received (exits the loop)
+5. Returns -1 on error
+
+## Queued vs. Sent Messages
+
+### Queued Messages
+
+**Queued messages** go into the message queue:
+
+```c
+PostMessage(hwnd, WM_COMMAND, ID_BUTTON, 0);
+```
+
+**Characteristics:**
+- Asynchronous (doesn't wait)
+- Goes into message queue
+- Processed by message loop
+- Returns immediately
+
+**Examples of queued messages:**
+- `WM_KEYDOWN` - Key pressed
+- `WM_MOUSEMOVE` - Mouse moved
+- `WM_LBUTTONDOWN` - Left button clicked
+- `WM_TIMER` - Timer expired
+- `WM_PAINT` - Window needs repainting
+- `WM_QUIT` - Application should exit
+
+### Sent Messages
+
+**Sent messages** bypass the queue and go directly to window procedure:
+
+```c
+SendMessage(hwnd, WM_SETTEXT, 0, (LPARAM)L"New Title");
+```
+
+**Characteristics:**
+- Synchronous (waits for processing)
+- Bypasses message queue
+- Goes directly to WindowProc
+- Returns result from WindowProc
+
+**Examples of sent messages:**
+- `WM_SETTEXT` - Set window text
+- `WM_GETTEXT` - Get window text
+- `WM_SETFONT` - Set control font
+- Most control messages (BM_*, EM_*, LB_*, etc.)
+
+### When to Use Each
+
+**Use PostMessage when:**
+- You don't need an immediate result
+- Calling from another thread
+- Want to avoid blocking
+
+**Use SendMessage when:**
+- You need the return value
+- Must complete before continuing
+- Same thread
+
+### Example: The Difference
+
+```c
+// PostMessage - returns immediately
+PostMessage(hwnd, WM_CLOSE, 0, 0);
+printf("This runs immediately!\n");  // Executes before window closes
+
+// SendMessage - waits for completion
+SendMessage(hwnd, WM_CLOSE, 0, 0);
+printf("This runs after window closes!\n");  // Executes after close completes
+```
+
+## Understanding wParam and lParam
+
+Every message has two parameters carrying additional information:
+
+```c
+LRESULT WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+```
+
+### What They Mean
+
+- **wParam**: Usually contains small values (IDs, flags, keys)
+- **lParam**: Usually contains larger data (pointers, coordinates, handles)
+
+**Historical note:** "W" = Word (16-bit), "L" = Long (32-bit). On modern 64-bit systems, both are pointer-sized.
+
+### Common Message Parameters
+
+#### WM_COMMAND
+```c
+case WM_COMMAND:
+{
+    int id = LOWORD(wParam);        // Control ID or menu ID
+    int notifyCode = HIWORD(wParam); // Notification code
+    HWND hControl = (HWND)lParam;    // Handle to control
+}
+```
+
+#### WM_SIZE
+```c
+case WM_SIZE:
+{
+    int type = wParam;           // SIZE_MAXIMIZED, SIZE_MINIMIZED, etc.
+    int width = LOWORD(lParam);  // New width
+    int height = HIWORD(lParam); // New height
+}
+```
+
+#### WM_MOUSEMOVE
+```c
+case WM_MOUSEMOVE:
+{
+    int x = LOWORD(lParam);      // X coordinate
+    int y = HIWORD(lParam);      // Y coordinate
+    UINT flags = wParam;         // MK_LBUTTON, MK_RBUTTON, etc.
+}
+```
+
+#### WM_KEYDOWN
+```c
+case WM_KEYDOWN:
+{
+    int virtualKey = wParam;     // VK_RETURN, VK_ESCAPE, VK_A, etc.
+    int repeatCount = LOWORD(lParam);
+    int scanCode = (lParam >> 16) & 0xFF;
+    BOOL wasDown = (lParam >> 30) & 1;
+}
+```
+
+#### WM_PAINT
+```c
+case WM_PAINT:
+{
+    // wParam and lParam are not used
+    PAINTSTRUCT ps;
+    HDC hdc = BeginPaint(hwnd, &ps);
+    // ... drawing code ...
+    EndPaint(hwnd, &ps);
+}
+```
+
+## Custom Messages
+
+You can define your own messages for communication within your app:
+
+### Defining Custom Messages
+
+```c
+#define WM_TRAYICON (WM_USER + 1)
+#define WM_HOSTSLOADED (WM_USER + 2)
+#define WM_CONNECTIONDONE (WM_USER + 3)
+```
+
+**Important:**
+- Start at `WM_USER` (0x0400)
+- `WM_USER` through `0x7FFF` are for application use
+- Above `0x7FFF` are system-defined
+
+### Using Custom Messages
+
+```c
+// Send custom message
+PostMessage(hwnd, WM_TRAYICON, iconID, WM_LBUTTONDOWN);
+
+// Handle custom message
+case WM_TRAYICON:
+{
+    UINT iconID = (UINT)wParam;
+    UINT mouseMsg = (UINT)lParam;
+    
+    if (mouseMsg == WM_LBUTTONDOWN)
+    {
+        // User clicked tray icon
+    }
+    return 0;
+}
+```
+
+### WinRDP Custom Message Example
+
+WinRDP uses a custom message for system tray clicks:
+
+```c
+#define WM_TRAYICON (WM_USER + 1)
+
+// Register tray icon with this message
+NOTIFYICONDATAW nid = {0};
+nid.uCallbackMessage = WM_TRAYICON;  // Send WM_TRAYICON when clicked
+// ... register tray icon ...
+
+// Handle tray icon clicks
+case WM_TRAYICON:
+{
+    if (lParam == WM_LBUTTONDOWN)
+    {
+        // Show main window
+    }
+    else if (lParam == WM_RBUTTONDOWN)
+    {
+        // Show context menu
+    }
+    return 0;
+}
+```
+
+## Message Categories
+
+### Window Management Messages
+
+| Message | When Sent |
+|---------|-----------|
+| `WM_CREATE` | Window is being created |
+| `WM_DESTROY` | Window is being destroyed |
+| `WM_CLOSE` | User clicked X button |
+| `WM_ACTIVATE` | Window activated/deactivated |
+| `WM_SETFOCUS` | Window gained keyboard focus |
+| `WM_KILLFOCUS` | Window lost keyboard focus |
+| `WM_MOVE` | Window was moved |
+| `WM_SIZE` | Window was resized |
+| `WM_SHOWWINDOW` | Window shown/hidden |
+
+### Input Messages
+
+| Message | When Sent |
+|---------|-----------|
+| `WM_KEYDOWN` | Key pressed |
+| `WM_KEYUP` | Key released |
+| `WM_CHAR` | Character input |
+| `WM_LBUTTONDOWN` | Left mouse button pressed |
+| `WM_LBUTTONUP` | Left mouse button released |
+| `WM_RBUTTONDOWN` | Right mouse button pressed |
+| `WM_MOUSEMOVE` | Mouse moved |
+| `WM_MOUSEWHEEL` | Mouse wheel scrolled |
+
+### Drawing Messages
+
+| Message | When Sent |
+|---------|-----------|
+| `WM_PAINT` | Window needs repainting |
+| `WM_ERASEBKGND` | Background needs erasing |
+| `WM_CTLCOLORBTN` | Button needs coloring |
+| `WM_CTLCOLOREDIT` | Edit control needs coloring |
+| `WM_CTLCOLORSTATIC` | Static control needs coloring |
+
+### Control Messages
+
+| Message | When Sent |
+|---------|-----------|
+| `WM_COMMAND` | Menu item or control notification |
+| `WM_NOTIFY` | Control sending detailed notification |
+| `WM_HSCROLL` | Horizontal scroll |
+| `WM_VSCROLL` | Vertical scroll |
+
+## PeekMessage vs. GetMessage
+
+### GetMessage - Blocking
+
+```c
+MSG msg;
+while (GetMessage(&msg, NULL, 0, 0) > 0)  // Blocks if no messages
+{
+    TranslateMessage(&msg);
+    DispatchMessage(&msg);
+}
+```
+
+**Use GetMessage when:**
+- Normal application behavior
+- Low CPU usage (sleeps when no messages)
+- Standard Windows applications
+
+### PeekMessage - Non-Blocking
+
+```c
+MSG msg;
+while (TRUE)
+{
+    // Check for messages without blocking
+    if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+    {
+        if (msg.message == WM_QUIT)
+            break;
+            
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    else
+    {
+        // No messages - do background work
+        UpdateAnimation();
+        RenderFrame();
+    }
+}
+```
+
+**Use PeekMessage when:**
+- Games that need continuous rendering
+- Real-time applications
+- Background processing needed
+- Warning: Higher CPU usage!
+
+## Message Filtering
+
+You can filter which messages GetMessage retrieves:
+
+```c
+GetMessage(&msg, hwnd, WM_KEYFIRST, WM_KEYLAST);  // Only keyboard messages
+```
+
+**Parameters:**
+```c
+BOOL GetMessage(
+    MSG* lpMsg,     // Receives message
+    HWND hWnd,      // NULL = all windows in thread
+    UINT wMsgMin,   // Minimum message value (0 = all)
+    UINT wMsgMax    // Maximum message value (0 = all)
+);
+```
+
+## Broadcasting Messages
+
+### Send to All Top-Level Windows
+
+```c
+SendMessage(HWND_BROADCAST, WM_SETTINGCHANGE, 0, 0);
+```
+
+This sends the message to ALL top-level windows in the system.
+
+### Send to Child Windows
+
+```c
+// Send to all children
+EnumChildWindows(hwndParent, EnumChildProc, lParam);
+
+BOOL CALLBACK EnumChildProc(HWND hwnd, LPARAM lParam)
+{
+    SendMessage(hwnd, WM_SETFONT, (WPARAM)hFont, TRUE);
+    return TRUE;  // Continue enumeration
+}
+```
+
+## Timers and WM_TIMER
+
+Timers generate periodic `WM_TIMER` messages:
+
+### Creating a Timer
+
+```c
+// In WM_CREATE or initialization
+SetTimer(
+    hwnd,        // Window to receive WM_TIMER
+    1,           // Timer ID
+    1000,        // Interval in milliseconds (1 second)
+    NULL         // Timer procedure (NULL = use WM_TIMER)
+);
+```
+
+### Handling WM_TIMER
+
+```c
+case WM_TIMER:
+{
+    int timerID = (int)wParam;
+    
+    if (timerID == 1)
+    {
+        // Update clock, check for updates, etc.
+        UpdateClock(hwnd);
+    }
+    
+    return 0;
+}
+```
+
+### Destroying Timer
+
+```c
+// In WM_DESTROY
+KillTimer(hwnd, 1);  // Kill timer with ID 1
+```
+
+### Timer Callback (Alternative)
+
+```c
+void CALLBACK TimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime)
+{
+    // This runs when timer fires
+    // No WM_TIMER message sent
+}
+
+// Set timer with callback
+SetTimer(hwnd, 1, 1000, TimerProc);
+```
+
+## Practical Example: Auto-Saving Application
+
+Let's build an application that auto-saves every 5 seconds:
+
+```c
+#include <windows.h>
+#include <stdio.h>
+
+#define IDC_EDIT 1001
+#define TIMER_AUTOSAVE 1
+
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+void SaveContent(HWND hwnd);
+
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+                    PWSTR pCmdLine, int nCmdShow)
+{
+    const wchar_t CLASS_NAME[] = L"AutoSaveEditor";
+    
+    WNDCLASSW wc = {0};
+    wc.lpfnWndProc = WindowProc;
+    wc.hInstance = hInstance;
+    wc.lpszClassName = CLASS_NAME;
+    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+    
+    RegisterClassW(&wc);
+    
+    HWND hwnd = CreateWindowExW(
+        0, CLASS_NAME, L"Auto-Save Editor",
+        WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT, CW_USEDEFAULT, 600, 400,
+        NULL, NULL, hInstance, NULL
+    );
+    
+    ShowWindow(hwnd, nCmdShow);
+    UpdateWindow(hwnd);
+    
+    MSG msg;
+    while (GetMessage(&msg, NULL, 0, 0) > 0)
+    {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    
+    return (int)msg.wParam;
+}
+
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    switch (uMsg)
+    {
+        case WM_CREATE:
+        {
+            // Create multiline edit control
+            CreateWindowExW(
+                WS_EX_CLIENTEDGE,
+                L"EDIT",
+                L"Type something...\nIt will auto-save every 5 seconds.",
+                WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL,
+                10, 10, 560, 320,
+                hwnd,
+                (HMENU)IDC_EDIT,
+                GetModuleHandle(NULL),
+                NULL
+            );
+            
+            // Start auto-save timer (5 seconds)
+            SetTimer(hwnd, TIMER_AUTOSAVE, 5000, NULL);
+            
+            return 0;
+        }
+        
+        case WM_TIMER:
+        {
+            if (wParam == TIMER_AUTOSAVE)
+            {
+                SaveContent(hwnd);
+            }
+            return 0;
+        }
+        
+        case WM_SIZE:
+        {
+            // Resize edit control when window resizes
+            int width = LOWORD(lParam);
+            int height = HIWORD(lParam);
+            
+            HWND hEdit = GetDlgItem(hwnd, IDC_EDIT);
+            SetWindowPos(hEdit, NULL, 10, 10, width - 20, height - 60, SWP_NOZORDER);
+            
+            return 0;
+        }
+        
+        case WM_CLOSE:
+        {
+            // Save before closing
+            SaveContent(hwnd);
+            DestroyWindow(hwnd);
+            return 0;
+        }
+        
+        case WM_DESTROY:
+        {
+            KillTimer(hwnd, TIMER_AUTOSAVE);
+            PostQuitMessage(0);
+            return 0;
+        }
+    }
+    
+    return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
+
+void SaveContent(HWND hwnd)
+{
+    HWND hEdit = GetDlgItem(hwnd, IDC_EDIT);
+    
+    // Get text length
+    int length = GetWindowTextLengthW(hEdit);
+    if (length == 0)
+        return;
+    
+    // Allocate buffer
+    wchar_t* buffer = (wchar_t*)malloc((length + 1) * sizeof(wchar_t));
+    if (buffer == NULL)
+        return;
+    
+    // Get text
+    GetWindowTextW(hEdit, buffer, length + 1);
+    
+    // Save to file
+    FILE* file = _wfopen(L"autosave.txt", L"w, ccs=UTF-8");
+    if (file)
+    {
+        fwprintf(file, L"%s", buffer);
+        fclose(file);
+        
+        // Show saved message in title
+        wchar_t title[64];
+        swprintf(title, 64, L"Auto-Save Editor - Saved at %d ms", GetTickCount());
+        SetWindowTextW(hwnd, title);
+    }
+    
+    free(buffer);
+}
+```
+
+**Compile:**
+```bash
+gcc autosave.c -o autosave.exe -mwindows -municode
+```
+
+**What it does:**
+- Creates a text editor
+- Automatically saves content every 5 seconds
+- Updates window title when saved
+- Saves on close
+
+## Message Return Values
+
+The return value of WindowProc has meaning:
+
+```c
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    switch (uMsg)
+    {
+        case WM_CREATE:
+            return 0;        // Success
+            // return -1;    // Failure (window won't be created)
+            
+        case WM_CLOSE:
+            DestroyWindow(hwnd);
+            return 0;        // Message processed
+            
+        case WM_NCHITTEST:
+            return HTCLIENT; // Says cursor is in client area
+    }
+    
+    return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
+```
+
+**Common return values:**
+- `0` - Message processed successfully
+- `-1` - Error (for some messages like WM_CREATE)
+- Specific values (for WM_NCHITTEST, WM_CTLCOLOR*, etc.)
+
+## DefWindowProc: The Default Handler
+
+Always call `DefWindowProc` for unhandled messages:
+
+```c
+return DefWindowProc(hwnd, uMsg, wParam, lParam);
+```
+
+**What DefWindowProc does:**
+- Provides default behavior for all messages
+- Ensures window behaves normally
+- Required for proper window operation
+
+**Messages you should NOT call DefWindowProc for:**
+- Messages you fully handle
+- Messages where you return a specific value
+
+## Message Processing Order
+
+When you send a message:
+
+1. **Sent messages** processed first (SendMessage)
+2. **Paint messages** (WM_PAINT) processed next
+3. **Posted messages** processed last (PostMessage)
+4. **Timers** processed when no other messages
+
+### Priority Example
+
+```c
+PostMessage(hwnd, WM_USER, 1, 0);      // Queued - processed last
+SendMessage(hwnd, WM_USER, 2, 0);      // Sent - processed first
+PostMessage(hwnd, WM_USER, 3, 0);      // Queued - processed last
+
+// Processing order: 2, 1, 3
+```
+
+## Inter-Thread Communication
+
+For communicating between threads, use messages:
+
+### From Worker Thread to UI Thread
+
+```c
+// Worker thread
+DWORD WINAPI WorkerThread(LPVOID param)
+{
+    HWND hwndMain = (HWND)param;
+    
+    // Do work...
+    
+    // Notify UI thread (safe!)
+    PostMessage(hwndMain, WM_WORKCOMPLETE, 0, 0);
+    
+    return 0;
+}
+
+// UI thread window procedure
+case WM_WORKCOMPLETE:
+{
+    MessageBoxW(hwnd, L"Work complete!", L"Info", MB_OK);
+    return 0;
+}
+```
+
+**Important:**
+- Use `PostMessage` (not SendMessage) from other threads
+- Never access UI controls directly from worker threads
+- Always communicate via messages
+
+## Debugging Messages
+
+### Message Logger
+
+Useful for debugging - log all messages:
+
+```c
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    // Log message (for debugging)
+    #ifdef DEBUG_MESSAGES
+    wchar_t buffer[256];
+    swprintf(buffer, 256, L"Message: 0x%04X, wParam: 0x%08X, lParam: 0x%08X\n",
+             uMsg, (UINT)wParam, (UINT)lParam);
+    OutputDebugStringW(buffer);
+    #endif
+    
+    // Process message
+    switch (uMsg)
+    {
+        // ... handle messages ...
+    }
+    
+    return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
+```
+
+Use DebugView from Microsoft to see OutputDebugString output.
+
+## Summary of Message Functions
+
+| Function | Purpose | Blocks? |
+|----------|---------|---------|
+| `GetMessage` | Retrieve message from queue | Yes |
+| `PeekMessage` | Check for message | No |
+| `PostMessage` | Add message to queue | No |
+| `SendMessage` | Send directly to WindowProc | Yes |
+| `DispatchMessage` | Call WindowProc with message | Yes |
+| `TranslateMessage` | Convert keyboard messages | No |
+| `PostQuitMessage` | Add WM_QUIT to queue | No |
+
+## Exercises
+
+### Exercise 1: Clock Application
+Create an application that shows the current time and updates every second using WM_TIMER.
+
+**Hint:**
+```c
+SetTimer(hwnd, 1, 1000, NULL);
+
+case WM_TIMER:
+{
+    SYSTEMTIME st;
+    GetLocalTime(&st);
+    // Update display
+}
+```
+
+### Exercise 2: Mouse Tracker
+Create a window that displays the current mouse position using WM_MOUSEMOVE.
+
+### Exercise 3: Custom Message
+Define a custom message and send it between two windows.
+
+### Exercise 4: Key Logger
+Log all key presses (WM_KEYDOWN) to a file with timestamps.
+
+### Exercise 5: Progress Indicator
+Create a progress bar that updates via custom messages from a worker thread.
+
+## Common Mistakes
+
+### Mistake 1: Forgetting DefWindowProc
+
+```c
+// WRONG - window won't work properly
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    switch (uMsg)
+    {
+        case WM_DESTROY:
+            PostQuitMessage(0);
+            return 0;
+    }
+    
+    return 0;  // WRONG! Missing DefWindowProc
+}
+
+// CORRECT
+return DefWindowProc(hwnd, uMsg, wParam, lParam);
+```
+
+### Mistake 2: Using SendMessage from Wrong Thread
+
+```c
+// WRONG - can deadlock!
+DWORD WINAPI WorkerThread(LPVOID param)
+{
+    HWND hwnd = (HWND)param;
+    SendMessage(hwnd, WM_USER, 0, 0);  // Can deadlock!
+}
+
+// CORRECT
+PostMessage(hwnd, WM_USER, 0, 0);  // Safe!
+```
+
+### Mistake 3: Not Killing Timers
+
+```c
+// WRONG - timer keeps running after window destroyed
+case WM_DESTROY:
+{
+    PostQuitMessage(0);
+    return 0;
+}
+
+// CORRECT
+case WM_DESTROY:
+{
+    KillTimer(hwnd, TIMER_ID);
+    PostQuitMessage(0);
+    return 0;
+}
+```
+
+### Mistake 4: Blocking in WindowProc
+
+```c
+// WRONG - UI freezes!
+case WM_COMMAND:
+{
+    if (id == IDC_PROCESS)
+    {
+        Sleep(5000);  // UI freezes for 5 seconds!
+    }
+}
+
+// CORRECT - use worker thread
+case WM_COMMAND:
+{
+    if (id == IDC_PROCESS)
+    {
+        CreateThread(NULL, 0, WorkerThread, hwnd, 0, NULL);
+    }
+}
+```
+
+## How WinRDP Uses Messages
+
+### System Tray Icon
+
+```c
+#define WM_TRAYICON (WM_USER + 1)
+
+// Register tray icon
+nid.uCallbackMessage = WM_TRAYICON;
+Shell_NotifyIconW(NIM_ADD, &nid);
+
+// Handle clicks
+case WM_TRAYICON:
+{
+    if (lParam == WM_LBUTTONDOWN)
+    {
+        // Show/hide main window
+    }
+    else if (lParam == WM_RBUTTONDOWN)
+    {
+        // Show context menu
+    }
+}
+```
+
+### ListView Notifications
+
+```c
+case WM_NOTIFY:
+{
+    LPNMHDR pnmhdr = (LPNMHDR)lParam;
+    
+    if (pnmhdr->idFrom == IDC_HOST_LIST)
+    {
+        if (pnmhdr->code == NM_DBLCLK)
+        {
+            // User double-clicked host - connect!
+            ConnectToSelectedHost();
+        }
+    }
+}
+```
+
+### Global Hotkey
+
+```c
+#define HOTKEY_ID 1
+
+// Register hotkey (Ctrl+Shift+R)
+RegisterHotKey(hwnd, HOTKEY_ID, MOD_CONTROL | MOD_SHIFT, 'R');
+
+// Handle hotkey
+case WM_HOTKEY:
+{
+    if (wParam == HOTKEY_ID)
+    {
+        // Show main window
+        ShowWindow(hwnd, SW_SHOW);
+    }
+}
+```
+
+## Summary
+
+You've learned:
+- ✅ How message queues work
+- ✅ Difference between queued and sent messages
+- ✅ PostMessage vs SendMessage
+- ✅ Message parameters (wParam and lParam)
+- ✅ Custom messages with WM_USER
+- ✅ Timers and WM_TIMER
+- ✅ Inter-thread communication with messages
+- ✅ Message processing order and priorities
+- ✅ DefWindowProc and return values
+- ✅ How to debug messages
+
+**Next Chapter**: Dialog boxes and controls - creating professional dialog-based applications like WinRDP!
+
+---
+
+# Chapter 16: Dialog Boxes and Controls
+
+## Professional User Interfaces with Dialogs
+
+So far, you've created windows manually with CreateWindowEx. But most Windows applications use **dialog boxes** for their interface - they're easier to create and maintain!
+
+In this chapter, you'll learn:
+- What dialog boxes are and why use them
+- Creating dialogs with resource files
+- Dialog procedures vs window procedures
+- Common dialog boxes (File Open, Color Picker, etc.)
+- How WinRDP uses dialogs
+- Building a login dialog
+
+## What Are Dialog Boxes?
+
+### Dialog vs Window
+
+**Traditional Window:**
+- Created with CreateWindowEx
+- Manual control positioning
+- Write lots of positioning code
+- Hard to maintain
+
+**Dialog Box:**
+- Defined in resource file (.rc)
+- Visual layout (can use editors)
+- Automatic tab order
+- Easier to maintain
+
+### Types of Dialogs
+
+**Modal Dialog:**
+- Blocks parent window
+- Must close before using parent
+- Used for critical input
+
+**Modeless Dialog:**
+- Doesn't block parent
+- Can switch between parent and dialog
+- Used for tool windows, find/replace
+
+## Resource Files (.rc)
+
+Resource files define dialogs, menus, icons, and strings:
+
+### Example Resource File
+
+Create `resources.rc`:
+
+```rc
+#include "resource.h"
+
+// Dialog definition
+IDD_LOGIN DIALOG 0, 0, 200, 100
+STYLE DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Login"
+FONT 9, "Segoe UI"
+BEGIN
+    LTEXT "Username:", IDC_STATIC, 10, 10, 60, 12
+    EDITTEXT IDC_USERNAME, 70, 10, 120, 14, ES_AUTOHSCROLL
+    
+    LTEXT "Password:", IDC_STATIC, 10, 30, 60, 12
+    EDITTEXT IDC_PASSWORD, 70, 30, 120, 14, ES_AUTOHSCROLL | ES_PASSWORD
+    
+    DEFPUSHBUTTON "OK", IDOK, 50, 70, 50, 14
+    PUSHBUTTON "Cancel", IDCANCEL, 110, 70, 50, 14
+END
+```
+
+Create `resource.h`:
+
+```c
+#define IDD_LOGIN 101
+#define IDC_USERNAME 1001
+#define IDC_PASSWORD 1002
+#define IDC_STATIC -1
+```
+
+### Dialog Resource Syntax
+
+```rc
+IDD_DIALOGID DIALOG x, y, width, height
+STYLE style_flags
+CAPTION "title"
+FONT pointsize, "fontname"
+BEGIN
+    // Controls go here
+END
+```
+
+**Style flags:**
+- `DS_CENTER` - Center on screen
+- `DS_MODALFRAME` - Modal dialog frame
+- `WS_POPUP` - Pop-up window
+- `WS_CAPTION` - Has title bar
+- `WS_SYSMENU` - Has system menu (X button)
+
+### Control Types in Resources
+
+```rc
+PUSHBUTTON "text", id, x, y, width, height
+DEFPUSHBUTTON "text", id, x, y, width, height  // Default button
+EDITTEXT id, x, y, width, height, styles
+LTEXT "text", id, x, y, width, height          // Left-aligned label
+RTEXT "text", id, x, y, width, height          // Right-aligned label
+CTEXT "text", id, x, y, width, height          // Centered label
+CHECKBOX "text", id, x, y, width, height
+RADIOBUTTON "text", id, x, y, width, height
+LISTBOX id, x, y, width, height, styles
+COMBOBOX id, x, y, width, height, styles
+CONTROL "text", id, "class", styles, x, y, width, height
+```
+
+## Dialog Procedures
+
+Dialog procedures are similar to window procedures:
+
+```c
+INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    switch (uMsg)
+    {
+        case WM_INITDIALOG:
+            // Initialize dialog
+            return TRUE;
+            
+        case WM_COMMAND:
+            switch (LOWORD(wParam))
+            {
+                case IDOK:
+                    // OK button clicked
+                    EndDialog(hDlg, IDOK);
+                    return TRUE;
+                    
+                case IDCANCEL:
+                    // Cancel button clicked
+                    EndDialog(hDlg, IDCANCEL);
+                    return TRUE;
+            }
+            break;
+    }
+    
+    return FALSE;  // Not TRUE or DefWindowProc!
+}
+```
+
+**Key differences from WindowProc:**
+- Returns `INT_PTR` (not LRESULT)
+- Returns `TRUE` if message processed, `FALSE` if not
+- **No** DefWindowProc - just return FALSE
+- Use `WM_INITDIALOG` instead of WM_CREATE
+- Use `EndDialog` to close (not DestroyWindow)
+
+## Creating Modal Dialogs
+
+### DialogBox Function
+
+```c
+INT_PTR result = DialogBox(
+    hInstance,              // Application instance
+    MAKEINTRESOURCE(IDD_LOGIN),  // Dialog resource ID
+    hwndParent,             // Parent window
+    DialogProc              // Dialog procedure
+);
+
+if (result == IDOK)
+{
+    // User clicked OK
+}
+else if (result == IDCANCEL)
+{
+    // User clicked Cancel
+}
+```
+
+**MAKEINTRESOURCE:** Converts integer ID to resource name.
+
+## Getting/Setting Dialog Control Values
+
+### Getting Text from Edit Control
+
+```c
+case WM_COMMAND:
+{
+    if (LOWORD(wParam) == IDOK)
+    {
+        wchar_t username[256];
+        wchar_t password[256];
+        
+        GetDlgItemTextW(hDlg, IDC_USERNAME, username, 256);
+        GetDlgItemTextW(hDlg, IDC_PASSWORD, password, 256);
+        
+        // Validate and process
+        if (ValidateLogin(username, password))
+        {
+            EndDialog(hDlg, IDOK);
+        }
+        else
+        {
+            MessageBoxW(hDlg, L"Invalid credentials!", L"Error", MB_OK | MB_ICONERROR);
+        }
+        
+        return TRUE;
+    }
+}
+```
+
+### Setting Text to Control
+
+```c
+case WM_INITDIALOG:
+{
+    SetDlgItemTextW(hDlg, IDC_USERNAME, L"DefaultUser");
+    return TRUE;
+}
+```
+
+### Getting Checkbox State
+
+```c
+BOOL isChecked = IsDlgButtonChecked(hDlg, IDC_REMEMBER);
+```
+
+### Setting Checkbox State
+
+```c
+CheckDlgButton(hDlg, IDC_REMEMBER, BST_CHECKED);    // Check
+CheckDlgButton(hDlg, IDC_REMEMBER, BST_UNCHECKED);  // Uncheck
+```
+
+## Complete Login Dialog Example
+
+### resources.rc
+
+```rc
+#include "resource.h"
+
+IDD_LOGIN DIALOG 0, 0, 250, 120
+STYLE DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Login to WinRDP"
+FONT 9, "Segoe UI"
+BEGIN
+    ICON IDI_APP_ICON, IDC_STATIC, 10, 10, 20, 20
+    
+    LTEXT "Username:", IDC_STATIC, 40, 15, 60, 12
+    EDITTEXT IDC_USERNAME, 100, 12, 140, 14, ES_AUTOHSCROLL
+    
+    LTEXT "Password:", IDC_STATIC, 40, 35, 60, 12
+    EDITTEXT IDC_PASSWORD, 100, 32, 140, 14, ES_AUTOHSCROLL | ES_PASSWORD
+    
+    AUTOCHECKBOX "Remember me", IDC_REMEMBER, 100, 52, 140, 12
+    
+    LTEXT "Domain:", IDC_STATIC, 40, 72, 60, 12
+    COMBOBOX IDC_DOMAIN, 100, 70, 140, 50, CBS_DROPDOWN | CBS_SORT | WS_VSCROLL
+    
+    DEFPUSHBUTTON "OK", IDOK, 90, 95, 70, 16
+    PUSHBUTTON "Cancel", IDCANCEL, 170, 95, 70, 16
+END
+```
+
+### resource.h
+
+```c
+#ifndef RESOURCE_H
+#define RESOURCE_H
+
+#define IDD_LOGIN 101
+#define IDC_USERNAME 1001
+#define IDC_PASSWORD 1002
+#define IDC_REMEMBER 1003
+#define IDC_DOMAIN 1004
+#define IDI_APP_ICON 2001
+#define IDC_STATIC -1
+
+#endif
+```
+
+### login.c
+
+```c
+#include <windows.h>
+#include <stdio.h>
+#include "resource.h"
+
+typedef struct {
+    wchar_t username[256];
+    wchar_t password[256];
+    wchar_t domain[256];
+    BOOL remember;
+} LoginInfo;
+
+INT_PTR CALLBACK LoginDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+                    PWSTR pCmdLine, int nCmdShow)
+{
+    LoginInfo info = {0};
+    
+    INT_PTR result = DialogBoxParam(
+        hInstance,
+        MAKEINTRESOURCE(IDD_LOGIN),
+        NULL,
+        LoginDialogProc,
+        (LPARAM)&info
+    );
+    
+    if (result == IDOK)
+    {
+        wchar_t message[512];
+        swprintf(message, 512, L"Logged in as:\nUser: %s\nDomain: %s\nRemember: %s",
+                info.username, info.domain, info.remember ? L"Yes" : L"No");
+        MessageBoxW(NULL, message, L"Success", MB_OK);
+    }
+    else
+    {
+        MessageBoxW(NULL, L"Login cancelled", L"Cancelled", MB_OK);
+    }
+    
+    return 0;
+}
+
+INT_PTR CALLBACK LoginDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    static LoginInfo* pInfo = NULL;
+    
+    switch (uMsg)
+    {
+        case WM_INITDIALOG:
+        {
+            // Store pointer to LoginInfo
+            pInfo = (LoginInfo*)lParam;
+            
+            // Set default username
+            SetDlgItemTextW(hDlg, IDC_USERNAME, L"admin");
+            
+            // Add domains to combo box
+            SendDlgItemMessageW(hDlg, IDC_DOMAIN, CB_ADDSTRING, 0, (LPARAM)L"WORKGROUP");
+            SendDlgItemMessageW(hDlg, IDC_DOMAIN, CB_ADDSTRING, 0, (LPARAM)L"DOMAIN1");
+            SendDlgItemMessageW(hDlg, IDC_DOMAIN, CB_ADDSTRING, 0, (LPARAM)L"DOMAIN2");
+            SendDlgItemMessageW(hDlg, IDC_DOMAIN, CB_SETCURSEL, 0, 0);  // Select first
+            
+            // Focus on password field
+            SetFocus(GetDlgItem(hDlg, IDC_PASSWORD));
+            return FALSE;  // We set focus manually
+        }
+        
+        case WM_COMMAND:
+        {
+            switch (LOWORD(wParam))
+            {
+                case IDOK:
+                {
+                    // Get values
+                    GetDlgItemTextW(hDlg, IDC_USERNAME, pInfo->username, 256);
+                    GetDlgItemTextW(hDlg, IDC_PASSWORD, pInfo->password, 256);
+                    GetDlgItemTextW(hDlg, IDC_DOMAIN, pInfo->domain, 256);
+                    pInfo->remember = IsDlgButtonChecked(hDlg, IDC_REMEMBER);
+                    
+                    // Validate
+                    if (wcslen(pInfo->username) == 0)
+                    {
+                        MessageBoxW(hDlg, L"Please enter a username", L"Error", 
+                                   MB_OK | MB_ICONERROR);
+                        SetFocus(GetDlgItem(hDlg, IDC_USERNAME));
+                        return TRUE;
+                    }
+                    
+                    if (wcslen(pInfo->password) == 0)
+                    {
+                        MessageBoxW(hDlg, L"Please enter a password", L"Error",
+                                   MB_OK | MB_ICONERROR);
+                        SetFocus(GetDlgItem(hDlg, IDC_PASSWORD));
+                        return TRUE;
+                    }
+                    
+                    // Success
+                    EndDialog(hDlg, IDOK);
+                    return TRUE;
+                }
+                
+                case IDCANCEL:
+                {
+                    EndDialog(hDlg, IDCANCEL);
+                    return TRUE;
+                }
+            }
+            break;
+        }
+        
+        case WM_CLOSE:
+        {
+            EndDialog(hDlg, IDCANCEL);
+            return TRUE;
+        }
+    }
+    
+    return FALSE;
+}
+```
+
+### Compiling with Resources
+
+```bash
+# Compile resource file
+windres resources.rc -o resources.o
+
+# Compile and link
+gcc login.c resources.o -o login.exe -mwindows -municode
+```
+
+## Modeless Dialogs
+
+Modeless dialogs don't block the parent:
+
+### Creating Modeless Dialog
+
+```c
+HWND hDlg = CreateDialogParam(
+    hInstance,
+    MAKEINTRESOURCE(IDD_FIND),
+    hwndParent,
+    FindDialogProc,
+    0
+);
+
+ShowWindow(hDlg, SW_SHOW);
+```
+
+**Key difference:** Returns HWND (not INT_PTR).
+
+### Message Loop for Modeless Dialogs
+
+```c
+MSG msg;
+while (GetMessage(&msg, NULL, 0, 0) > 0)
+{
+    // Check if message is for modeless dialog
+    if (hDlg == NULL || !IsDialogMessage(hDlg, &msg))
+    {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+}
+```
+
+**IsDialogMessage:** Handles tab key, accelerators, etc.
+
+### Closing Modeless Dialog
+
+```c
+case IDCANCEL:
+{
+    DestroyWindow(hDlg);  // Not EndDialog!
+    hDlg = NULL;
+    return TRUE;
+}
+```
+
+## Common Dialogs
+
+Windows provides standard dialogs for common tasks:
+
+### File Open Dialog
+
+```c
+#include <commdlg.h>
+
+wchar_t filename[MAX_PATH] = L"";
+
+OPENFILENAMEW ofn = {0};
+ofn.lStructSize = sizeof(ofn);
+ofn.hwndOwner = hwnd;
+ofn.lpstrFilter = L"Text Files (*.txt)\0*.txt\0All Files (*.*)\0*.*\0";
+ofn.lpstrFile = filename;
+ofn.nMaxFile = MAX_PATH;
+ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+ofn.lpstrTitle = L"Open File";
+
+if (GetOpenFileNameW(&ofn))
+{
+    // User selected a file
+    MessageBoxW(hwnd, filename, L"Selected", MB_OK);
+}
+```
+
+### File Save Dialog
+
+```c
+OPENFILENAMEW ofn = {0};
+ofn.lStructSize = sizeof(ofn);
+ofn.hwndOwner = hwnd;
+ofn.lpstrFilter = L"Text Files (*.txt)\0*.txt\0All Files (*.*)\0*.*\0";
+ofn.lpstrFile = filename;
+ofn.nMaxFile = MAX_PATH;
+ofn.Flags = OFN_OVERWRITEPROMPT;
+ofn.lpstrDefExt = L"txt";
+ofn.lpstrTitle = L"Save File";
+
+if (GetSaveFileNameW(&ofn))
+{
+    // User entered a filename
+}
+```
+
+### Color Picker Dialog
+
+```c
+CHOOSECOLORW cc = {0};
+COLORREF customColors[16] = {0};
+
+cc.lStructSize = sizeof(cc);
+cc.hwndOwner = hwnd;
+cc.lpCustColors = customColors;
+cc.Flags = CC_FULLOPEN | CC_RGBINIT;
+cc.rgbResult = RGB(255, 0, 0);  // Initial color (red)
+
+if (ChooseColorW(&cc))
+{
+    COLORREF color = cc.rgbResult;
+    
+    // Extract RGB components
+    BYTE r = GetRValue(color);
+    BYTE g = GetGValue(color);
+    BYTE b = GetBValue(color);
+}
+```
+
+### Font Picker Dialog
+
+```c
+CHOOSEFONTW cf = {0};
+LOGFONTW lf = {0};
+
+cf.lStructSize = sizeof(cf);
+cf.hwndOwner = hwnd;
+cf.lpLogFont = &lf;
+cf.Flags = CF_SCREENFONTS | CF_EFFECTS;
+
+if (ChooseFontW(&cf))
+{
+    // Create font from LOGFONT
+    HFONT hFont = CreateFontIndirectW(&lf);
+    
+    // Use font...
+    SendMessage(hControl, WM_SETFONT, (WPARAM)hFont, TRUE);
+}
+```
+
+## ListView Control (Advanced)
+
+ListView is essential for displaying lists - WinRDP uses it for the host list:
+
+### Creating ListView
+
+```c
+HWND hListView = CreateWindowExW(
+    0,
+    WC_LISTVIEW,  // "SysListView32"
+    L"",
+    WS_CHILD | WS_VISIBLE | WS_BORDER | LVS_REPORT | LVS_SINGLESEL,
+    10, 10, 500, 300,
+    hwnd,
+    (HMENU)IDC_LISTVIEW,
+    hInstance,
+    NULL
+);
+
+// Enable full row select and grid lines
+ListView_SetExtendedListViewStyle(hListView, 
+    LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
+```
+
+### Adding Columns
+
+```c
+LVCOLUMNW lvc = {0};
+lvc.mask = LVCF_TEXT | LVCF_WIDTH;
+
+// Column 1: Hostname
+lvc.pszText = L"Hostname";
+lvc.cx = 150;
+ListView_InsertColumn(hListView, 0, &lvc);
+
+// Column 2: Description
+lvc.pszText = L"Description";
+lvc.cx = 250;
+ListView_InsertColumn(hListView, 1, &lvc);
+
+// Column 3: Status
+lvc.pszText = L"Status";
+lvc.cx = 100;
+ListView_InsertColumn(hListView, 2, &lvc);
+```
+
+### Adding Items
+
+```c
+LVITEMW lvi = {0};
+lvi.mask = LVIF_TEXT;
+lvi.iItem = 0;
+lvi.iSubItem = 0;
+lvi.pszText = L"server1.local";
+int index = ListView_InsertItem(hListView, &lvi);
+
+// Set subitems (columns)
+ListView_SetItemText(hListView, index, 1, L"Production Server");
+ListView_SetItemText(hListView, index, 2, L"Online");
+```
+
+### Getting Selected Item
+
+```c
+int selected = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
+if (selected != -1)
+{
+    wchar_t hostname[256];
+    ListView_GetItemText(hListView, selected, 0, hostname, 256);
+    
+    wchar_t msg[300];
+    swprintf(msg, 300, L"Selected: %s", hostname);
+    MessageBoxW(hwnd, msg, L"Info", MB_OK);
+}
+```
+
+### Handling Double-Click
+
+```c
+case WM_NOTIFY:
+{
+    LPNMHDR pnmhdr = (LPNMHDR)lParam;
+    
+    if (pnmhdr->idFrom == IDC_LISTVIEW && pnmhdr->code == NM_DBLCLK)
+    {
+        // Get selected item
+        int selected = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
+        if (selected != -1)
+        {
+            wchar_t hostname[256];
+            ListView_GetItemText(hListView, selected, 0, hostname, 256);
+            
+            // Connect to server
+            ConnectToHost(hostname);
+        }
+    }
+    
+    return 0;
+}
+```
+
+## How WinRDP Uses Dialogs
+
+### Main Dialog (Modeless)
+
+WinRDP's main interface is a modeless dialog:
+
+```c
+// main.c
+HWND hMainDlg = CreateDialogParam(
+    hInstance,
+    MAKEINTRESOURCE(IDD_MAIN_DIALOG),
+    hwnd,
+    MainDialogProc,
+    0
+);
+```
+
+**Benefits:**
+- Easy layout with resource file
+- Automatic control management
+- Tab order handling
+
+### Login Dialog (Modal)
+
+```c
+INT_PTR result = DialogBoxParam(
+    hInstance,
+    MAKEINTRESOURCE(IDD_LOGIN),
+    hwnd,
+    LoginDialogProc,
+    0
+);
+
+if (result == IDOK)
+{
+    // User logged in - show main dialog
+}
+```
+
+### Host ListView
+
+```c
+// Populate ListView with hosts from CSV
+for (int i = 0; i < hostCount; i++)
+{
+    LVITEMW lvi = {0};
+    lvi.mask = LVIF_TEXT | LVIF_PARAM;
+    lvi.iItem = i;
+    lvi.pszText = hosts[i].hostname;
+    lvi.lParam = (LPARAM)&hosts[i];
+    
+    int index = ListView_InsertItem(hListView, &lvi);
+    ListView_SetItemText(hListView, index, 1, hosts[i].description);
+}
+```
+
+## Dialog Units vs Pixels
+
+Resource files use **dialog units**, not pixels:
+
+**Dialog units** are based on font size:
+- 4 horizontal dialog units = average character width
+- 8 vertical dialog units = average character height
+
+**Why?** Dialogs scale properly with different font sizes.
+
+**Convert dialog units to pixels:**
+
+```c
+RECT rc = {0, 0, 100, 50};  // 100x50 dialog units
+MapDialogRect(hDlg, &rc);
+// rc now contains pixel coordinates
+```
+
+## Tab Order and Keyboard Navigation
+
+Windows automatically handles:
+- **Tab** - Move to next control
+- **Shift+Tab** - Move to previous control
+- **Alt+Letter** - Activate control with that mnemonic
+
+### Setting Tab Order
+
+In resource file, define controls in tab order:
+
+```rc
+BEGIN
+    EDITTEXT IDC_FIRST, ...     // Tab order: 1
+    EDITTEXT IDC_SECOND, ...    // Tab order: 2
+    PUSHBUTTON "OK", IDOK, ...  // Tab order: 3
+END
+```
+
+### Mnemonics (Keyboard Shortcuts)
+
+Use & in control text:
+
+```rc
+PUSHBUTTON "&OK", IDOK, ...       // Alt+O
+PUSHBUTTON "&Cancel", IDCANCEL, ... // Alt+C
+LTEXT "&Username:", IDC_STATIC, ... // Alt+U focuses next control
+```
+
+## Dialog Templates in Code (Without .rc)
+
+You can create dialogs without resource files:
+
+```c
+typedef struct {
+    DLGTEMPLATE dlg;
+    WORD menu;
+    WORD windowClass;
+    WCHAR title[20];
+    // Followed by control definitions
+} DialogTemplate;
+
+// Complex - usually better to use .rc files!
+```
+
+**Recommendation:** Use resource files - they're much easier!
+
+## Exercises
+
+### Exercise 1: Settings Dialog
+Create a settings dialog with checkboxes, radio buttons, and combo boxes.
+
+### Exercise 2: About Dialog
+Create an "About" dialog showing version, copyright, and a logo.
+
+**Hint:**
+```rc
+IDD_ABOUT DIALOG 0, 0, 200, 100
+BEGIN
+    ICON IDI_APP, IDC_STATIC, 10, 10, 20, 20
+    LTEXT "MyApp v1.0", IDC_STATIC, 40, 10, 150, 12
+    LTEXT "Copyright 2024", IDC_STATIC, 40, 25, 150, 12
+    DEFPUSHBUTTON "OK", IDOK, 75, 80, 50, 14
+END
+```
+
+### Exercise 3: Find and Replace
+Create modeless Find and Replace dialogs.
+
+### Exercise 4: ListView Manager
+Create an app that manages a list of tasks with Add, Edit, Delete buttons.
+
+### Exercise 5: Wizard
+Create a multi-page wizard using multiple dialogs.
+
+## Common Mistakes
+
+### Mistake 1: Using DefWindowProc in Dialog Procedure
+
+```c
+// WRONG
+INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    // ...
+    return DefWindowProc(hDlg, uMsg, wParam, lParam);  // WRONG!
+}
+
+// CORRECT
+return FALSE;  // Let dialog manager handle it
+```
+
+### Mistake 2: DestroyWindow Instead of EndDialog
+
+```c
+// WRONG - for modal dialog
+case IDOK:
+{
+    DestroyWindow(hDlg);  // WRONG!
+}
+
+// CORRECT
+case IDOK:
+{
+    EndDialog(hDlg, IDOK);
+}
+```
+
+### Mistake 3: Forgetting to Process Modeless Dialog Messages
+
+```c
+// WRONG - tab key won't work!
+MSG msg;
+while (GetMessage(&msg, NULL, 0, 0) > 0)
+{
+    TranslateMessage(&msg);
+    DispatchMessage(&msg);
+}
+
+// CORRECT
+while (GetMessage(&msg, NULL, 0, 0) > 0)
+{
+    if (!IsDialogMessage(hDlg, &msg))
+    {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+}
+```
+
+### Mistake 4: Not Initializing Common Controls
+
+For ListView, TreeView, etc., initialize first:
+
+```c
+// In WinMain, before creating controls
+INITCOMMONCONTROLSEX icc = {0};
+icc.dwSize = sizeof(icc);
+icc.dwICC = ICC_LISTVIEW_CLASSES;
+InitCommonControlsEx(&icc);
+```
+
+## Summary
+
+You've learned:
+- ✅ What dialog boxes are and their advantages
+- ✅ Resource files (.rc) for dialog definitions
+- ✅ Dialog procedures and their differences from window procedures
+- ✅ Modal vs modeless dialogs
+- ✅ Getting/setting control values
+- ✅ Common dialogs (file, color, font)
+- ✅ ListView control for displaying lists
+- ✅ How WinRDP uses dialogs
+- ✅ Tab order and keyboard navigation
+
+**Congratulations!** You've completed Part III (Windows Programming Basics)!
+
+You now know:
+- Part I: C Fundamentals
+- Part II: Advanced C Concepts
+- Part III: Windows Programming Basics
+
+**Next: Part IV - Building WinRDP Core!**
+
+In Part IV, you'll apply everything you've learned to build the complete WinRDP application, module by module, feature by feature!
+
+---
+
+# Part III Complete!
+
+You now have all the Windows programming knowledge needed to build real applications. In Part IV, we'll build WinRDP from scratch, starting with project setup and progressively adding each feature.
+
+**Preview of Part IV:**
+- Chapter 17: Project Setup and Architecture
+- Chapter 18: Configuration and Utilities
+- Chapter 19: CSV File Management (hosts.c)
+- Chapter 20: Windows Credential Manager (credentials.c)
+- Chapter 21: Main Application Window (main.c)
+- Chapter 22: ListView Control for Host Display
+- Chapter 23: RDP Connection Logic (rdp.c)
+- Chapter 24: System Tray Integration
+
+Ready to build something real? Let's continue! 🚀
+
+---
