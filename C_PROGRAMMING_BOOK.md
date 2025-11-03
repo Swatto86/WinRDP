@@ -2406,13 +2406,3649 @@ You've learned:
 
 ---
 
-*This is the first third of the book. The book continues with Chapter 7 (Strings), Chapter 8 (Structures), and then progresses through Advanced C, Windows Programming, and ultimately building the complete WinRDP application.*
+# Chapter 7: Strings: Text Processing in C
 
-*Would you like me to continue with the remaining chapters?*
+## What Are Strings?
+
+In C, strings are arrays of characters terminated by a null character (`'\0'`):
+
+```c
+char name[] = "Hello";
+```
+
+Memory layout:
+```
+Index:  0    1    2    3    4    5
+Value: ['H']['e']['l']['l']['o']['\0']
+```
+
+The `'\0'` marks the end of the string. Without it, functions wouldn't know where the string ends!
+
+## String Declaration and Initialization
+
+### Method 1: Character Array with Initializer
+
+```c
+char str1[] = "Hello";  // Size is automatically 6 (5 + '\0')
+char str2[10] = "Hi";   // Size is 10, only first 3 used
+```
+
+### Method 2: Character Array with Manual Initialization
+
+```c
+char str3[] = {'H', 'e', 'l', 'l', 'o', '\0'};  // Must add '\0'!
+```
+
+### Method 3: Pointer to String Literal
+
+```c
+char* str4 = "Hello";  // Points to read-only memory
+```
+
+**Important**: String literals are read-only! Don't try to modify them:
+
+```c
+char* str = "Hello";
+str[0] = 'J';  // CRASH! Can't modify string literal
+```
+
+Use array form if you need to modify:
+
+```c
+char str[] = "Hello";
+str[0] = 'J';  // OK! str is now "Jello"
+```
+
+## String Input/Output
+
+### Outputting Strings
+
+```c
+char name[] = "Alice";
+printf("%s\n", name);           // Alice
+printf("Hello, %s!\n", name);   // Hello, Alice!
+```
+
+### Inputting Strings
+
+#### Method 1: scanf (stops at whitespace)
+
+```c
+char name[50];
+printf("Enter your name: ");
+scanf("%s", name);  // Note: No & needed (array name is already pointer)
+```
+
+**Problem**: `scanf("%s", ...)` stops at first space!
+
+```
+Input:  John Smith
+Result: name = "John"  (Smith is lost!)
+```
+
+#### Method 2: fgets (reads whole line)
+
+```c
+char line[100];
+printf("Enter text: ");
+fgets(line, sizeof(line), stdin);  // Reads up to 99 chars + '\0'
+```
+
+**fgets** reads the newline character too. You may want to remove it:
+
+```c
+// Remove trailing newline
+int len = strlen(line);
+if (len > 0 && line[len - 1] == '\n')
+{
+    line[len - 1] = '\0';
+}
+```
+
+## String Library Functions
+
+Include `<string.h>` for these functions:
+
+### strlen - String Length
+
+```c
+char str[] = "Hello";
+int len = strlen(str);  // 5 (doesn't count '\0')
+```
+
+### strcpy - String Copy
+
+```c
+char source[] = "Hello";
+char dest[20];
+strcpy(dest, source);  // dest now contains "Hello"
+```
+
+**Warning**: Make sure destination is large enough!
+
+```c
+char dest[3];
+strcpy(dest, "Hello");  // BUFFER OVERFLOW! Dangerous!
+```
+
+### strncpy - Safe String Copy
+
+```c
+char dest[10];
+strncpy(dest, "Hello World", sizeof(dest) - 1);
+dest[sizeof(dest) - 1] = '\0';  // Ensure null termination
+```
+
+### strcat - String Concatenation
+
+```c
+char str1[20] = "Hello";
+char str2[] = " World";
+strcat(str1, str2);  // str1 is now "Hello World"
+```
+
+### strncat - Safe String Concatenation
+
+```c
+char str1[20] = "Hello";
+strncat(str1, " World", sizeof(str1) - strlen(str1) - 1);
+```
+
+### strcmp - String Comparison
+
+```c
+char str1[] = "Apple";
+char str2[] = "Banana";
+
+int result = strcmp(str1, str2);
+// result < 0 if str1 < str2 (alphabetically)
+// result == 0 if str1 == str2 (equal)
+// result > 0 if str1 > str2
+
+if (strcmp(str1, str2) == 0)
+{
+    printf("Strings are equal\n");
+}
+```
+
+**Important**: Don't use `==` to compare strings!
+
+```c
+if (str1 == str2)  // WRONG! Compares addresses, not content
+if (strcmp(str1, str2) == 0)  // CORRECT!
+```
+
+### strchr - Find Character
+
+```c
+char str[] = "Hello World";
+char* p = strchr(str, 'W');
+
+if (p != NULL)
+{
+    printf("Found at index: %ld\n", p - str);  // 6
+}
+```
+
+### strstr - Find Substring
+
+```c
+char str[] = "Hello World";
+char* p = strstr(str, "World");
+
+if (p != NULL)
+{
+    printf("Found substring at: %s\n", p);  // "World"
+}
+```
+
+## Common String Operations
+
+### Example 1: Converting to Uppercase
+
+```c
+void toUpper(char* str)
+{
+    for (int i = 0; str[i] != '\0'; i++)
+    {
+        if (str[i] >= 'a' && str[i] <= 'z')
+        {
+            str[i] = str[i] - 32;  // Or use toupper() from <ctype.h>
+        }
+    }
+}
+
+int main(void)
+{
+    char text[] = "hello";
+    toUpper(text);
+    printf("%s\n", text);  // HELLO
+    return 0;
+}
+```
+
+Using `<ctype.h>`:
+
+```c
+#include <ctype.h>
+
+void toUpper(char* str)
+{
+    for (int i = 0; str[i] != '\0'; i++)
+    {
+        str[i] = toupper(str[i]);
+    }
+}
+```
+
+### Example 2: Counting Words
+
+```c
+#include <stdio.h>
+#include <ctype.h>
+
+int countWords(char* str)
+{
+    int count = 0;
+    int inWord = 0;
+    
+    for (int i = 0; str[i] != '\0'; i++)
+    {
+        if (isspace(str[i]))
+        {
+            inWord = 0;
+        }
+        else if (!inWord)
+        {
+            inWord = 1;
+            count++;
+        }
+    }
+    
+    return count;
+}
+
+int main(void)
+{
+    char text[] = "Hello World from C";
+    printf("Word count: %d\n", countWords(text));  // 4
+    return 0;
+}
+```
+
+### Example 3: Reversing a String
+
+```c
+void reverseString(char* str)
+{
+    int len = strlen(str);
+    
+    for (int i = 0; i < len / 2; i++)
+    {
+        char temp = str[i];
+        str[i] = str[len - 1 - i];
+        str[len - 1 - i] = temp;
+    }
+}
+
+int main(void)
+{
+    char text[] = "Hello";
+    reverseString(text);
+    printf("%s\n", text);  // olleH
+    return 0;
+}
+```
+
+## String Arrays
+
+Array of strings (2D char array):
+
+```c
+char days[][10] = {
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday"
+};
+
+for (int i = 0; i < 7; i++)
+{
+    printf("%s\n", days[i]);
+}
+```
+
+Or using array of pointers:
+
+```c
+char* days[] = {
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday"
+};
+
+for (int i = 0; i < 7; i++)
+{
+    printf("%s\n", days[i]);
+}
+```
+
+## Practical Example: Password Validator
+
+```c
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+#include <stdbool.h>
+
+bool isValidPassword(char* password)
+{
+    int len = strlen(password);
+    
+    // Check length
+    if (len < 8)
+    {
+        printf("Password must be at least 8 characters\n");
+        return false;
+    }
+    
+    // Check for uppercase, lowercase, and digit
+    bool hasUpper = false, hasLower = false, hasDigit = false;
+    
+    for (int i = 0; i < len; i++)
+    {
+        if (isupper(password[i])) hasUpper = true;
+        if (islower(password[i])) hasLower = true;
+        if (isdigit(password[i])) hasDigit = true;
+    }
+    
+    if (!hasUpper)
+    {
+        printf("Password must contain uppercase letter\n");
+        return false;
+    }
+    if (!hasLower)
+    {
+        printf("Password must contain lowercase letter\n");
+        return false;
+    }
+    if (!hasDigit)
+    {
+        printf("Password must contain digit\n");
+        return false;
+    }
+    
+    return true;
+}
+
+int main(void)
+{
+    char password[100];
+    
+    printf("Enter password: ");
+    scanf("%s", password);
+    
+    if (isValidPassword(password))
+    {
+        printf("Valid password!\n");
+    }
+    else
+    {
+        printf("Invalid password.\n");
+    }
+    
+    return 0;
+}
+```
+
+## Exercise 7.1: String Palindrome Checker
+
+Check if a string is a palindrome:
+
+```c
+#include <stdio.h>
+#include <string.h>
+#include <stdbool.h>
+
+bool isPalindrome(char* str)
+{
+    int len = strlen(str);
+    
+    for (int i = 0; i < len / 2; i++)
+    {
+        if (str[i] != str[len - 1 - i])
+        {
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+int main(void)
+{
+    char word[100];
+    
+    printf("Enter a word: ");
+    scanf("%s", word);
+    
+    if (isPalindrome(word))
+    {
+        printf("%s is a palindrome\n", word);
+    }
+    else
+    {
+        printf("%s is not a palindrome\n", word);
+    }
+    
+    return 0;
+}
+```
+
+## Exercise 7.2: String Tokenization
+
+Split a string by delimiter:
+
+```c
+#include <stdio.h>
+#include <string.h>
+
+int main(void)
+{
+    char str[] = "apple,banana,orange,grape";
+    char* token;
+    
+    token = strtok(str, ",");
+    
+    while (token != NULL)
+    {
+        printf("%s\n", token);
+        token = strtok(NULL, ",");
+    }
+    
+    return 0;
+}
+```
+
+Output:
+```
+apple
+banana
+orange
+grape
+```
+
+## Exercise 7.3: Custom String Copy Function
+
+Implement your own strcpy:
+
+```c
+#include <stdio.h>
+
+void myStrcpy(char* dest, const char* src)
+{
+    int i = 0;
+    while (src[i] != '\0')
+    {
+        dest[i] = src[i];
+        i++;
+    }
+    dest[i] = '\0';  // Don't forget null terminator!
+}
+
+int main(void)
+{
+    char source[] = "Hello";
+    char destination[20];
+    
+    myStrcpy(destination, source);
+    printf("Copied: %s\n", destination);
+    
+    return 0;
+}
+```
+
+## Common Mistakes
+
+### Mistake 1: Forgetting Null Terminator
+
+```c
+char str[5];
+str[0] = 'H';
+str[1] = 'i';
+// Missing '\0'!
+printf("%s\n", str);  // Prints garbage after "Hi"
+```
+
+### Mistake 2: Buffer Overflow
+
+```c
+char small[5] = "Hi";
+strcat(small, " World");  // OVERFLOW! Only room for 4 chars + '\0'
+```
+
+### Mistake 3: Modifying String Literals
+
+```c
+char* str = "Hello";
+str[0] = 'J';  // CRASH! String literal is read-only
+```
+
+Use array instead:
+```c
+char str[] = "Hello";
+str[0] = 'J';  // OK
+```
+
+### Mistake 4: Using == for Comparison
+
+```c
+char str1[] = "Hello";
+char str2[] = "Hello";
+
+if (str1 == str2)  // WRONG! Compares addresses
+{
+    // Never executes!
+}
+
+if (strcmp(str1, str2) == 0)  // CORRECT!
+{
+    // This works!
+}
+```
+
+## Summary
+
+You've learned:
+- ✅ How strings work in C (character arrays with '\0')
+- ✅ String input/output (printf, scanf, fgets)
+- ✅ String library functions (strlen, strcpy, strcmp, etc.)
+- ✅ Common string operations (uppercase, reverse, etc.)
+- ✅ String arrays and 2D character arrays
+- ✅ How to avoid common string pitfalls
+
+**Next Chapter**: Structures - organizing related data together!
 
 ---
 
-**To be continued in Part II...**
+# Chapter 8: Structures: Organizing Related Data
+
+## What Are Structures?
+
+Structures (structs) let you group related data of different types:
+
+```c
+struct Person {
+    char name[50];
+    int age;
+    float height;
+};
+```
+
+Think of a struct as a custom data type that bundles related information.
+
+## Defining Structures
+
+### Basic Syntax
+
+```c
+struct Person {
+    char name[50];
+    int age;
+    float height;
+};
+```
+
+### Creating Structure Variables
+
+```c
+struct Person person1;  // Declare a Person
+```
+
+### Initialization
+
+```c
+// Method 1: Initialize at declaration
+struct Person person1 = {"Alice", 30, 5.6};
+
+// Method 2: Designated initializers (C99)
+struct Person person2 = {
+    .name = "Bob",
+    .age = 25,
+    .height = 5.9
+};
+
+// Method 3: Assign after declaration
+struct Person person3;
+strcpy(person3.name, "Charlie");
+person3.age = 35;
+person3.height = 6.0;
+```
+
+## Accessing Structure Members
+
+Use the dot (`.`) operator:
+
+```c
+struct Person person = {"Alice", 30, 5.6};
+
+printf("Name: %s\n", person.name);     // Alice
+printf("Age: %d\n", person.age);       // 30
+printf("Height: %.1f\n", person.height); // 5.6
+
+// Modify members
+person.age = 31;
+strcpy(person.name, "Alice Smith");
+```
+
+## typedef for Cleaner Code
+
+Instead of writing `struct Person` every time:
+
+```c
+typedef struct {
+    char name[50];
+    int age;
+    float height;
+} Person;
+
+// Now you can use Person directly:
+Person person1;
+Person person2 = {"Bob", 25, 5.9};
+```
+
+**This is the recommended style!**
+
+## Structures and Functions
+
+### Passing by Value
+
+```c
+void printPerson(Person p)
+{
+    printf("Name: %s\n", p.name);
+    printf("Age: %d\n", p.age);
+    printf("Height: %.1f\n", p.height);
+}
+
+int main(void)
+{
+    Person person = {"Alice", 30, 5.6};
+    printPerson(person);
+    return 0;
+}
+```
+
+### Passing by Pointer (Efficient)
+
+For large structures, use pointers to avoid copying:
+
+```c
+void printPerson(Person* p)
+{
+    printf("Name: %s\n", p->name);      // -> is used for pointer access
+    printf("Age: %d\n", p->age);
+    printf("Height: %.1f\n", p->height);
+}
+
+int main(void)
+{
+    Person person = {"Alice", 30, 5.6};
+    printPerson(&person);  // Pass address
+    return 0;
+}
+```
+
+**Arrow Operator** (`->`):
+- `p->name` is shorthand for `(*p).name`
+- Used to access members through a pointer
+
+### Returning Structures
+
+```c
+Person createPerson(char* name, int age, float height)
+{
+    Person p;
+    strcpy(p.name, name);
+    p.age = age;
+    p.height = height;
+    return p;
+}
+
+int main(void)
+{
+    Person person = createPerson("Bob", 25, 5.9);
+    printPerson(&person);
+    return 0;
+}
+```
+
+## Nested Structures
+
+Structures can contain other structures:
+
+```c
+typedef struct {
+    int day;
+    int month;
+    int year;
+} Date;
+
+typedef struct {
+    char name[50];
+    Date birthDate;
+    float salary;
+} Employee;
+
+int main(void)
+{
+    Employee emp = {
+        .name = "John Doe",
+        .birthDate = {15, 3, 1990},
+        .salary = 50000.0
+    };
+    
+    printf("Name: %s\n", emp.name);
+    printf("Birth Date: %d/%d/%d\n", 
+           emp.birthDate.day,
+           emp.birthDate.month,
+           emp.birthDate.year);
+    printf("Salary: $%.2f\n", emp.salary);
+    
+    return 0;
+}
+```
+
+## Arrays of Structures
+
+```c
+#define MAX_STUDENTS 100
+
+typedef struct {
+    char name[50];
+    int id;
+    float gpa;
+} Student;
+
+int main(void)
+{
+    Student students[MAX_STUDENTS];
+    int count = 3;
+    
+    // Initialize students
+    students[0] = (Student){"Alice", 1001, 3.8};
+    students[1] = (Student){"Bob", 1002, 3.5};
+    students[2] = (Student){"Charlie", 1003, 3.9};
+    
+    // Print all students
+    for (int i = 0; i < count; i++)
+    {
+        printf("Student: %s (ID: %d, GPA: %.2f)\n",
+               students[i].name,
+               students[i].id,
+               students[i].gpa);
+    }
+    
+    return 0;
+}
+```
+
+## Practical Example: Contact Management System
+
+```c
+#include <stdio.h>
+#include <string.h>
+
+#define MAX_CONTACTS 100
+
+typedef struct {
+    char name[50];
+    char phone[20];
+    char email[50];
+} Contact;
+
+typedef struct {
+    Contact contacts[MAX_CONTACTS];
+    int count;
+} ContactList;
+
+void addContact(ContactList* list, char* name, char* phone, char* email)
+{
+    if (list->count >= MAX_CONTACTS)
+    {
+        printf("Contact list is full!\n");
+        return;
+    }
+    
+    Contact* c = &list->contacts[list->count];
+    strcpy(c->name, name);
+    strcpy(c->phone, phone);
+    strcpy(c->email, email);
+    list->count++;
+    
+    printf("Contact added!\n");
+}
+
+void printContact(Contact* c)
+{
+    printf("Name:  %s\n", c->name);
+    printf("Phone: %s\n", c->phone);
+    printf("Email: %s\n", c->email);
+    printf("---\n");
+}
+
+void listContacts(ContactList* list)
+{
+    if (list->count == 0)
+    {
+        printf("No contacts.\n");
+        return;
+    }
+    
+    for (int i = 0; i < list->count; i++)
+    {
+        printf("%d. ", i + 1);
+        printContact(&list->contacts[i]);
+    }
+}
+
+Contact* findContact(ContactList* list, char* name)
+{
+    for (int i = 0; i < list->count; i++)
+    {
+        if (strcmp(list->contacts[i].name, name) == 0)
+        {
+            return &list->contacts[i];
+        }
+    }
+    return NULL;
+}
+
+int main(void)
+{
+    ContactList myContacts = {.count = 0};
+    
+    addContact(&myContacts, "Alice", "555-1234", "alice@email.com");
+    addContact(&myContacts, "Bob", "555-5678", "bob@email.com");
+    addContact(&myContacts, "Charlie", "555-9012", "charlie@email.com");
+    
+    printf("\n=== All Contacts ===\n");
+    listContacts(&myContacts);
+    
+    printf("\n=== Search for Bob ===\n");
+    Contact* found = findContact(&myContacts, "Bob");
+    if (found != NULL)
+    {
+        printContact(found);
+    }
+    else
+    {
+        printf("Contact not found.\n");
+    }
+    
+    return 0;
+}
+```
+
+## Structure Padding and Size
+
+Structures may have padding for alignment:
+
+```c
+#include <stdio.h>
+
+typedef struct {
+    char c;     // 1 byte
+    int i;      // 4 bytes
+    char d;     // 1 byte
+} Example;
+
+int main(void)
+{
+    printf("Size: %zu bytes\n", sizeof(Example));
+    // Might print 12 instead of 6 due to padding!
+    return 0;
+}
+```
+
+Memory layout (typical):
+```
+[c][pad][pad][pad][i][i][i][i][d][pad][pad][pad]
+ 1   1   1   1   4  4  4  4  1   1   1   1  = 12 bytes
+```
+
+## WinRDP Connection: Host Structure
+
+This is how WinRDP stores RDP server information:
+
+```c
+typedef struct {
+    wchar_t hostname[256];     // Server name or IP
+    wchar_t description[256];  // Friendly description
+} Host;
+```
+
+Loading hosts from CSV file:
+
+```c
+Host* hosts = NULL;
+int hostCount = 0;
+
+// Dynamic array that grows as needed
+hosts = realloc(hosts, (hostCount + 1) * sizeof(Host));
+wcscpy(hosts[hostCount].hostname, L"server1.example.com");
+wcscpy(hosts[hostCount].description, L"Production Server");
+hostCount++;
+```
+
+**You'll build this in Chapter 19!**
+
+## Exercise 8.1: Rectangle Structure
+
+Create a structure for rectangles:
+
+```c
+#include <stdio.h>
+
+typedef struct {
+    float width;
+    float height;
+} Rectangle;
+
+float area(Rectangle r)
+{
+    return r.width * r.height;
+}
+
+float perimeter(Rectangle r)
+{
+    return 2 * (r.width + r.height);
+}
+
+int main(void)
+{
+    Rectangle rect = {5.0, 3.0};
+    
+    printf("Area: %.2f\n", area(rect));
+    printf("Perimeter: %.2f\n", perimeter(rect));
+    
+    return 0;
+}
+```
+
+## Exercise 8.2: Book Database
+
+Create a simple book database:
+
+```c
+#include <stdio.h>
+#include <string.h>
+
+typedef struct {
+    char title[100];
+    char author[50];
+    int year;
+    float price;
+} Book;
+
+void printBook(Book* b)
+{
+    printf("Title:  %s\n", b->title);
+    printf("Author: %s\n", b->author);
+    printf("Year:   %d\n", b->year);
+    printf("Price:  $%.2f\n", b->price);
+    printf("---\n");
+}
+
+int main(void)
+{
+    Book books[3] = {
+        {"The C Programming Language", "K&R", 1978, 59.99},
+        {"C Primer Plus", "Stephen Prata", 2013, 49.99},
+        {"Expert C Programming", "Peter van der Linden", 1994, 44.99}
+    };
+    
+    for (int i = 0; i < 3; i++)
+    {
+        printBook(&books[i]);
+    }
+    
+    return 0;
+}
+```
+
+## Exercise 8.3: Linked List Node
+
+Introduction to linked lists:
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+
+typedef struct Node {
+    int data;
+    struct Node* next;  // Pointer to next node
+} Node;
+
+Node* createNode(int value)
+{
+    Node* newNode = malloc(sizeof(Node));
+    newNode->data = value;
+    newNode->next = NULL;
+    return newNode;
+}
+
+void printList(Node* head)
+{
+    Node* current = head;
+    while (current != NULL)
+    {
+        printf("%d -> ", current->data);
+        current = current->next;
+    }
+    printf("NULL\n");
+}
+
+int main(void)
+{
+    Node* head = createNode(1);
+    head->next = createNode(2);
+    head->next->next = createNode(3);
+    
+    printList(head);  // 1 -> 2 -> 3 -> NULL
+    
+    // Free memory (we'll cover this properly in Chapter 9)
+    Node* current = head;
+    while (current != NULL)
+    {
+        Node* temp = current;
+        current = current->next;
+        free(temp);
+    }
+    
+    return 0;
+}
+```
+
+## Common Mistakes
+
+### Mistake 1: Forgetting -> with Pointers
+
+```c
+Person* p = &person;
+printf("%s", p.name);  // WRONG! Use -> for pointers
+printf("%s", p->name); // CORRECT!
+```
+
+### Mistake 2: Comparing Structs with ==
+
+```c
+Person p1 = {"Alice", 30, 5.6};
+Person p2 = {"Alice", 30, 5.6};
+
+if (p1 == p2)  // ERROR! Can't compare structs directly
+```
+
+Write a comparison function instead:
+
+```c
+bool equalPersons(Person* p1, Person* p2)
+{
+    return strcmp(p1->name, p2->name) == 0 &&
+           p1->age == p2->age &&
+           p1->height == p2->height;
+}
+```
+
+### Mistake 3: Returning Pointer to Local Variable
+
+```c
+Person* createPerson()
+{
+    Person p = {"Alice", 30, 5.6};
+    return &p;  // DANGER! p is destroyed when function returns
+}
+```
+
+Return by value or use dynamic allocation:
+
+```c
+Person createPerson()  // Return by value (OK)
+{
+    Person p = {"Alice", 30, 5.6};
+    return p;
+}
+
+Person* createPerson()  // Dynamic allocation (OK)
+{
+    Person* p = malloc(sizeof(Person));
+    strcpy(p->name, "Alice");
+    p->age = 30;
+    p->height = 5.6;
+    return p;
+}
+```
+
+## Summary
+
+You've learned:
+- ✅ What structures are and why they're useful
+- ✅ How to define and use structures
+- ✅ typedef for cleaner code
+- ✅ Passing structures to functions (by value and by pointer)
+- ✅ Nested structures and arrays of structures
+- ✅ The arrow operator (->) for pointer member access
+- ✅ How structures are used in real programs (WinRDP example)
+
+**Congratulations!** You've completed Part I (C Fundamentals)! You now understand:
+- Variables and data types
+- Control flow (if, loops)
+- Functions
+- Arrays
+- Pointers
+- Strings
+- Structures
+
+**Next: Part II - Advanced C Concepts!**
+
+---
+
+# Part II: Advanced C Concepts
+
+# Chapter 9: Dynamic Memory Management
+
+## Why Dynamic Memory?
+
+So far, we've used **static memory** (arrays with fixed size):
+
+```c
+int numbers[100];  // What if we need 200? Or only 10?
+```
+
+**Dynamic memory** lets us allocate memory at runtime based on actual needs:
+
+```c
+int size;
+printf("How many numbers? ");
+scanf("%d", &size);
+int* numbers = malloc(size * sizeof(int));  // Allocate exactly what we need!
+```
+
+## The Stack vs The Heap
+
+### Stack Memory (Automatic)
+- Local variables
+- Fixed size
+- Automatically freed when function returns
+- Fast but limited
+
+```c
+void function()
+{
+    int x = 10;  // On stack
+    // Automatically freed when function ends
+}
+```
+
+### Heap Memory (Dynamic)
+- Allocated with malloc/calloc
+- Variable size
+- Must be manually freed
+- Slower but flexible
+
+```c
+int* ptr = malloc(100 * sizeof(int));  // On heap
+// Must free manually!
+free(ptr);
+```
+
+## malloc - Memory Allocation
+
+Allocates uninitialized memory:
+
+```c
+#include <stdlib.h>
+
+int* numbers = malloc(5 * sizeof(int));
+if (numbers == NULL)
+{
+    printf("Memory allocation failed!\n");
+    return 1;
+}
+
+// Use the memory
+numbers[0] = 10;
+numbers[1] = 20;
+// ...
+
+free(numbers);  // Always free!
+```
+
+**Important**: Always check if `malloc` returns `NULL` (allocation failed)!
+
+## calloc - Cleared Allocation
+
+Like `malloc`, but initializes memory to zero:
+
+```c
+int* numbers = calloc(5, sizeof(int));
+// All elements are 0
+```
+
+**Syntax**: `calloc(count, size_per_element)`
+
+## realloc - Resize Memory
+
+Change the size of allocated memory:
+
+```c
+int* numbers = malloc(5 * sizeof(int));
+
+// Need more space!
+numbers = realloc(numbers, 10 * sizeof(int));
+
+if (numbers == NULL)
+{
+    printf("Reallocation failed!\n");
+    return 1;
+}
+
+free(numbers);
+```
+
+**How realloc works**:
+1. Allocates new block (if needed)
+2. Copies old data to new block
+3. Frees old block
+4. Returns pointer to new block
+
+## free - Deallocate Memory
+
+**Critical**: Always free dynamically allocated memory!
+
+```c
+int* ptr = malloc(sizeof(int) * 100);
+// Use ptr...
+free(ptr);
+ptr = NULL;  // Good practice: prevent use after free
+```
+
+## Dynamic Arrays
+
+Creating a growable array:
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+
+int main(void)
+{
+    int* arr = NULL;
+    int capacity = 0;
+    int size = 0;
+    
+    // Add elements dynamically
+    for (int i = 0; i < 10; i++)
+    {
+        if (size >= capacity)
+        {
+            // Grow array
+            capacity = (capacity == 0) ? 1 : capacity * 2;
+            arr = realloc(arr, capacity * sizeof(int));
+            
+            if (arr == NULL)
+            {
+                printf("Allocation failed!\n");
+                return 1;
+            }
+        }
+        
+        arr[size++] = i * 10;
+    }
+    
+    // Print array
+    for (int i = 0; i < size; i++)
+    {
+        printf("%d ", arr[i]);
+    }
+    printf("\n");
+    
+    free(arr);
+    return 0;
+}
+```
+
+## Memory Leaks
+
+**Memory leak**: Allocated memory that's never freed.
+
+```c
+void leakyFunction()
+{
+    int* ptr = malloc(1000 * sizeof(int));
+    // Forgot to free!
+}  // Memory is lost forever!
+
+int main(void)
+{
+    for (int i = 0; i < 1000; i++)
+    {
+        leakyFunction();  // Leaks 4KB each iteration!
+    }
+    return 0;
+}
+```
+
+**How to prevent**:
+- Every `malloc` must have a matching `free`
+- Use tools like Valgrind to detect leaks
+- Set freed pointers to NULL
+
+## Dynamic Strings
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+char* createString(const char* str)
+{
+    char* copy = malloc((strlen(str) + 1) * sizeof(char));
+    if (copy != NULL)
+    {
+        strcpy(copy, str);
+    }
+    return copy;
+}
+
+int main(void)
+{
+    char* greeting = createString("Hello, World!");
+    printf("%s\n", greeting);
+    free(greeting);
+    return 0;
+}
+```
+
+## Dynamic Structures
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+typedef struct {
+    char* name;
+    int age;
+} Person;
+
+Person* createPerson(const char* name, int age)
+{
+    Person* p = malloc(sizeof(Person));
+    if (p == NULL) return NULL;
+    
+    p->name = malloc(strlen(name) + 1);
+    if (p->name == NULL)
+    {
+        free(p);
+        return NULL;
+    }
+    
+    strcpy(p->name, name);
+    p->age = age;
+    
+    return p;
+}
+
+void freePerson(Person* p)
+{
+    if (p != NULL)
+    {
+        free(p->name);  // Free nested allocation first!
+        free(p);
+    }
+}
+
+int main(void)
+{
+    Person* person = createPerson("Alice", 30);
+    printf("Name: %s, Age: %d\n", person->name, person->age);
+    freePerson(person);
+    return 0;
+}
+```
+
+## WinRDP Connection: Dynamic Host List
+
+WinRDP uses dynamic allocation for its host list:
+
+```c
+typedef struct {
+    wchar_t hostname[256];
+    wchar_t description[256];
+} Host;
+
+Host* hosts = NULL;
+int hostCount = 0;
+
+void addHost(const wchar_t* hostname, const wchar_t* description)
+{
+    // Grow array
+    Host* temp = realloc(hosts, (hostCount + 1) * sizeof(Host));
+    if (temp == NULL)
+    {
+        // Handle error
+        return;
+    }
+    
+    hosts = temp;
+    wcscpy(hosts[hostCount].hostname, hostname);
+    wcscpy(hosts[hostCount].description, description);
+    hostCount++;
+}
+
+void freeHosts()
+{
+    free(hosts);
+    hosts = NULL;
+    hostCount = 0;
+}
+```
+
+**You'll implement this in Chapter 19!**
+
+## Practical Example: Dynamic Student Database
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+typedef struct {
+    char* name;
+    int id;
+    float gpa;
+} Student;
+
+typedef struct {
+    Student* students;
+    int count;
+    int capacity;
+} Database;
+
+Database* createDatabase()
+{
+    Database* db = malloc(sizeof(Database));
+    db->students = NULL;
+    db->count = 0;
+    db->capacity = 0;
+    return db;
+}
+
+void addStudent(Database* db, const char* name, int id, float gpa)
+{
+    if (db->count >= db->capacity)
+    {
+        int newCapacity = (db->capacity == 0) ? 4 : db->capacity * 2;
+        Student* temp = realloc(db->students, newCapacity * sizeof(Student));
+        
+        if (temp == NULL)
+        {
+            printf("Failed to allocate memory!\n");
+            return;
+        }
+        
+        db->students = temp;
+        db->capacity = newCapacity;
+    }
+    
+    Student* s = &db->students[db->count];
+    s->name = malloc(strlen(name) + 1);
+    strcpy(s->name, name);
+    s->id = id;
+    s->gpa = gpa;
+    db->count++;
+}
+
+void printDatabase(Database* db)
+{
+    for (int i = 0; i < db->count; i++)
+    {
+        printf("%d. %s (ID: %d, GPA: %.2f)\n",
+               i + 1,
+               db->students[i].name,
+               db->students[i].id,
+               db->students[i].gpa);
+    }
+}
+
+void freeDatabase(Database* db)
+{
+    for (int i = 0; i < db->count; i++)
+    {
+        free(db->students[i].name);
+    }
+    free(db->students);
+    free(db);
+}
+
+int main(void)
+{
+    Database* db = createDatabase();
+    
+    addStudent(db, "Alice", 1001, 3.8);
+    addStudent(db, "Bob", 1002, 3.5);
+    addStudent(db, "Charlie", 1003, 3.9);
+    
+    printDatabase(db);
+    
+    freeDatabase(db);
+    return 0;
+}
+```
+
+## Common Memory Management Patterns
+
+### Pattern 1: Create and Destroy Functions
+
+```c
+// Create
+Thing* createThing()
+{
+    Thing* t = malloc(sizeof(Thing));
+    // Initialize...
+    return t;
+}
+
+// Destroy
+void freeThing(Thing* t)
+{
+    // Free nested allocations
+    free(t);
+}
+```
+
+### Pattern 2: Growing Arrays
+
+```c
+void addElement(Array* arr, int value)
+{
+    if (arr->size >= arr->capacity)
+    {
+        arr->capacity *= 2;
+        arr->data = realloc(arr->data, arr->capacity * sizeof(int));
+    }
+    arr->data[arr->size++] = value;
+}
+```
+
+### Pattern 3: String Duplication
+
+```c
+char* duplicate(const char* str)
+{
+    char* copy = malloc(strlen(str) + 1);
+    if (copy != NULL)
+    {
+        strcpy(copy, str);
+    }
+    return copy;
+}
+```
+
+## Exercise 9.1: Dynamic Matrix
+
+Create a dynamic 2D array:
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+
+int** createMatrix(int rows, int cols)
+{
+    int** matrix = malloc(rows * sizeof(int*));
+    for (int i = 0; i < rows; i++)
+    {
+        matrix[i] = malloc(cols * sizeof(int));
+    }
+    return matrix;
+}
+
+void freeMatrix(int** matrix, int rows)
+{
+    for (int i = 0; i < rows; i++)
+    {
+        free(matrix[i]);
+    }
+    free(matrix);
+}
+
+int main(void)
+{
+    int** matrix = createMatrix(3, 4);
+    
+    // Use matrix...
+    matrix[0][0] = 1;
+    matrix[1][2] = 5;
+    
+    freeMatrix(matrix, 3);
+    return 0;
+}
+```
+
+## Exercise 9.2: String Array
+
+Create a dynamic array of strings:
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+char** createStringArray(int count)
+{
+    return calloc(count, sizeof(char*));
+}
+
+void setString(char** arr, int index, const char* str)
+{
+    arr[index] = malloc(strlen(str) + 1);
+    strcpy(arr[index], str);
+}
+
+void freeStringArray(char** arr, int count)
+{
+    for (int i = 0; i < count; i++)
+    {
+        free(arr[i]);
+    }
+    free(arr);
+}
+
+int main(void)
+{
+    char** names = createStringArray(3);
+    
+    setString(names, 0, "Alice");
+    setString(names, 1, "Bob");
+    setString(names, 2, "Charlie");
+    
+    for (int i = 0; i < 3; i++)
+    {
+        printf("%s\n", names[i]);
+    }
+    
+    freeStringArray(names, 3);
+    return 0;
+}
+```
+
+## Common Mistakes
+
+### Mistake 1: Using After Free
+
+```c
+int* ptr = malloc(sizeof(int));
+*ptr = 42;
+free(ptr);
+*ptr = 100;  // DANGER! Use after free
+```
+
+### Mistake 2: Double Free
+
+```c
+int* ptr = malloc(sizeof(int));
+free(ptr);
+free(ptr);  // CRASH! Double free
+```
+
+### Mistake 3: Memory Leaks
+
+```c
+int* ptr = malloc(100 * sizeof(int));
+ptr = malloc(200 * sizeof(int));  // LEAK! Lost first allocation
+```
+
+### Mistake 4: Freeing Stack Memory
+
+```c
+int x = 10;
+int* ptr = &x;
+free(ptr);  // CRASH! Can't free stack memory
+```
+
+### Mistake 5: Not Checking malloc Return
+
+```c
+int* ptr = malloc(1000000000 * sizeof(int));  // Might fail!
+ptr[0] = 10;  // CRASH if malloc returned NULL
+```
+
+Always check:
+```c
+int* ptr = malloc(size);
+if (ptr == NULL)
+{
+    // Handle error
+}
+```
+
+## Memory Debugging Tips
+
+### Tip 1: Set Freed Pointers to NULL
+
+```c
+free(ptr);
+ptr = NULL;  // Prevents use-after-free bugs
+```
+
+### Tip 2: Use Valgrind (Linux/Mac)
+
+```bash
+valgrind --leak-check=full ./program
+```
+
+### Tip 3: Initialize to NULL
+
+```c
+char* str = NULL;  // So you can safely check if(str != NULL)
+```
+
+### Tip 4: Pair malloc with free
+
+```c
+// If this function allocates...
+Data* createData();
+
+// There should be a matching free function
+void freeData(Data* d);
+```
+
+## Summary
+
+You've learned:
+- ✅ The difference between stack and heap memory
+- ✅ How to allocate memory dynamically (malloc, calloc, realloc)
+- ✅ How to free memory (free)
+- ✅ Dynamic arrays and structures
+- ✅ Common memory management patterns
+- ✅ How to avoid memory leaks and errors
+- ✅ How WinRDP manages its dynamic host list
+
+**Next Chapter**: File Input/Output - reading and writing data!
+
+---
+
+# Chapter 10: File Input/Output
+
+## Why File I/O?
+
+Programs need to save data permanently and load it later:
+- Save game progress
+- Store user settings
+- Read configuration files
+- Process data files
+- Log application activity
+
+## File Pointers
+
+In C, files are accessed through `FILE*` pointers:
+
+```c
+#include <stdio.h>
+
+FILE* file = fopen("data.txt", "r");  // Open for reading
+```
+
+## Opening Files: fopen
+
+```c
+FILE* fopen(const char* filename, const char* mode);
+```
+
+### File Modes
+
+| Mode | Description | File Must Exist? |
+|------|-------------|------------------|
+| `"r"` | Read | Yes |
+| `"w"` | Write (truncate) | No (creates if needed) |
+| `"a"` | Append | No (creates if needed) |
+| `"r+"` | Read + Write | Yes |
+| `"w+"` | Read + Write (truncate) | No |
+| `"a+"` | Read + Append | No |
+
+### Example
+
+```c
+FILE* file = fopen("data.txt", "r");
+if (file == NULL)
+{
+    printf("Error opening file!\n");
+    return 1;
+}
+
+// Use file...
+
+fclose(file);  // Always close!
+```
+
+## Closing Files: fclose
+
+```c
+int fclose(FILE* file);
+```
+
+**Always close files** when done! This:
+- Flushes buffered data
+- Releases system resources
+- Prevents data corruption
+
+## Reading Text Files
+
+### Reading Character by Character: fgetc
+
+```c
+FILE* file = fopen("data.txt", "r");
+if (file == NULL) return 1;
+
+int ch;
+while ((ch = fgetc(file)) != EOF)
+{
+    putchar(ch);  // Print character
+}
+
+fclose(file);
+```
+
+### Reading Line by Line: fgets
+
+```c
+char line[256];
+
+FILE* file = fopen("data.txt", "r");
+if (file == NULL) return 1;
+
+while (fgets(line, sizeof(line), file) != NULL)
+{
+    printf("%s", line);
+}
+
+fclose(file);
+```
+
+**fgets** includes the newline character if present.
+
+### Reading Formatted Data: fscanf
+
+```c
+FILE* file = fopen("data.txt", "r");
+if (file == NULL) return 1;
+
+int age;
+char name[50];
+
+while (fscanf(file, "%s %d", name, &age) == 2)
+{
+    printf("Name: %s, Age: %d\n", name, age);
+}
+
+fclose(file);
+```
+
+## Writing Text Files
+
+### Writing Character by Character: fputc
+
+```c
+FILE* file = fopen("output.txt", "w");
+if (file == NULL) return 1;
+
+char message[] = "Hello, File!";
+for (int i = 0; message[i] != '\0'; i++)
+{
+    fputc(message[i], file);
+}
+
+fclose(file);
+```
+
+### Writing Strings: fputs
+
+```c
+FILE* file = fopen("output.txt", "w");
+if (file == NULL) return 1;
+
+fputs("Line 1\n", file);
+fputs("Line 2\n", file);
+fputs("Line 3\n", file);
+
+fclose(file);
+```
+
+### Writing Formatted Data: fprintf
+
+```c
+FILE* file = fopen("output.txt", "w");
+if (file == NULL) return 1;
+
+fprintf(file, "Name: %s\n", "Alice");
+fprintf(file, "Age: %d\n", 30);
+fprintf(file, "GPA: %.2f\n", 3.85);
+
+fclose(file);
+```
+
+## Binary File I/O
+
+### Writing Binary Data: fwrite
+
+```c
+typedef struct {
+    char name[50];
+    int age;
+    float gpa;
+} Student;
+
+Student student = {"Alice", 20, 3.8};
+
+FILE* file = fopen("student.dat", "wb");  // "wb" = write binary
+if (file == NULL) return 1;
+
+fwrite(&student, sizeof(Student), 1, file);
+
+fclose(file);
+```
+
+### Reading Binary Data: fread
+
+```c
+Student student;
+
+FILE* file = fopen("student.dat", "rb");  // "rb" = read binary
+if (file == NULL) return 1;
+
+if (fread(&student, sizeof(Student), 1, file) == 1)
+{
+    printf("Name: %s\n", student.name);
+    printf("Age: %d\n", student.age);
+    printf("GPA: %.2f\n", student.gpa);
+}
+
+fclose(file);
+```
+
+## File Positioning
+
+### ftell - Get Current Position
+
+```c
+long position = ftell(file);
+printf("Current position: %ld\n", position);
+```
+
+### fseek - Set Position
+
+```c
+fseek(file, 0, SEEK_SET);  // Beginning of file
+fseek(file, 0, SEEK_END);  // End of file
+fseek(file, 10, SEEK_CUR); // 10 bytes from current position
+```
+
+### rewind - Go to Beginning
+
+```c
+rewind(file);  // Same as fseek(file, 0, SEEK_SET)
+```
+
+## Checking File Status
+
+### feof - Check for End of File
+
+```c
+if (feof(file))
+{
+    printf("Reached end of file\n");
+}
+```
+
+### ferror - Check for Errors
+
+```c
+if (ferror(file))
+{
+    printf("File error occurred\n");
+}
+```
+
+## Practical Example: Student Record Manager
+
+```c
+#include <stdio.h>
+#include <string.h>
+
+typedef struct {
+    char name[50];
+    int id;
+    float gpa;
+} Student;
+
+void saveStudent(const char* filename, Student* student)
+{
+    FILE* file = fopen(filename, "ab");  // Append binary
+    if (file == NULL)
+    {
+        printf("Error opening file for writing!\n");
+        return;
+    }
+    
+    fwrite(student, sizeof(Student), 1, file);
+    fclose(file);
+    printf("Student saved!\n");
+}
+
+void loadStudents(const char* filename)
+{
+    FILE* file = fopen(filename, "rb");  // Read binary
+    if (file == NULL)
+    {
+        printf("No students file found.\n");
+        return;
+    }
+    
+    Student student;
+    printf("\n=== All Students ===\n");
+    while (fread(&student, sizeof(Student), 1, file) == 1)
+    {
+        printf("Name: %s, ID: %d, GPA: %.2f\n",
+               student.name, student.id, student.gpa);
+    }
+    
+    fclose(file);
+}
+
+int main(void)
+{
+    Student s1 = {"Alice", 1001, 3.8};
+    Student s2 = {"Bob", 1002, 3.5};
+    Student s3 = {"Charlie", 1003, 3.9};
+    
+    saveStudent("students.dat", &s1);
+    saveStudent("students.dat", &s2);
+    saveStudent("students.dat", &s3);
+    
+    loadStudents("students.dat");
+    
+    return 0;
+}
+```
+
+## CSV File Parsing
+
+CSV (Comma-Separated Values) files are common data format:
+
+```c
+#include <stdio.h>
+#include <string.h>
+
+void parseCSV(const char* filename)
+{
+    FILE* file = fopen(filename, "r");
+    if (file == NULL)
+    {
+        printf("Error opening CSV file!\n");
+        return;
+    }
+    
+    char line[256];
+    
+    while (fgets(line, sizeof(line), file) != NULL)
+    {
+        // Remove newline
+        line[strcspn(line, "\n")] = '\0';
+        
+        char* name = strtok(line, ",");
+        char* age = strtok(NULL, ",");
+        char* city = strtok(NULL, ",");
+        
+        if (name && age && city)
+        {
+            printf("Name: %s, Age: %s, City: %s\n", name, age, city);
+        }
+    }
+    
+    fclose(file);
+}
+
+int main(void)
+{
+    // Assume data.csv contains:
+    // Alice,30,New York
+    // Bob,25,Los Angeles
+    // Charlie,35,Chicago
+    
+    parseCSV("data.csv");
+    return 0;
+}
+```
+
+## WinRDP Connection: Loading Hosts from CSV
+
+WinRDP stores RDP servers in a CSV file:
+
+```c
+// hosts.csv format:
+// hostname,description
+// server1.example.com,Production Server
+// server2.example.com,Development Server
+
+Host* LoadHosts(int* count)
+{
+    FILE* file = _wfopen(L"hosts.csv", L"r, ccs=UTF-8");
+    if (file == NULL)
+    {
+        *count = 0;
+        return NULL;
+    }
+    
+    Host* hosts = NULL;
+    *count = 0;
+    wchar_t line[1024];
+    
+    while (fgetswc(line, 1024, file) != NULL)
+    {
+        // Skip empty lines
+        if (wcslen(line) == 0) continue;
+        
+        // Parse comma-separated values
+        wchar_t* hostname = wcstok(line, L",");
+        wchar_t* description = wcstok(NULL, L",");
+        
+        if (hostname && description)
+        {
+            // Grow array
+            hosts = realloc(hosts, (*count + 1) * sizeof(Host));
+            wcscpy(hosts[*count].hostname, hostname);
+            wcscpy(hosts[*count].description, description);
+            (*count)++;
+        }
+    }
+    
+    fclose(file);
+    return hosts;
+}
+```
+
+**You'll implement this in Chapter 19!**
+
+## Exercise 10.1: File Copy Program
+
+Copy one file to another:
+
+```c
+#include <stdio.h>
+
+void copyFile(const char* source, const char* dest)
+{
+    FILE* src = fopen(source, "rb");
+    if (src == NULL)
+    {
+        printf("Error opening source file!\n");
+        return;
+    }
+    
+    FILE* dst = fopen(dest, "wb");
+    if (dst == NULL)
+    {
+        printf("Error opening destination file!\n");
+        fclose(src);
+        return;
+    }
+    
+    int ch;
+    while ((ch = fgetc(src)) != EOF)
+    {
+        fputc(ch, dst);
+    }
+    
+    fclose(src);
+    fclose(dst);
+    printf("File copied successfully!\n");
+}
+
+int main(void)
+{
+    copyFile("input.txt", "output.txt");
+    return 0;
+}
+```
+
+## Exercise 10.2: Word Count
+
+Count words, lines, and characters in a file:
+
+```c
+#include <stdio.h>
+#include <ctype.h>
+
+void fileStats(const char* filename)
+{
+    FILE* file = fopen(filename, "r");
+    if (file == NULL)
+    {
+        printf("Error opening file!\n");
+        return;
+    }
+    
+    int chars = 0, words = 0, lines = 0;
+    int inWord = 0;
+    int ch;
+    
+    while ((ch = fgetc(file)) != EOF)
+    {
+        chars++;
+        
+        if (ch == '\n')
+        {
+            lines++;
+        }
+        
+        if (isspace(ch))
+        {
+            inWord = 0;
+        }
+        else if (!inWord)
+        {
+            inWord = 1;
+            words++;
+        }
+    }
+    
+    fclose(file);
+    
+    printf("Characters: %d\n", chars);
+    printf("Words: %d\n", words);
+    printf("Lines: %d\n", lines);
+}
+
+int main(void)
+{
+    fileStats("document.txt");
+    return 0;
+}
+```
+
+## Exercise 10.3: Simple Database
+
+Create a contact database:
+
+```c
+#include <stdio.h>
+#include <string.h>
+
+typedef struct {
+    char name[50];
+    char phone[20];
+    char email[50];
+} Contact;
+
+void addContact()
+{
+    Contact c;
+    printf("Name: ");
+    fgets(c.name, sizeof(c.name), stdin);
+    c.name[strcspn(c.name, "\n")] = '\0';
+    
+    printf("Phone: ");
+    fgets(c.phone, sizeof(c.phone), stdin);
+    c.phone[strcspn(c.phone, "\n")] = '\0';
+    
+    printf("Email: ");
+    fgets(c.email, sizeof(c.email), stdin);
+    c.email[strcspn(c.email, "\n")] = '\0';
+    
+    FILE* file = fopen("contacts.dat", "ab");
+    if (file == NULL)
+    {
+        printf("Error opening file!\n");
+        return;
+    }
+    
+    fwrite(&c, sizeof(Contact), 1, file);
+    fclose(file);
+    printf("Contact added!\n");
+}
+
+void listContacts()
+{
+    FILE* file = fopen("contacts.dat", "rb");
+    if (file == NULL)
+    {
+        printf("No contacts found.\n");
+        return;
+    }
+    
+    Contact c;
+    printf("\n=== Contacts ===\n");
+    while (fread(&c, sizeof(Contact), 1, file) == 1)
+    {
+        printf("Name:  %s\n", c.name);
+        printf("Phone: %s\n", c.phone);
+        printf("Email: %s\n", c.email);
+        printf("---\n");
+    }
+    
+    fclose(file);
+}
+
+int main(void)
+{
+    int choice;
+    
+    do
+    {
+        printf("\n1. Add Contact\n");
+        printf("2. List Contacts\n");
+        printf("3. Exit\n");
+        printf("Choice: ");
+        scanf("%d", &choice);
+        getchar();  // Consume newline
+        
+        switch (choice)
+        {
+            case 1:
+                addContact();
+                break;
+            case 2:
+                listContacts();
+                break;
+            case 3:
+                printf("Goodbye!\n");
+                break;
+            default:
+                printf("Invalid choice!\n");
+        }
+    } while (choice != 3);
+    
+    return 0;
+}
+```
+
+## Common Mistakes
+
+### Mistake 1: Forgetting to Check fopen Result
+
+```c
+FILE* file = fopen("data.txt", "r");
+// Forgot to check if file is NULL!
+fgetc(file);  // CRASH if file doesn't exist!
+```
+
+Always check:
+```c
+FILE* file = fopen("data.txt", "r");
+if (file == NULL)
+{
+    printf("Error opening file!\n");
+    return 1;
+}
+```
+
+### Mistake 2: Not Closing Files
+
+```c
+FILE* file = fopen("data.txt", "w");
+fprintf(file, "Data");
+// Forgot fclose(file)!
+// Data might not be written!
+```
+
+### Mistake 3: Wrong Mode
+
+```c
+FILE* file = fopen("data.txt", "r");  // Read mode
+fprintf(file, "Test");  // WRONG! Can't write in read mode
+```
+
+### Mistake 4: Buffer Overflows
+
+```c
+char line[10];
+fgets(line, 100, file);  // WRONG! Buffer is only 10!
+```
+
+Correct:
+```c
+fgets(line, sizeof(line), file);
+```
+
+## File I/O Best Practices
+
+### 1. Always Check Return Values
+
+```c
+if (fopen(...) == NULL) { /* handle error */ }
+if (fread(...) != expected) { /* handle error */ }
+```
+
+### 2. Close Files in All Code Paths
+
+```c
+FILE* file = fopen("data.txt", "r");
+if (file == NULL) return 1;
+
+if (error_condition)
+{
+    fclose(file);  // Don't forget!
+    return 1;
+}
+
+fclose(file);
+```
+
+### 3. Use Binary Mode for Binary Data
+
+```c
+fopen("data.dat", "wb");  // Binary write
+fopen("data.dat", "rb");  // Binary read
+```
+
+### 4. Flush When Necessary
+
+```c
+fprintf(file, "Important data");
+fflush(file);  // Force write to disk now
+```
+
+## Summary
+
+You've learned:
+- ✅ How to open and close files (fopen, fclose)
+- ✅ Reading from files (fgetc, fgets, fscanf, fread)
+- ✅ Writing to files (fputc, fputs, fprintf, fwrite)
+- ✅ Binary vs text file I/O
+- ✅ File positioning (fseek, ftell, rewind)
+- ✅ CSV file parsing
+- ✅ How WinRDP loads hosts from CSV files
+- ✅ Best practices for file handling
+
+**Next Chapter**: Function Pointers and Callbacks!
+
+---
+
+# Chapter 11: Function Pointers and Callbacks
+
+## What Are Function Pointers?
+
+Just like we can have pointers to data, we can have pointers to functions:
+
+```c
+int add(int a, int b)
+{
+    return a + b;
+}
+
+int main(void)
+{
+    int (*funcPtr)(int, int) = add;  // Function pointer
+    int result = funcPtr(5, 3);      // Call through pointer
+    printf("Result: %d\n", result);   // 8
+    return 0;
+}
+```
+
+## Function Pointer Syntax
+
+### Declaration
+
+```c
+return_type (*pointer_name)(parameter_types);
+```
+
+### Examples
+
+```c
+// Pointer to function that returns int and takes two ints
+int (*operation)(int, int);
+
+// Pointer to function that returns void and takes a char*
+void (*printer)(char*);
+
+// Pointer to function that returns float and takes no parameters
+float (*calculator)(void);
+```
+
+## Using Function Pointers
+
+### Example: Math Operations
+
+```c
+#include <stdio.h>
+
+int add(int a, int b) { return a + b; }
+int subtract(int a, int b) { return a - b; }
+int multiply(int a, int b) { return a * b; }
+int divide(int a, int b) { return b != 0 ? a / b : 0; }
+
+int main(void)
+{
+    int (*operation)(int, int);
+    
+    operation = add;
+    printf("5 + 3 = %d\n", operation(5, 3));
+    
+    operation = subtract;
+    printf("5 - 3 = %d\n", operation(5, 3));
+    
+    operation = multiply;
+    printf("5 * 3 = %d\n", operation(5, 3));
+    
+    operation = divide;
+    printf("15 / 3 = %d\n", operation(15, 3));
+    
+    return 0;
+}
+```
+
+## Arrays of Function Pointers
+
+```c
+#include <stdio.h>
+
+int add(int a, int b) { return a + b; }
+int subtract(int a, int b) { return a - b; }
+int multiply(int a, int b) { return a * b; }
+
+int main(void)
+{
+    int (*operations[3])(int, int) = {add, subtract, multiply};
+    
+    char* names[] = {"Add", "Subtract", "Multiply"};
+    
+    for (int i = 0; i < 3; i++)
+    {
+        int result = operations[i](10, 5);
+        printf("%s: %d\n", names[i], result);
+    }
+    
+    return 0;
+}
+```
+
+Output:
+```
+Add: 15
+Subtract: 5
+Multiply: 50
+```
+
+## Callbacks
+
+A **callback** is a function passed to another function to be called later:
+
+```c
+#include <stdio.h>
+
+// Function that takes a callback
+void forEach(int* arr, int size, void (*callback)(int))
+{
+    for (int i = 0; i < size; i++)
+    {
+        callback(arr[i]);
+    }
+}
+
+// Callback functions
+void printNumber(int n)
+{
+    printf("%d ", n);
+}
+
+void printSquare(int n)
+{
+    printf("%d ", n * n);
+}
+
+int main(void)
+{
+    int numbers[] = {1, 2, 3, 4, 5};
+    int size = 5;
+    
+    printf("Numbers: ");
+    forEach(numbers, size, printNumber);
+    printf("\n");
+    
+    printf("Squares: ");
+    forEach(numbers, size, printSquare);
+    printf("\n");
+    
+    return 0;
+}
+```
+
+## Practical Example: Generic Sorting
+
+```c
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+// Comparison function type
+typedef int (*CompareFunc)(const void*, const void*);
+
+// Compare integers
+int compareInts(const void* a, const void* b)
+{
+    int arg1 = *(const int*)a;
+    int arg2 = *(const int*)b;
+    return (arg1 > arg2) - (arg1 < arg2);
+}
+
+// Compare strings
+int compareStrings(const void* a, const void* b)
+{
+    return strcmp(*(const char**)a, *(const char**)b);
+}
+
+int main(void)
+{
+    // Sort integers
+    int numbers[] = {5, 2, 8, 1, 9};
+    int size = sizeof(numbers) / sizeof(numbers[0]);
+    
+    qsort(numbers, size, sizeof(int), compareInts);
+    
+    printf("Sorted numbers: ");
+    for (int i = 0; i < size; i++)
+    {
+        printf("%d ", numbers[i]);
+    }
+    printf("\n");
+    
+    // Sort strings
+    char* names[] = {"Charlie", "Alice", "Bob"};
+    size = 3;
+    
+    qsort(names, size, sizeof(char*), compareStrings);
+    
+    printf("Sorted names: ");
+    for (int i = 0; i < size; i++)
+    {
+        printf("%s ", names[i]);
+    }
+    printf("\n");
+    
+    return 0;
+}
+```
+
+## Windows Callback Functions
+
+Windows API uses callbacks extensively. Here's a preview:
+
+```c
+// Window procedure callback
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+        case WM_CLOSE:
+            DestroyWindow(hwnd);
+            return 0;
+            
+        case WM_DESTROY:
+            PostQuitMessage(0);
+            return 0;
+    }
+    
+    return DefWindowProc(hwnd, msg, wParam, lParam);
+}
+```
+
+**You'll use this in Chapter 15!**
+
+## Function Pointers in Structures
+
+```c
+#include <stdio.h>
+
+typedef struct {
+    char name[50];
+    int (*calculate)(int, int);
+} Operation;
+
+int add(int a, int b) { return a + b; }
+int multiply(int a, int b) { return a * b; }
+
+int main(void)
+{
+    Operation ops[] = {
+        {"Addition", add},
+        {"Multiplication", multiply}
+    };
+    
+    for (int i = 0; i < 2; i++)
+    {
+        int result = ops[i].calculate(5, 3);
+        printf("%s: %d\n", ops[i].name, result);
+    }
+    
+    return 0;
+}
+```
+
+## Practical Example: Event System
+
+```c
+#include <stdio.h>
+#include <string.h>
+
+#define MAX_LISTENERS 10
+
+typedef void (*EventHandler)(const char*);
+
+typedef struct {
+    EventHandler listeners[MAX_LISTENERS];
+    int count;
+} EventManager;
+
+void initEventManager(EventManager* em)
+{
+    em->count = 0;
+}
+
+void addEventListener(EventManager* em, EventHandler handler)
+{
+    if (em->count < MAX_LISTENERS)
+    {
+        em->listeners[em->count++] = handler;
+    }
+}
+
+void triggerEvent(EventManager* em, const char* message)
+{
+    for (int i = 0; i < em->count; i++)
+    {
+        em->listeners[i](message);
+    }
+}
+
+// Event handlers
+void onLog(const char* msg)
+{
+    printf("[LOG] %s\n", msg);
+}
+
+void onAlert(const char* msg)
+{
+    printf("[ALERT] %s\n", msg);
+}
+
+void onSave(const char* msg)
+{
+    printf("[SAVE] Saving: %s\n", msg);
+}
+
+int main(void)
+{
+    EventManager em;
+    initEventManager(&em);
+    
+    addEventListener(&em, onLog);
+    addEventListener(&em, onAlert);
+    addEventListener(&em, onSave);
+    
+    triggerEvent(&em, "Important event occurred!");
+    
+    return 0;
+}
+```
+
+Output:
+```
+[LOG] Important event occurred!
+[ALERT] Important event occurred!
+[SAVE] Saving: Important event occurred!
+```
+
+## typedef for Cleaner Code
+
+Instead of writing function pointer syntax repeatedly:
+
+```c
+typedef int (*BinaryOp)(int, int);
+
+BinaryOp operation = add;  // Much cleaner!
+```
+
+Complete example:
+
+```c
+#include <stdio.h>
+
+typedef int (*BinaryOp)(int, int);
+
+int add(int a, int b) { return a + b; }
+int subtract(int a, int b) { return a - b; }
+
+int calculate(int a, int b, BinaryOp op)
+{
+    return op(a, b);
+}
+
+int main(void)
+{
+    printf("10 + 5 = %d\n", calculate(10, 5, add));
+    printf("10 - 5 = %d\n", calculate(10, 5, subtract));
+    return 0;
+}
+```
+
+## Exercise 11.1: Calculator with Function Pointers
+
+```c
+#include <stdio.h>
+
+typedef float (*Operation)(float, float);
+
+float add(float a, float b) { return a + b; }
+float subtract(float a, float b) { return a - b; }
+float multiply(float a, float b) { return a * b; }
+float divide(float a, float b) { return b != 0 ? a / b : 0; }
+
+int main(void)
+{
+    Operation ops[] = {add, subtract, multiply, divide};
+    char* symbols[] = {"+", "-", "*", "/"};
+    
+    float a = 10.0f, b = 5.0f;
+    
+    for (int i = 0; i < 4; i++)
+    {
+        float result = ops[i](a, b);
+        printf("%.1f %s %.1f = %.2f\n", a, symbols[i], b, result);
+    }
+    
+    return 0;
+}
+```
+
+## Exercise 11.2: Filter Function
+
+```c
+#include <stdio.h>
+#include <stdbool.h>
+
+typedef bool (*FilterFunc)(int);
+
+bool isEven(int n) { return n % 2 == 0; }
+bool isPositive(int n) { return n > 0; }
+bool isGreaterThan5(int n) { return n > 5; }
+
+int filter(int* arr, int size, int* result, FilterFunc predicate)
+{
+    int count = 0;
+    for (int i = 0; i < size; i++)
+    {
+        if (predicate(arr[i]))
+        {
+            result[count++] = arr[i];
+        }
+    }
+    return count;
+}
+
+void printArray(int* arr, int size)
+{
+    for (int i = 0; i < size; i++)
+    {
+        printf("%d ", arr[i]);
+    }
+    printf("\n");
+}
+
+int main(void)
+{
+    int numbers[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    int size = 10;
+    int result[10];
+    int count;
+    
+    count = filter(numbers, size, result, isEven);
+    printf("Even numbers: ");
+    printArray(result, count);
+    
+    count = filter(numbers, size, result, isGreaterThan5);
+    printf("Greater than 5: ");
+    printArray(result, count);
+    
+    return 0;
+}
+```
+
+## Common Mistakes
+
+### Mistake 1: Incorrect Syntax
+
+```c
+int (*func)(int, int);  // CORRECT: Pointer to function
+
+int *func(int, int);    // WRONG: Function returning int*
+```
+
+### Mistake 2: Forgetting Parentheses
+
+```c
+int (*operation)(int, int);  // Correct
+int *operation(int, int);    // Different! Function returning int*
+```
+
+### Mistake 3: Not Checking NULL
+
+```c
+typedef void (*Callback)(int);
+
+void execute(Callback cb, int value)
+{
+    cb(value);  // CRASH if cb is NULL!
+}
+```
+
+Always check:
+```c
+void execute(Callback cb, int value)
+{
+    if (cb != NULL)
+    {
+        cb(value);
+    }
+}
+```
+
+## Summary
+
+You've learned:
+- ✅ What function pointers are and how to declare them
+- ✅ How to use function pointers for flexible code
+- ✅ Arrays of function pointers
+- ✅ Callbacks and event handlers
+- ✅ How to use typedef for cleaner syntax
+- ✅ Practical applications (sorting, filtering, events)
+- ✅ Preview of Windows callback functions
+
+**Next Chapter**: Preprocessor and Multi-File Programs!
+
+---
+
+# Chapter 12: Preprocessor and Multi-File Programs
+
+## The C Preprocessor
+
+The preprocessor processes your code **before** compilation:
+
+```
+Source Code (.c)
+     ↓
+Preprocessor (#include, #define, etc.)
+     ↓
+Expanded Code
+     ↓
+Compiler
+     ↓
+Object Code (.o)
+```
+
+## #include Directive
+
+Includes content from another file:
+
+### System Headers
+
+```c
+#include <stdio.h>   // System header (standard library)
+#include <stdlib.h>
+#include <string.h>
+```
+
+### Local Headers
+
+```c
+#include "myheader.h"  // Local header (your file)
+#include "utils.h"
+```
+
+**Difference:**
+- `<>` searches system directories
+- `""` searches current directory first, then system
+
+## #define Directive
+
+### Simple Macros
+
+```c
+#define PI 3.14159
+#define MAX_SIZE 100
+#define PROGRAM_NAME "My Program"
+
+int main(void)
+{
+    float radius = 5.0;
+    float area = PI * radius * radius;
+    printf("Area: %.2f\n", area);
+    return 0;
+}
+```
+
+### Function-like Macros
+
+```c
+#define SQUARE(x) ((x) * (x))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+
+int main(void)
+{
+    printf("5 squared: %d\n", SQUARE(5));      // 25
+    printf("Max(10, 20): %d\n", MAX(10, 20));  // 20
+    printf("Min(10, 20): %d\n", MIN(10, 20));  // 10
+    return 0;
+}
+```
+
+**Important**: Always use parentheses in macros!
+
+```c
+#define SQUARE(x) x * x     // BAD!
+SQUARE(2 + 3)  // Expands to: 2 + 3 * 2 + 3 = 11 (WRONG!)
+
+#define SQUARE(x) ((x) * (x))  // GOOD!
+SQUARE(2 + 3)  // Expands to: ((2 + 3) * (2 + 3)) = 25 (CORRECT!)
+```
+
+## Conditional Compilation
+
+### #ifdef, #ifndef, #endif
+
+```c
+#define DEBUG
+
+#ifdef DEBUG
+    printf("Debug: x = %d\n", x);
+#endif
+```
+
+```c
+#ifndef UTILS_H
+#define UTILS_H
+
+// Header content...
+
+#endif  // UTILS_H
+```
+
+### #if, #elif, #else
+
+```c
+#define VERSION 2
+
+#if VERSION == 1
+    printf("Version 1\n");
+#elif VERSION == 2
+    printf("Version 2\n");
+#else
+    printf("Unknown version\n");
+#endif
+```
+
+## Header Guards
+
+Prevent multiple inclusion of the same header:
+
+```c
+// utils.h
+#ifndef UTILS_H
+#define UTILS_H
+
+void printMessage(const char* msg);
+int add(int a, int b);
+
+#endif  // UTILS_H
+```
+
+Without header guards:
+```c
+#include "utils.h"
+#include "utils.h"  // ERROR: Functions defined twice!
+```
+
+With header guards:
+```c
+#include "utils.h"
+#include "utils.h"  // OK: Second inclusion is skipped
+```
+
+## Multi-File Programs
+
+### File Structure
+
+```
+project/
+├── main.c          (main function)
+├── utils.h         (declarations)
+├── utils.c         (implementations)
+├── math_ops.h
+└── math_ops.c
+```
+
+### Example: math_ops.h (Header File)
+
+```c
+#ifndef MATH_OPS_H
+#define MATH_OPS_H
+
+int add(int a, int b);
+int subtract(int a, int b);
+int multiply(int a, int b);
+float divide(float a, float b);
+
+#endif  // MATH_OPS_H
+```
+
+### Example: math_ops.c (Implementation File)
+
+```c
+#include "math_ops.h"
+
+int add(int a, int b)
+{
+    return a + b;
+}
+
+int subtract(int a, int b)
+{
+    return a - b;
+}
+
+int multiply(int a, int b)
+{
+    return a * b;
+}
+
+float divide(float a, float b)
+{
+    if (b != 0)
+        return a / b;
+    return 0.0f;
+}
+```
+
+### Example: main.c
+
+```c
+#include <stdio.h>
+#include "math_ops.h"
+
+int main(void)
+{
+    printf("10 + 5 = %d\n", add(10, 5));
+    printf("10 - 5 = %d\n", subtract(10, 5));
+    printf("10 * 5 = %d\n", multiply(10, 5));
+    printf("10 / 5 = %.1f\n", divide(10.0f, 5.0f));
+    return 0;
+}
+```
+
+### Compilation
+
+```bash
+gcc main.c math_ops.c -o program
+```
+
+Or separately:
+
+```bash
+gcc -c main.c        # Creates main.o
+gcc -c math_ops.c    # Creates math_ops.o
+gcc main.o math_ops.o -o program  # Links object files
+```
+
+## Static vs Extern
+
+### static - File Scope Only
+
+```c
+// utils.c
+static int helperFunction()  // Only visible in this file
+{
+    return 42;
+}
+
+void publicFunction()  // Visible to other files
+{
+    int result = helperFunction();
+}
+```
+
+### extern - Access Global Variables
+
+```c
+// globals.c
+int globalCounter = 0;
+
+// main.c
+extern int globalCounter;  // Declare that it exists elsewhere
+
+int main(void)
+{
+    globalCounter++;
+    return 0;
+}
+```
+
+## Practical Example: Modular Calculator
+
+### calculator.h
+
+```c
+#ifndef CALCULATOR_H
+#define CALCULATOR_H
+
+float add(float a, float b);
+float subtract(float a, float b);
+float multiply(float a, float b);
+float divide(float a, float b);
+
+#endif
+```
+
+### calculator.c
+
+```c
+#include "calculator.h"
+
+float add(float a, float b)
+{
+    return a + b;
+}
+
+float subtract(float a, float b)
+{
+    return a - b;
+}
+
+float multiply(float a, float b)
+{
+    return a * b;
+}
+
+float divide(float a, float b)
+{
+    if (b != 0.0f)
+        return a / b;
+    return 0.0f;
+}
+```
+
+### main.c
+
+```c
+#include <stdio.h>
+#include "calculator.h"
+
+int main(void)
+{
+    float a, b;
+    char op;
+    
+    printf("Enter calculation (e.g., 5 + 3): ");
+    scanf("%f %c %f", &a, &op, &b);
+    
+    float result;
+    
+    switch (op)
+    {
+        case '+': result = add(a, b); break;
+        case '-': result = subtract(a, b); break;
+        case '*': result = multiply(a, b); break;
+        case '/': result = divide(a, b); break;
+        default:
+            printf("Invalid operator!\n");
+            return 1;
+    }
+    
+    printf("Result: %.2f\n", result);
+    return 0;
+}
+```
+
+### Compilation
+
+```bash
+gcc main.c calculator.c -o calc
+```
+
+## WinRDP Module Structure
+
+WinRDP is organized into modules:
+
+```
+src/
+├── main.c          - Entry point, WinMain
+├── config.h        - Configuration constants
+├── hosts.h/c       - Host management
+├── credentials.h/c - Credential storage
+├── rdp.h/c         - RDP connection logic
+├── utils.c         - Utility functions
+├── darkmode.h/c    - Dark mode support
+├── adscan.h/c      - Network scanning
+└── registry.h/c    - Registry operations
+```
+
+### Example: hosts.h
+
+```c
+#ifndef HOSTS_H
+#define HOSTS_H
+
+#include <windows.h>
+
+typedef struct {
+    wchar_t hostname[256];
+    wchar_t description[256];
+} Host;
+
+Host* LoadHosts(int* count);
+void SaveHosts(Host* hosts, int count);
+void FreeHosts(Host* hosts);
+
+#endif  // HOSTS_H
+```
+
+**You'll build this structure in Chapter 17!**
+
+## Common Preprocessor Macros
+
+```c
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
+#define SAFE_FREE(p) do { if (p) { free(p); (p) = NULL; } } while(0)
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+```
+
+Usage:
+
+```c
+int numbers[] = {1, 2, 3, 4, 5};
+int size = ARRAY_SIZE(numbers);  // 5
+
+char* str = malloc(100);
+SAFE_FREE(str);  // Frees and sets to NULL
+```
+
+## Predefined Macros
+
+```c
+#include <stdio.h>
+
+int main(void)
+{
+    printf("File: %s\n", __FILE__);      // Current file name
+    printf("Line: %d\n", __LINE__);      // Current line number
+    printf("Date: %s\n", __DATE__);      // Compilation date
+    printf("Time: %s\n", __TIME__);      // Compilation time
+    printf("Function: %s\n", __func__);  // Current function (C99)
+    return 0;
+}
+```
+
+## Exercise 12.1: String Utilities Module
+
+### string_utils.h
+
+```c
+#ifndef STRING_UTILS_H
+#define STRING_UTILS_H
+
+#include <stdbool.h>
+
+void toUpper(char* str);
+void toLower(char* str);
+bool isPalindrome(const char* str);
+int countWords(const char* str);
+
+#endif
+```
+
+### string_utils.c
+
+```c
+#include "string_utils.h"
+#include <ctype.h>
+#include <string.h>
+
+void toUpper(char* str)
+{
+    for (int i = 0; str[i]; i++)
+    {
+        str[i] = toupper(str[i]);
+    }
+}
+
+void toLower(char* str)
+{
+    for (int i = 0; str[i]; i++)
+    {
+        str[i] = tolower(str[i]);
+    }
+}
+
+bool isPalindrome(const char* str)
+{
+    int len = strlen(str);
+    for (int i = 0; i < len / 2; i++)
+    {
+        if (str[i] != str[len - 1 - i])
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+int countWords(const char* str)
+{
+    int count = 0;
+    bool inWord = false;
+    
+    for (int i = 0; str[i]; i++)
+    {
+        if (isspace(str[i]))
+        {
+            inWord = false;
+        }
+        else if (!inWord)
+        {
+            inWord = true;
+            count++;
+        }
+    }
+    
+    return count;
+}
+```
+
+### test_string_utils.c
+
+```c
+#include <stdio.h>
+#include <string.h>
+#include "string_utils.h"
+
+int main(void)
+{
+    char text[] = "Hello World";
+    
+    printf("Original: %s\n", text);
+    
+    toUpper(text);
+    printf("Uppercase: %s\n", text);
+    
+    toLower(text);
+    printf("Lowercase: %s\n", text);
+    
+    char word[] = "racecar";
+    printf("%s is %sa palindrome\n", word, 
+           isPalindrome(word) ? "" : "not ");
+    
+    char sentence[] = "The quick brown fox";
+    printf("Words in '%s': %d\n", sentence, countWords(sentence));
+    
+    return 0;
+}
+```
+
+### Compilation
+
+```bash
+gcc test_string_utils.c string_utils.c -o test
+```
+
+## Common Mistakes
+
+### Mistake 1: Missing Header Guards
+
+```c
+// Bad: No header guard
+// utils.h
+void function();
+```
+
+```c
+// Good: With header guard
+// utils.h
+#ifndef UTILS_H
+#define UTILS_H
+
+void function();
+
+#endif
+```
+
+### Mistake 2: Including .c Files
+
+```c
+#include "utils.c"  // WRONG! Include .h files, compile .c files
+```
+
+```c
+#include "utils.h"  // CORRECT!
+```
+
+### Mistake 3: Circular Dependencies
+
+```c
+// a.h includes b.h
+// b.h includes a.h
+// CIRCULAR DEPENDENCY!
+```
+
+Solution: Use forward declarations:
+
+```c
+// a.h
+typedef struct B B;  // Forward declaration
+struct A {
+    B* b;
+};
+```
+
+### Mistake 4: Unparenthesized Macros
+
+```c
+#define DOUBLE(x) x + x       // BAD!
+int result = DOUBLE(2) * 3;   // Expands to: 2 + 2 * 3 = 8 (WRONG!)
+
+#define DOUBLE(x) ((x) + (x)) // GOOD!
+int result = DOUBLE(2) * 3;   // Expands to: ((2) + (2)) * 3 = 12 (CORRECT!)
+```
+
+## Best Practices
+
+### 1. One Module Per Feature
+
+```
+hosts.h/c     - Host management
+credentials.h/c - Credentials
+rdp.h/c       - RDP logic
+```
+
+### 2. Keep Headers Minimal
+
+```c
+// Header: Only declarations
+void function();
+
+// Source: Implementation
+void function()
+{
+    // Implementation here
+}
+```
+
+### 3. Use const for Read-Only Parameters
+
+```c
+void printString(const char* str);
+int compare(const int* a, const int* b);
+```
+
+### 4. Document Public APIs
+
+```c
+/**
+ * Adds two integers.
+ * @param a First integer
+ * @param b Second integer
+ * @return Sum of a and b
+ */
+int add(int a, int b);
+```
+
+## Summary
+
+You've learned:
+- ✅ How the C preprocessor works
+- ✅ #include, #define, and conditional compilation
+- ✅ Header guards to prevent multiple inclusion
+- ✅ How to organize code into multiple files
+- ✅ Header files (.h) vs implementation files (.c)
+- ✅ static and extern keywords
+- ✅ Modular program structure
+- ✅ How WinRDP is organized into modules
+- ✅ Best practices for multi-file projects
+
+**Congratulations!** You've completed Part II (Advanced C Concepts)!
+
+You now have a solid foundation in:
+- **Part I**: C fundamentals (variables, functions, arrays, pointers, strings, structures)
+- **Part II**: Advanced C (dynamic memory, file I/O, function pointers, multi-file projects)
+
+**Next: Part III - Windows Programming Basics!**
+
+In Part III, you'll learn:
+- How Windows applications work
+- The Windows API
+- Creating windows and dialogs
+- Handling user input
+- Message-driven programming
+
+Then in Parts IV and V, you'll apply everything you've learned to build the complete WinRDP application!
 
 ---
 
