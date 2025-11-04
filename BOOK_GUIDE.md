@@ -7,7 +7,7 @@ This book teaches C programming from absolute basics to building a complete, pro
 ## Book Structure
 
 ### Part I: C Fundamentals (Chapters 1-8) ✅ COMPLETE
-**Status**: First 6 chapters fully written
+**Status**: All 8 chapters fully written!
 
 These chapters introduce core C concepts that form the foundation:
 
@@ -17,8 +17,8 @@ These chapters introduce core C concepts that form the foundation:
 4. **Functions** ✅ - Declaration, definition, parameters, return values, scope
 5. **Arrays** ✅ - Single and multi-dimensional arrays, iteration, common operations
 6. **Pointers** ✅ - Memory addresses, dereferencing, pointer arithmetic, pass-by-reference
-7. **Strings** - Character arrays, string functions, manipulation (TO BE WRITTEN)
-8. **Structures** - typedef struct, nested structures, organizing data (TO BE WRITTEN)
+7. **Strings** ✅ - Character arrays, string functions, manipulation, wide strings for Windows
+8. **Structures** ✅ - typedef struct, nested structures, organizing data, arrays of structures
 
 ### Part II: Advanced C Concepts (Chapters 9-12)
 
@@ -484,13 +484,15 @@ By the end of this book, you'll have created:
 
 **Completed** (Fully written with examples and exercises):
 
-**Part I: C Fundamentals**
+**Part I: C Fundamentals** ✅ **COMPLETE!**
 - ✅ Chapter 1: Introduction to C Programming
 - ✅ Chapter 2: Variables, Data Types, and Operators
 - ✅ Chapter 3: Control Flow: Making Decisions
 - ✅ Chapter 4: Functions: Building Blocks of Programs
 - ✅ Chapter 5: Arrays: Working with Multiple Values
 - ✅ Chapter 6: Pointers: The Heart of C
+- ✅ Chapter 7: Strings: Text Processing in C
+- ✅ Chapter 8: Structures: Organizing Related Data
 
 **Part III: Windows Programming Basics** 
 - ✅ Chapter 13: Introduction to Windows Programming
@@ -503,8 +505,6 @@ By the end of this book, you'll have created:
 - ✅ Chapter 18: Configuration and Utilities
 
 **To Be Written** (Outlined, structure defined):
-- 📝 Chapter 7: Strings: Text Processing in C
-- 📝 Chapter 8: Structures: Organizing Related Data
 - 📝 Chapters 9-12: Advanced C Concepts (Part II)
 - 📝 Chapters 19-24: Building WinRDP Core (continued)
 - 📝 Chapters 25-29: Advanced Features (Part V)
