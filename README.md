@@ -72,10 +72,10 @@ pacman -S mingw-w64-x86_64-gcc
 - **GETTING_STARTED.md** - Learning path and exercises
 
 **Learning Resources:**
-- **C_LANGUAGE_PRIMER.md** - Comprehensive C concepts guide
+- **C_PROGRAMMING_BOOK.md** - Complete C programming book (Chapters 1-23)
+- **BOOK_GUIDE.md** - Book guide and learning paths
 - **PROJECT_SUMMARY.md** - Architecture overview
 - **CODE_COMMENTARY.md** - Windows API deep-dive and implementation details
-- **MEMORY_MANAGEMENT.md** - C memory management guide
 - **APPLICATION_FLOW_DIAGRAM.md** - Architecture visualization
 
 **Reference:**
