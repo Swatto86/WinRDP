@@ -11968,3 +11968,2272 @@ You've learned:
 
 **Next chapter:** We'll implement host management (loading and saving the server list)!
 
+
+# Chapter 19: CSV File Management
+
+## Introduction
+
+In this chapter, we'll implement the host management system for WinRDP. We need a way to:
+
+1. **Store a list of RDP servers** (hostname and description for each)
+2. **Load the list** when the application starts
+3. **Save changes** when users add or delete servers
+4. **Persist data** across application restarts
+
+We'll use a **CSV (Comma-Separated Values) file** for storage. CSV is:
+- ✅ **Simple** - Easy to read and write
+- ✅ **Human-readable** - Users can edit it with Notepad if needed
+- ✅ **Universal** - Works with Excel, spreadsheet programs
+- ✅ **Lightweight** - No external database needed
+
+This chapter demonstrates:
+- **Dynamic memory allocation** with `malloc` and `realloc`
+- **Growing arrays** (we don't know how many hosts beforehand)
+- **File I/O** with UTF-8 encoding for international characters
+- **CSV parsing** with proper quote handling
+- **Memory management patterns** you'll use in every C project
+
+## What We're Building
+
+We'll create the `hosts.h` and `hosts.c` module that provides:
+
+```c
+// The Host structure - represents one RDP server
+typedef struct {
+    wchar_t hostname[MAX_HOSTNAME_LEN];
+    wchar_t description[MAX_DESCRIPTION_LEN];
+} Host;
+
+// Core functions
+BOOL LoadHosts(Host** hosts, int* count);      // Load from CSV
+BOOL SaveHosts(const Host* hosts, int count);  // Save to CSV
+BOOL AddHost(const wchar_t* hostname, const wchar_t* description);
+BOOL DeleteHost(const wchar_t* hostname);
+void FreeHosts(Host* hosts, int count);        // Free memory
+```
+
+### Example CSV File
+
+```csv
+hostname,description
+server1.company.com,Production Server
+192.168.1.100,Development Machine
+laptop-office,John's Office Laptop
+```
+
+## The Host Structure
+
+First, let's define what data we need for each server:
+
+```c
+typedef struct {
+    wchar_t hostname[MAX_HOSTNAME_LEN];       // e.g., "server1.company.com"
+    wchar_t description[MAX_DESCRIPTION_LEN]; // e.g., "Production Server"
+} Host;
+```
+
+**Design decisions:**
+
+1. **Fixed-size arrays** vs. pointers:
+   - We use `wchar_t hostname[256]` not `wchar_t* hostname`
+   - **Pros**: Simpler memory management, all memory in one block
+   - **Cons**: Wastes some space if strings are short
+   - **Choice**: Simplicity wins for an educational project
+
+2. **Wide strings** (`wchar_t`):
+   - Windows API uses Unicode (UTF-16)
+   - Handles international characters (Chinese, Arabic, emoji, etc.)
+   - All Windows functions use `W` suffix: `MessageBoxW`, `CreateFileW`
+
+## Memory Management Strategy
+
+This is the **heart of the chapter**. Let's understand the challenge:
+
+### The Problem
+
+```c
+// We want to do this:
+Host* hosts = LoadHostsFromFile();
+
+// But how big should the array be?
+Host hosts[???];  // We don't know how many hosts!
+```
+
+We **don't know beforehand** how many hosts are in the file. Could be 5, could be 500.
+
+### The Solution: Dynamic Allocation
+
+```c
+// 1. Start with initial capacity
+Host* hosts = malloc(10 * sizeof(Host));
+
+// 2. As we read more hosts, grow the array
+if (count >= capacity) {
+    capacity *= 2;  // Double the size
+    hosts = realloc(hosts, capacity * sizeof(Host));
+}
+
+// 3. When done, free the memory
+free(hosts);
+```
+
+This is called a **dynamic array** or **growable array** - fundamental to C programming!
+
+## Loading Hosts: Step by Step
+
+Let's build the `LoadHosts` function piece by piece.
+
+### Step 1: Function Signature
+
+```c
+BOOL LoadHosts(Host** hosts, int* count)
+```
+
+**Why `Host**` (pointer-to-pointer)?**
+
+The function needs to:
+1. Allocate memory for an array
+2. Return the pointer to that array to the caller
+3. Also return the count of items
+
+```c
+// Inside LoadHosts:
+*hosts = malloc(...);  // Allocate memory
+*count = num_items;    // Set count
+
+// Caller uses it like this:
+Host* myHosts = NULL;
+int myCount = 0;
+LoadHosts(&myHosts, &myCount);
+// Now myHosts points to the allocated array
+```
+
+This is a **common C pattern** for returning dynamically allocated data.
+
+### Step 2: Initialize and Open File
+
+```c
+BOOL LoadHosts(Host** hosts, int* count)
+{
+    FILE* file = NULL;
+    errno_t err;
+    
+    // ALWAYS initialize output parameters first!
+    *hosts = NULL;
+    *count = 0;
+    
+    // Try to open the file
+    err = _wfopen_s(&file, HOSTS_FILE_NAME, L"rb");
+    if (err != 0 || file == NULL)
+    {
+        // File doesn't exist - that's okay, return empty list
+        return TRUE;
+    }
+    
+    // ... continue reading ...
+}
+```
+
+**Key points:**
+- `_wfopen_s` is the **secure version** of `fopen` (Microsoft)
+- `L"rb"` means read (`r`) in binary mode (`b`)
+- If file doesn't exist, we return an empty list (not an error!)
+
+### Step 3: Handle UTF-8 BOM
+
+```c
+// Skip UTF-8 BOM (Byte Order Mark) if present
+unsigned char bom[3];
+fread(bom, 1, 3, file);
+
+// Check for BOM: 0xEF, 0xBB, 0xBF
+if (!(bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF))
+{
+    // No BOM, rewind to start
+    fseek(file, 0, SEEK_SET);
+}
+```
+
+**What's a BOM?**
+- **Byte Order Mark**: 3-byte sequence at file start indicating UTF-8 encoding
+- Many text editors (Notepad) add it automatically
+- We need to skip it or first line will be corrupted
+
+### Step 4: Allocate Initial Array
+
+```c
+int capacity = 10;  // Start with space for 10 hosts
+*hosts = (Host*)malloc(capacity * sizeof(Host));
+
+// CRITICAL: Check if allocation succeeded!
+if (*hosts == NULL)
+{
+    fclose(file);  // Don't leak file handle!
+    return FALSE;
+}
+```
+
+**Memory allocation can fail!** Always check:
+- Out of memory
+- Requested size too large
+- Memory fragmentation
+
+### Step 5: Read and Grow Loop
+
+```c
+char line[1024];
+BOOL firstLine = TRUE;
+
+while (fgets(line, 1024, file) != NULL)
+{
+    // Skip header line
+    if (firstLine) {
+        firstLine = FALSE;
+        continue;
+    }
+    
+    // Convert UTF-8 to wide string
+    wchar_t wline[1024];
+    MultiByteToWideChar(CP_UTF8, 0, line, -1, wline, 1024);
+    
+    // Skip empty lines
+    if (wcslen(trim_whitespace(wline)) == 0)
+        continue;
+    
+    // GROW ARRAY IF NEEDED
+    if (*count >= capacity)
+    {
+        capacity *= 2;  // Double capacity
+        
+        // SAFE REALLOC PATTERN: Use temporary variable!
+        Host* newHosts = (Host*)realloc(*hosts, capacity * sizeof(Host));
+        
+        if (newHosts == NULL)
+        {
+            // Realloc failed! Clean up and return error
+            FreeHosts(*hosts, *count);
+            fclose(file);
+            return FALSE;
+        }
+        
+        *hosts = newHosts;  // Success! Update pointer
+    }
+    
+    // Parse CSV line and add to array
+    if (parse_csv_line(wline, &(*hosts)[*count]))
+    {
+        (*count)++;
+    }
+}
+
+fclose(file);
+return TRUE;
+```
+
+### The Growing Array Algorithm
+
+Let's visualize what happens:
+
+```
+Initial:     [H][H][H][H][H][H][H][H][H][H]  (capacity = 10)
+             [0][1][2][3][4][5][6][7][8][9]
+
+After 10:    Full! Need to grow.
+
+Realloc:     [H][H][H][H][H][H][H][H][H][H][H][H][H][H][H][H][H][H][H][H]
+             [0][1][2][3][4][5][6][7][8][9][10][11]...[19]
+             (capacity = 20)
+
+After 20:    Full again! Realloc to 40.
+
+After 40:    Full again! Realloc to 80.
+```
+
+**Why double the size?**
+- **Efficient**: For N items, we only resize O(log N) times
+- **Not wasteful**: At most 50% wasted space
+- **Industry standard**: std::vector in C++ does this
+
+## The Realloc Pattern: Critical Safety!
+
+This is **one of the most important patterns in C**:
+
+```c
+// WRONG - DANGEROUS!
+hosts = realloc(hosts, newSize);
+// If realloc fails, hosts is now NULL and original data is lost!
+
+// CORRECT - SAFE!
+Host* newHosts = realloc(hosts, newSize);
+if (newHosts == NULL) {
+    // Realloc failed, but 'hosts' still points to original data
+    free(hosts);  // Clean up original
+    return ERROR;
+}
+hosts = newHosts;  // Success! Update pointer
+```
+
+**Why this matters:**
+- `realloc(ptr, size)` returns `NULL` on failure
+- But it **doesn't free the original** `ptr`
+- If you overwrite `ptr` with `NULL`, you **leak memory**!
+
+## Parsing CSV Lines
+
+CSV parsing is trickier than it looks:
+
+```c
+static BOOL parse_csv_line(wchar_t* line, Host* host)
+{
+    // Remove newline
+    line[wcscspn(line, L"\r\n")] = L'\0';
+    
+    // Find the first comma
+    wchar_t* comma = wcschr(line, L',');
+    
+    if (comma == NULL) {
+        // No comma - just hostname, no description
+        wcsncpy_s(host->hostname, MAX_HOSTNAME_LEN, 
+                  trim_whitespace(line), _TRUNCATE);
+        host->description[0] = L'\0';
+        return TRUE;
+    }
+    
+    // Split at comma
+    *comma = L'\0';  // Terminate hostname at comma
+    wchar_t* hostname = trim_whitespace(line);
+    wchar_t* description = trim_whitespace(comma + 1);
+    
+    // Remove quotes if present
+    if (hostname[0] == L'"') {
+        hostname++;
+        size_t len = wcslen(hostname);
+        if (len > 0 && hostname[len-1] == L'"')
+            hostname[len-1] = L'\0';
+    }
+    
+    // Copy to structure
+    wcsncpy_s(host->hostname, MAX_HOSTNAME_LEN, hostname, _TRUNCATE);
+    wcsncpy_s(host->description, MAX_DESCRIPTION_LEN, description, _TRUNCATE);
+    
+    return TRUE;
+}
+```
+
+**CSV Complications:**
+- Trailing/leading whitespace: `"  server1  , Production Server  "`
+- Quotes: `"server,1","Production, Main Server"`
+- Empty fields: `server1,`
+- No comma: `server1`
+
+## Saving Hosts
+
+Saving is simpler than loading (we know the count):
+
+```c
+BOOL SaveHosts(const Host* hosts, int count)
+{
+    FILE* file = NULL;
+    errno_t err;
+    
+    // Open file for writing (overwrites existing)
+    err = _wfopen_s(&file, HOSTS_FILE_NAME, L"wb");
+    if (err != 0 || file == NULL)
+        return FALSE;
+    
+    // Write UTF-8 BOM
+    unsigned char bom[3] = {0xEF, 0xBB, 0xBF};
+    fwrite(bom, 1, 3, file);
+    
+    // Write CSV header
+    const char* header = "hostname,description\r\n";
+    fwrite(header, 1, strlen(header), file);
+    
+    // Write each host
+    for (int i = 0; i < count; i++)
+    {
+        // Convert wide strings to UTF-8
+        char utf8_hostname[MAX_HOSTNAME_LEN * 3];
+        char utf8_description[MAX_DESCRIPTION_LEN * 3];
+        
+        WideCharToMultiByte(CP_UTF8, 0, hosts[i].hostname, -1, 
+                           utf8_hostname, sizeof(utf8_hostname), NULL, NULL);
+        WideCharToMultiByte(CP_UTF8, 0, hosts[i].description, -1, 
+                           utf8_description, sizeof(utf8_description), NULL, NULL);
+        
+        // Write with quotes if contains comma
+        BOOL hostnameNeedsQuotes = (strchr(utf8_hostname, ',') != NULL);
+        BOOL descNeedsQuotes = (strchr(utf8_description, ',') != NULL);
+        
+        if (hostnameNeedsQuotes)
+            fprintf(file, "\"%s\"", utf8_hostname);
+        else
+            fwrite(utf8_hostname, 1, strlen(utf8_hostname), file);
+        
+        fwrite(",", 1, 1, file);
+        
+        if (descNeedsQuotes)
+            fprintf(file, "\"%s\"", utf8_description);
+        else
+            fwrite(utf8_description, 1, strlen(utf8_description), file);
+        
+        fwrite("\r\n", 1, 2, file);
+        fflush(file);  // Flush after each line
+    }
+    
+    fclose(file);
+    return TRUE;
+}
+```
+
+**Key points:**
+- `L"wb"` = write binary mode (prevents Windows newline conversion)
+- `\r\n` = Windows line endings (CRLF)
+- Quote fields that contain commas
+- `fflush()` ensures data is written immediately
+
+## Adding a Host
+
+```c
+BOOL AddHost(const wchar_t* hostname, const wchar_t* description)
+{
+    Host* hosts = NULL;
+    int count = 0;
+    
+    // Load existing hosts
+    if (!LoadHosts(&hosts, &count))
+        return FALSE;
+    
+    // Check if host already exists (update description)
+    for (int i = 0; i < count; i++)
+    {
+        if (_wcsicmp(hosts[i].hostname, hostname) == 0)
+        {
+            // Update existing host
+            wcsncpy_s(hosts[i].description, MAX_DESCRIPTION_LEN, 
+                     description, _TRUNCATE);
+            
+            BOOL result = SaveHosts(hosts, count);
+            FreeHosts(hosts, count);
+            return result;
+        }
+    }
+    
+    // Add new host - grow array by one
+    Host* newHosts = (Host*)realloc(hosts, (count + 1) * sizeof(Host));
+    if (newHosts == NULL)
+    {
+        FreeHosts(hosts, count);
+        return FALSE;
+    }
+    hosts = newHosts;
+    
+    // Copy new host data
+    wcsncpy_s(hosts[count].hostname, MAX_HOSTNAME_LEN, hostname, _TRUNCATE);
+    wcsncpy_s(hosts[count].description, MAX_DESCRIPTION_LEN, description, _TRUNCATE);
+    count++;
+    
+    // Save and cleanup
+    BOOL result = SaveHosts(hosts, count);
+    FreeHosts(hosts, count);
+    return result;
+}
+```
+
+**Pattern: Load-Modify-Save-Free**
+1. Load entire list into memory
+2. Modify in memory
+3. Save back to file
+4. Free memory
+
+This is simple but rewrites the whole file each time. Fine for small lists.
+
+## Deleting a Host
+
+```c
+BOOL DeleteHost(const wchar_t* hostname)
+{
+    Host* hosts = NULL;
+    int count = 0;
+    
+    if (!LoadHosts(&hosts, &count))
+        return FALSE;
+    
+    // Find host
+    int foundIndex = -1;
+    for (int i = 0; i < count; i++)
+    {
+        if (_wcsicmp(hosts[i].hostname, hostname) == 0)
+        {
+            foundIndex = i;
+            break;
+        }
+    }
+    
+    if (foundIndex == -1)
+    {
+        FreeHosts(hosts, count);
+        return FALSE;  // Not found
+    }
+    
+    // Shift remaining hosts down
+    for (int i = foundIndex; i < count - 1; i++)
+    {
+        hosts[i] = hosts[i + 1];
+    }
+    count--;
+    
+    BOOL result = SaveHosts(hosts, count);
+    FreeHosts(hosts, count);
+    return result;
+}
+```
+
+**Array deletion**: Shift all elements after deleted item leftward.
+
+```
+Before: [A][B][C][D][E]
+Delete C (index 2):
+Step 1: [A][B][D][D][E]  (copy D to position 2)
+Step 2: [A][B][D][E][E]  (copy E to position 3)
+After:  [A][B][D][E]     (count = 4)
+```
+
+## Freeing Memory
+
+```c
+void FreeHosts(Host* hosts, int count)
+{
+    UNREFERENCED_PARAMETER(count);  // Don't need count for our simple case
+    
+    if (hosts != NULL)
+    {
+        free(hosts);
+        // NOTE: We can't set hosts = NULL here because it's a local copy
+        // Caller should set their pointer to NULL
+    }
+}
+```
+
+**Memory management rule:**
+> Every `malloc` must have exactly one `free`.
+
+**Alternative design** (better but more complex):
+
+```c
+void FreeHosts(Host** hosts, int count)
+{
+    if (*hosts != NULL)
+    {
+        free(*hosts);
+        *hosts = NULL;  // Clear caller's pointer
+    }
+}
+
+// Usage:
+FreeHosts(&hosts, count);  // Caller's 'hosts' is set to NULL
+```
+
+## Complete hosts.h Header
+
+```c
+#ifndef HOSTS_H
+#define HOSTS_H
+
+#include <windows.h>
+#include "config.h"
+
+// Host structure - represents an RDP server
+typedef struct {
+    wchar_t hostname[MAX_HOSTNAME_LEN];
+    wchar_t description[MAX_DESCRIPTION_LEN];
+} Host;
+
+// Host management functions
+BOOL LoadHosts(Host** hosts, int* count);
+BOOL SaveHosts(const Host* hosts, int count);
+BOOL AddHost(const wchar_t* hostname, const wchar_t* description);
+BOOL DeleteHost(const wchar_t* hostname);
+BOOL DeleteAllHosts(void);
+void FreeHosts(Host* hosts, int count);
+
+#endif // HOSTS_H
+```
+
+## Testing the Module
+
+Let's write a simple test program:
+
+```c
+#include <stdio.h>
+#include <windows.h>
+#include "hosts.h"
+
+int main(void)
+{
+    // Test 1: Add some hosts
+    printf("Adding hosts...\n");
+    AddHost(L"server1.company.com", L"Production Server");
+    AddHost(L"192.168.1.100", L"Development Machine");
+    AddHost(L"laptop-office", L"John's Laptop");
+    
+    // Test 2: Load and display
+    Host* hosts = NULL;
+    int count = 0;
+    
+    if (LoadHosts(&hosts, &count))
+    {
+        printf("Loaded %d hosts:\n", count);
+        for (int i = 0; i < count; i++)
+        {
+            wprintf(L"  %d. %s - %s\n", i+1, 
+                   hosts[i].hostname, 
+                   hosts[i].description);
+        }
+        
+        // Test 3: Update existing host
+        printf("\nUpdating server1...\n");
+        AddHost(L"server1.company.com", L"Updated Description");
+        
+        // Test 4: Delete a host
+        printf("Deleting laptop-office...\n");
+        DeleteHost(L"laptop-office");
+        
+        // Reload and display
+        FreeHosts(hosts, count);
+        if (LoadHosts(&hosts, &count))
+        {
+            printf("\nAfter modifications:\n");
+            for (int i = 0; i < count; i++)
+            {
+                wprintf(L"  %d. %s - %s\n", i+1, 
+                       hosts[i].hostname, 
+                       hosts[i].description);
+            }
+        }
+        
+        FreeHosts(hosts, count);
+    }
+    
+    return 0;
+}
+```
+
+**Expected output:**
+```
+Adding hosts...
+Loaded 3 hosts:
+  1. server1.company.com - Production Server
+  2. 192.168.1.100 - Development Machine
+  3. laptop-office - John's Laptop
+
+Updating server1...
+Deleting laptop-office...
+
+After modifications:
+  1. server1.company.com - Updated Description
+  2. 192.168.1.100 - Development Machine
+```
+
+## Memory Management Patterns Summary
+
+Let's review the key patterns you learned:
+
+### Pattern 1: Allocate-Check-Use-Free
+
+```c
+// 1. Allocate
+Host* hosts = malloc(10 * sizeof(Host));
+
+// 2. Check
+if (hosts == NULL) {
+    return ERROR;
+}
+
+// 3. Use
+hosts[0] = ...;
+hosts[1] = ...;
+
+// 4. Free
+free(hosts);
+```
+
+### Pattern 2: Safe Realloc
+
+```c
+// ALWAYS use temporary variable!
+Host* temp = realloc(hosts, newSize);
+if (temp == NULL) {
+    // Original 'hosts' is still valid
+    free(hosts);
+    return ERROR;
+}
+hosts = temp;  // Success
+```
+
+### Pattern 3: Output Parameter Initialization
+
+```c
+BOOL LoadHosts(Host** hosts, int* count)
+{
+    // ALWAYS initialize output parameters first!
+    *hosts = NULL;
+    *count = 0;
+    
+    // ... rest of function ...
+}
+```
+
+### Pattern 4: Cleanup on Error
+
+```c
+BOOL LoadHosts(Host** hosts, int* count)
+{
+    *hosts = malloc(...);
+    FILE* file = fopen(...);
+    
+    if (error_condition)
+    {
+        // Clean up all allocated resources!
+        if (*hosts) free(*hosts);
+        if (file) fclose(file);
+        return FALSE;
+    }
+    
+    // ... success path ...
+}
+```
+
+## Common Mistakes
+
+### Mistake 1: Forgetting to Free Memory
+
+```c
+// WRONG - Memory leak!
+void ProcessHosts(void)
+{
+    Host* hosts = NULL;
+    int count = 0;
+    
+    LoadHosts(&hosts, &count);
+    
+    // Do something with hosts...
+    
+    // Oops! Forgot to FreeHosts()!
+    // Memory is leaked!
+}
+
+// CORRECT
+void ProcessHosts(void)
+{
+    Host* hosts = NULL;
+    int count = 0;
+    
+    LoadHosts(&hosts, &count);
+    
+    // Do something with hosts...
+    
+    FreeHosts(hosts, count);  // Always free!
+}
+```
+
+### Mistake 2: Using Freed Memory
+
+```c
+// WRONG - Use after free!
+FreeHosts(hosts, count);
+printf("Host 0: %s\n", hosts[0].hostname);  // CRASH!
+
+// CORRECT
+printf("Host 0: %s\n", hosts[0].hostname);
+FreeHosts(hosts, count);
+hosts = NULL;  // Good practice: clear pointer after freeing
+```
+
+### Mistake 3: Double Free
+
+```c
+// WRONG - Double free causes crash!
+FreeHosts(hosts, count);
+FreeHosts(hosts, count);  // CRASH! Already freed!
+
+// CORRECT
+FreeHosts(hosts, count);
+hosts = NULL;  // Now calling FreeHosts(NULL, count) is safe
+```
+
+### Mistake 4: Not Checking Malloc/Realloc
+
+```c
+// WRONG - No error checking!
+hosts = malloc(count * sizeof(Host));
+hosts[0] = ...;  // If malloc failed, this crashes!
+
+// CORRECT
+hosts = malloc(count * sizeof(Host));
+if (hosts == NULL) {
+    // Handle error
+    return FALSE;
+}
+hosts[0] = ...;
+```
+
+### Mistake 5: Pointer Confusion
+
+```c
+// WRONG - Doesn't modify caller's pointer!
+void LoadData(Host* hosts)
+{
+    hosts = malloc(...);  // Only modifies local copy!
+}
+
+Host* myHosts = NULL;
+LoadData(myHosts);
+// myHosts is still NULL!
+
+// CORRECT - Use pointer-to-pointer
+void LoadData(Host** hosts)
+{
+    *hosts = malloc(...);  // Modifies caller's pointer!
+}
+
+Host* myHosts = NULL;
+LoadData(&myHosts);
+// myHosts now points to allocated memory!
+```
+
+## Exercises
+
+### Exercise 1: Add Validation
+
+Modify `AddHost` to validate inputs:
+- Hostname cannot be empty
+- Hostname cannot contain spaces
+- Description is optional but limited to 256 characters
+
+```c
+BOOL AddHost(const wchar_t* hostname, const wchar_t* description)
+{
+    // Validate hostname
+    if (hostname == NULL || wcslen(hostname) == 0)
+    {
+        MessageBoxW(NULL, L"Hostname cannot be empty", L"Error", MB_OK);
+        return FALSE;
+    }
+    
+    if (wcschr(hostname, L' ') != NULL)
+    {
+        MessageBoxW(NULL, L"Hostname cannot contain spaces", L"Error", MB_OK);
+        return FALSE;
+    }
+    
+    // TODO: Rest of AddHost implementation
+}
+```
+
+### Exercise 2: Count Hosts
+
+Write a function to count hosts without loading them all:
+
+```c
+int CountHosts(void)
+{
+    Host* hosts = NULL;
+    int count = 0;
+    
+    if (LoadHosts(&hosts, &count))
+    {
+        FreeHosts(hosts, count);
+        return count;
+    }
+    
+    return 0;
+}
+```
+
+Can you make this more efficient? (Hint: Read file line by line without allocating)
+
+### Exercise 3: Find Host
+
+Write a function to check if a host exists:
+
+```c
+BOOL HostExists(const wchar_t* hostname)
+{
+    Host* hosts = NULL;
+    int count = 0;
+    BOOL found = FALSE;
+    
+    if (LoadHosts(&hosts, &count))
+    {
+        for (int i = 0; i < count; i++)
+        {
+            if (_wcsicmp(hosts[i].hostname, hostname) == 0)
+            {
+                found = TRUE;
+                break;
+            }
+        }
+        FreeHosts(hosts, count);
+    }
+    
+    return found;
+}
+```
+
+### Exercise 4: Export to JSON
+
+Extend the module to save hosts in JSON format:
+
+```json
+{
+  "hosts": [
+    {
+      "hostname": "server1.company.com",
+      "description": "Production Server"
+    },
+    {
+      "hostname": "192.168.1.100",
+      "description": "Development Machine"
+    }
+  ]
+}
+```
+
+```c
+BOOL SaveHostsAsJSON(const Host* hosts, int count)
+{
+    // TODO: Implement JSON export
+    return FALSE;
+}
+```
+
+### Exercise 5: Import from Text File
+
+Write a function to import hosts from a simple text file:
+
+```
+server1.company.com
+192.168.1.100
+laptop-office
+```
+
+```c
+BOOL ImportHostsFromTextFile(const wchar_t* filename)
+{
+    FILE* file = NULL;
+    errno_t err = _wfopen_s(&file, filename, L"r");
+    
+    if (err != 0 || file == NULL)
+        return FALSE;
+    
+    // TODO: Read each line, add as host with empty description
+    
+    fclose(file);
+    return TRUE;
+}
+```
+
+## Real-World Applications
+
+The techniques you learned apply to many scenarios:
+
+### 1. Contact Lists
+```c
+typedef struct {
+    wchar_t name[256];
+    wchar_t email[256];
+    wchar_t phone[50];
+} Contact;
+
+BOOL LoadContacts(Contact** contacts, int* count);
+```
+
+### 2. Game High Scores
+```c
+typedef struct {
+    wchar_t playerName[100];
+    int score;
+    time_t date;
+} HighScore;
+
+BOOL LoadHighScores(HighScore** scores, int* count);
+```
+
+### 3. Configuration Files
+```c
+typedef struct {
+    wchar_t key[256];
+    wchar_t value[1024];
+} ConfigEntry;
+
+BOOL LoadConfig(ConfigEntry** entries, int* count);
+```
+
+### 4. Log File Parsing
+```c
+typedef struct {
+    time_t timestamp;
+    wchar_t level[20];  // INFO, WARNING, ERROR
+    wchar_t message[512];
+} LogEntry;
+
+BOOL LoadLogs(LogEntry** entries, int* count);
+```
+
+## Performance Considerations
+
+### Time Complexity
+
+- **LoadHosts**: O(n) where n = number of hosts
+- **SaveHosts**: O(n)
+- **AddHost**: O(n) - must load all hosts
+- **DeleteHost**: O(n) - must load all hosts
+
+### Memory Usage
+
+- **LoadHosts**: O(n) - allocates array for all hosts
+- **Wasted space**: Up to 50% if array grew (fine for small lists)
+
+### Optimization Ideas
+
+For large datasets (1000+ hosts):
+
+1. **Database**: Use SQLite instead of CSV
+2. **Incremental writes**: Append to file instead of rewriting
+3. **Caching**: Keep loaded hosts in memory
+4. **Indexing**: Create index for fast lookups
+
+Example caching approach:
+
+```c
+// Global cache
+static Host* g_cachedHosts = NULL;
+static int g_cachedCount = 0;
+static BOOL g_cacheValid = FALSE;
+
+BOOL LoadHostsCached(Host** hosts, int* count)
+{
+    if (g_cacheValid)
+    {
+        *hosts = g_cachedHosts;
+        *count = g_cachedCount;
+        return TRUE;
+    }
+    
+    // Load from file
+    if (LoadHosts(&g_cachedHosts, &g_cachedCount))
+    {
+        g_cacheValid = TRUE;
+        *hosts = g_cachedHosts;
+        *count = g_cachedCount;
+        return TRUE;
+    }
+    
+    return FALSE;
+}
+
+void InvalidateHostsCache(void)
+{
+    g_cacheValid = FALSE;
+}
+```
+
+## UTF-8 and Unicode
+
+Let's clarify character encoding:
+
+### What is UTF-8?
+
+- **Variable-length encoding**: 1-4 bytes per character
+- **ASCII compatible**: First 127 characters are same as ASCII
+- **Universal**: Can represent all languages
+
+### Why Use UTF-8 for Files?
+
+- Small file size for English text
+- Compatible with most text editors
+- Standard for web and cross-platform
+
+### Why Use UTF-16 (wchar_t) in Memory?
+
+- Windows API uses UTF-16
+- Easier string manipulation in Windows
+- Direct compatibility with Windows functions
+
+### Conversion Functions
+
+```c
+// UTF-8 (file) → UTF-16 (memory)
+MultiByteToWideChar(CP_UTF8, 0, utf8String, -1, wideString, size);
+
+// UTF-16 (memory) → UTF-8 (file)
+WideCharToMultiByte(CP_UTF8, 0, wideString, -1, utf8String, size, NULL, NULL);
+```
+
+### Practical Example
+
+```c
+// Reading UTF-8 from file
+char utf8Line[256];
+fgets(utf8Line, 256, file);
+
+// Convert to wide string for processing
+wchar_t wideLine[256];
+MultiByteToWideChar(CP_UTF8, 0, utf8Line, -1, wideLine, 256);
+
+// Use Windows API with wide string
+MessageBoxW(NULL, wideLine, L"Info", MB_OK);
+```
+
+## Integration with WinRDP
+
+In later chapters, we'll use these functions to:
+
+1. **Load hosts at startup**:
+```c
+// In WinMain
+LoadHosts(&g_hosts, &g_hostCount);
+PopulateListView(g_hosts, g_hostCount);
+```
+
+2. **Add hosts from UI**:
+```c
+// In Add Host button handler
+wchar_t hostname[256], description[256];
+GetDlgItemTextW(hDlg, IDC_HOSTNAME, hostname, 256);
+GetDlgItemTextW(hDlg, IDC_DESCRIPTION, description, 256);
+AddHost(hostname, description);
+RefreshListView();
+```
+
+3. **Delete hosts**:
+```c
+// In Delete button handler
+int selectedIndex = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
+if (selectedIndex >= 0)
+{
+    DeleteHost(g_hosts[selectedIndex].hostname);
+    ReloadHosts();
+}
+```
+
+## Summary
+
+You've learned:
+- ✅ **Dynamic memory allocation** with `malloc` and `realloc`
+- ✅ **Growing arrays** - the fundamental dynamic data structure
+- ✅ **Safe realloc pattern** - critical for preventing leaks
+- ✅ **Pointer-to-pointer** pattern for returning allocated data
+- ✅ **CSV file format** - simple persistent storage
+- ✅ **UTF-8 and UTF-16** conversion for Windows
+- ✅ **File I/O** with error handling
+- ✅ **Load-Modify-Save-Free** pattern
+- ✅ **Memory management discipline** - every malloc has a free
+
+**You now have:**
+- Complete host management module (`hosts.h` and `hosts.c`)
+- Ability to load/save RDP server lists
+- Foundation for building the UI in later chapters
+- Essential C patterns used in every real project
+
+**Next chapter:** We'll implement secure credential storage using Windows Credential Manager!
+
+
+# Chapter 20: Windows Credential Manager
+
+## Introduction
+
+In the previous chapter, we stored hostnames and descriptions in a CSV file. But what about **passwords**?
+
+**❌ Never store passwords in plain text files!**
+
+```c
+// NEVER DO THIS!
+fprintf(file, "%s,%s,%s\n", hostname, username, password);
+```
+
+If you store passwords in plain text:
+- Anyone with file access can read them
+- Malware can steal them easily
+- Backups expose them
+- It's a **massive security risk**
+
+In this chapter, we'll use the **Windows Credential Manager** - a secure, encrypted storage system built into Windows. It's the same system Windows uses to store:
+- Saved website passwords
+- Network share credentials  
+- RDP saved credentials
+- VPN passwords
+
+You'll learn:
+- ✅ Windows Credential Manager API (`wincred.h`)
+- ✅ Secure password storage with encryption
+- ✅ Per-host and global credential management
+- ✅ The `CREDENTIALW` structure
+- ✅ Best practices for handling passwords in memory
+
+## What is Windows Credential Manager?
+
+### User's Perspective
+
+Open Windows Credential Manager on your PC:
+1. Press `Win + R`
+2. Type `control /name Microsoft.CredentialManager`
+3. Press Enter
+
+You'll see stored credentials for:
+- Windows Credentials (domain passwords, etc.)
+- Web Credentials (browser saved passwords)
+- Generic Credentials (applications like WinRDP)
+
+### Programmer's Perspective
+
+Windows Credential Manager provides:
+- **Encrypted storage** - Passwords encrypted with user's Windows password
+- **Per-user isolation** - Each Windows user has separate credential store
+- **System integration** - Works with Windows security model
+- **Simple API** - 4 main functions: Write, Read, Delete, Enumerate
+
+### Security Model
+
+```
+Your Password
+     ↓
+CredWriteW() → [Encrypted with Windows credentials] → System storage
+     ↓
+CredReadW() ← [Decrypted automatically] ← System storage
+     ↓
+Your Password (in memory)
+```
+
+**Key security features:**
+- Passwords encrypted at rest (on disk)
+- Decryption tied to Windows user account
+- No access from other Windows users
+- Protected from casual file browsing
+
+## The Credential API
+
+Four main functions in `wincred.h`:
+
+### 1. CredWriteW - Save a Credential
+
+```c
+BOOL CredWriteW(
+    PCREDENTIALW Credential,  // Pointer to credential structure
+    DWORD Flags               // Usually 0
+);
+```
+
+### 2. CredReadW - Retrieve a Credential
+
+```c
+BOOL CredReadW(
+    LPCWSTR TargetName,       // Name/identifier of credential
+    DWORD Type,               // CRED_TYPE_GENERIC for us
+    DWORD Flags,              // Usually 0
+    PCREDENTIALW *Credential  // Receives pointer to credential
+);
+```
+
+**Important**: `CredReadW` allocates memory! Must free with `CredFree()`.
+
+### 3. CredDeleteW - Delete a Credential
+
+```c
+BOOL CredDeleteW(
+    LPCWSTR TargetName,  // Name/identifier of credential
+    DWORD Type,          // CRED_TYPE_GENERIC
+    DWORD Flags          // Usually 0
+);
+```
+
+### 4. CredFree - Free Memory
+
+```c
+VOID CredFree(
+    PVOID Buffer  // Pointer returned by CredReadW or CredEnumerateW
+);
+```
+
+## The CREDENTIALW Structure
+
+```c
+typedef struct _CREDENTIALW {
+    DWORD Flags;              // Usually 0
+    DWORD Type;               // CRED_TYPE_GENERIC for applications
+    LPWSTR TargetName;        // Unique identifier (e.g., "WinRDP:server1")
+    LPWSTR Comment;           // Optional description
+    FILETIME LastWritten;     // Automatically set by system
+    DWORD CredentialBlobSize; // Size of password in bytes
+    LPBYTE CredentialBlob;    // The actual password (as binary data)
+    DWORD Persist;            // How long to keep (CRED_PERSIST_LOCAL_MACHINE)
+    DWORD AttributeCount;     // Usually 0
+    PCREDENTIAL_ATTRIBUTEW Attributes;  // Usually NULL
+    LPWSTR TargetAlias;       // Usually NULL
+    LPWSTR UserName;          // The username
+} CREDENTIALW, *PCREDENTIALW;
+```
+
+**Key fields we use:**
+- `Type` = `CRED_TYPE_GENERIC` (for application credentials)
+- `TargetName` = Unique identifier (like "WinRDP:DefaultCredentials")
+- `UserName` = The username
+- `CredentialBlob` = The password (stored as bytes)
+- `CredentialBlobSize` = Password length in bytes
+- `Persist` = `CRED_PERSIST_LOCAL_MACHINE` (save permanently)
+
+## Saving Credentials
+
+Let's implement the `SaveCredentials` function:
+
+```c
+BOOL SaveCredentials(const wchar_t* targetName, const wchar_t* username, 
+                     const wchar_t* password)
+{
+    CREDENTIALW cred = {0};  // Initialize all fields to 0
+    
+    // Use default target name if none provided
+    if (targetName == NULL)
+        targetName = CRED_TARGET_NAME;  // "WinRDP:DefaultCredentials"
+    
+    // Set up the credential structure
+    cred.Type = CRED_TYPE_GENERIC;                    // Generic app credential
+    cred.TargetName = (LPWSTR)targetName;             // Identifier
+    cred.CredentialBlobSize = (DWORD)(wcslen(password) * sizeof(wchar_t));
+    cred.CredentialBlob = (LPBYTE)password;           // Password as bytes
+    cred.Persist = CRED_PERSIST_LOCAL_MACHINE;        // Save permanently
+    cred.UserName = (LPWSTR)username;                 // Username
+    
+    // Write to Credential Manager
+    if (!CredWriteW(&cred, 0))
+    {
+        DWORD error = GetLastError();
+        wchar_t errorMsg[256];
+        swprintf(errorMsg, 256, L"Failed to save credentials. Error: %lu", error);
+        MessageBoxW(NULL, errorMsg, L"Error", MB_OK | MB_ICONERROR);
+        return FALSE;
+    }
+    
+    return TRUE;
+}
+```
+
+### Understanding CredentialBlob
+
+**Why is password stored as bytes (`LPBYTE`)?**
+
+The Credential Manager stores passwords as **binary blobs** - it doesn't care if it's text, image data, or encryption keys. This flexibility allows storing any type of secret.
+
+```c
+// Password as string
+wchar_t password[] = L"MyPassword123";
+
+// Size in bytes (not characters!)
+// Each wchar_t is 2 bytes
+DWORD size = wcslen(password) * sizeof(wchar_t);
+// For "MyPassword123": 13 characters * 2 bytes = 26 bytes
+
+// Cast to LPBYTE for storage
+LPBYTE blob = (LPBYTE)password;
+```
+
+### Credential Types
+
+```c
+// Generic credentials (for applications like WinRDP)
+cred.Type = CRED_TYPE_GENERIC;
+
+// Domain credentials (for Windows networks)
+cred.Type = CRED_TYPE_DOMAIN_PASSWORD;
+
+// Certificate-based credentials
+cred.Type = CRED_TYPE_DOMAIN_CERTIFICATE;
+```
+
+We use `CRED_TYPE_GENERIC` for application-specific credentials.
+
+### Persistence Options
+
+```c
+// Session only (deleted when user logs out)
+cred.Persist = CRED_PERSIST_SESSION;
+
+// Permanent (survives logout and reboot)
+cred.Persist = CRED_PERSIST_LOCAL_MACHINE;
+
+// Enterprise (roams with user profile - requires AD)
+cred.Persist = CRED_PERSIST_ENTERPRISE;
+```
+
+We use `CRED_PERSIST_LOCAL_MACHINE` so credentials survive reboots.
+
+## Loading Credentials
+
+```c
+BOOL LoadCredentials(const wchar_t* targetName, wchar_t* username, wchar_t* password)
+{
+    PCREDENTIALW pcred = NULL;
+    
+    // Use default target name if none provided
+    if (targetName == NULL)
+        targetName = CRED_TARGET_NAME;
+    
+    // Read the credential
+    // CredReadW allocates memory - we must free it!
+    if (!CredReadW(targetName, CRED_TYPE_GENERIC, 0, &pcred))
+    {
+        // Credential not found or other error
+        return FALSE;
+    }
+    
+    // Copy username
+    if (pcred->UserName != NULL)
+    {
+        wcsncpy_s(username, MAX_USERNAME_LEN, pcred->UserName, _TRUNCATE);
+    }
+    else
+    {
+        username[0] = L'\0';  // Empty username
+    }
+    
+    // Copy password from binary blob back to string
+    if (pcred->CredentialBlob != NULL && pcred->CredentialBlobSize > 0)
+    {
+        // Calculate string length (blob size / 2 bytes per wchar_t)
+        size_t passwordLen = pcred->CredentialBlobSize / sizeof(wchar_t);
+        
+        // Prevent buffer overflow
+        if (passwordLen >= MAX_PASSWORD_LEN)
+            passwordLen = MAX_PASSWORD_LEN - 1;
+        
+        // Copy password
+        wcsncpy_s(password, MAX_PASSWORD_LEN, 
+                 (wchar_t*)pcred->CredentialBlob, passwordLen);
+        password[passwordLen] = L'\0';  // Null-terminate
+    }
+    else
+    {
+        password[0] = L'\0';  // Empty password
+    }
+    
+    // CRITICAL: Free memory allocated by CredReadW
+    CredFree(pcred);
+    
+    return TRUE;
+}
+```
+
+### Memory Management with CredReadW
+
+**Important pattern:**
+
+```c
+PCREDENTIALW pcred = NULL;
+
+// CredReadW allocates memory for us
+if (CredReadW(targetName, CRED_TYPE_GENERIC, 0, &pcred))
+{
+    // Use pcred...
+    
+    // MUST free with CredFree, not free()!
+    CredFree(pcred);
+}
+```
+
+**Why `CredFree` instead of `free()`?**
+- `CredReadW` may allocate multiple memory blocks
+- `CredFree` handles all internal allocations
+- Using `free()` would cause memory leaks or crashes
+
+## Deleting Credentials
+
+```c
+BOOL DeleteCredentials(const wchar_t* targetName)
+{
+    // Use default target name if none provided
+    if (targetName == NULL)
+        targetName = CRED_TARGET_NAME;
+    
+    if (!CredDeleteW(targetName, CRED_TYPE_GENERIC, 0))
+    {
+        DWORD error = GetLastError();
+        
+        // ERROR_NOT_FOUND is okay - credential didn't exist
+        if (error == ERROR_NOT_FOUND)
+            return TRUE;
+        
+        return FALSE;
+    }
+    
+    return TRUE;
+}
+```
+
+**Error handling note:**
+- `ERROR_NOT_FOUND` (1168) means credential doesn't exist
+- We treat this as success (goal achieved: no credential exists)
+- Other errors are actual failures
+
+## Per-Host Credentials
+
+WinRDP supports two types of credentials:
+
+1. **Global credentials** - Used for all servers
+2. **Per-host credentials** - Specific to one server
+
+### Target Name Convention
+
+```c
+// Global credentials
+"WinRDP:DefaultCredentials"
+
+// Per-host credentials
+"WinRDP:TERMSRV/server1.company.com"
+"WinRDP:TERMSRV/192.168.1.100"
+```
+
+**Why "TERMSRV"?**
+- Matches Windows RDP client convention
+- TERMSRV = Terminal Services (old name for RDP)
+- Helps organize credentials in Credential Manager
+
+### Saving Per-Host Credentials
+
+```c
+BOOL SaveRDPCredentials(const wchar_t* hostname, const wchar_t* username, 
+                        const wchar_t* password)
+{
+    wchar_t targetName[512];
+    
+    // Format: "WinRDP:TERMSRV/hostname"
+    swprintf_s(targetName, 512, L"%s%s", CRED_TARGET_PREFIX, hostname);
+    // Example: "WinRDP:TERMSRV/server1.company.com"
+    
+    return SaveCredentials(targetName, username, password);
+}
+```
+
+Where `CRED_TARGET_PREFIX` is defined in `config.h`:
+
+```c
+#define CRED_TARGET_PREFIX L"WinRDP:TERMSRV/"
+```
+
+### Loading Per-Host Credentials
+
+```c
+BOOL LoadRDPCredentials(const wchar_t* hostname, wchar_t* username, wchar_t* password)
+{
+    wchar_t targetName[512];
+    swprintf_s(targetName, 512, L"%s%s", CRED_TARGET_PREFIX, hostname);
+    
+    return LoadCredentials(targetName, username, password);
+}
+```
+
+### Connection Logic with Fallback
+
+When connecting to a server:
+
+```c
+wchar_t username[MAX_USERNAME_LEN];
+wchar_t password[MAX_PASSWORD_LEN];
+
+// 1. Try per-host credentials first
+if (LoadRDPCredentials(hostname, username, password))
+{
+    // Found per-host credentials!
+    ConnectToServer(hostname, username, password);
+}
+// 2. Fall back to global credentials
+else if (LoadCredentials(NULL, username, password))
+{
+    // Use global credentials
+    ConnectToServer(hostname, username, password);
+}
+else
+{
+    // No credentials saved - prompt user
+    ShowLoginDialog();
+}
+```
+
+This allows:
+- Most servers use global credentials
+- Specific servers (e.g., production) use separate credentials
+- Flexibility without complexity
+
+## Enumerating All Credentials
+
+To delete all WinRDP credentials (e.g., when uninstalling):
+
+```c
+BOOL DeleteAllWinRDPCredentials(void)
+{
+    DWORD count = 0;
+    PCREDENTIALW* credentials = NULL;
+    
+    // Enumerate all credentials
+    if (!CredEnumerateW(NULL, 0, &count, &credentials))
+    {
+        DWORD error = GetLastError();
+        
+        // ERROR_NOT_FOUND is okay - no credentials exist
+        if (error == ERROR_NOT_FOUND)
+            return TRUE;
+        
+        return FALSE;
+    }
+    
+    // Iterate through all credentials
+    for (DWORD i = 0; i < count; i++)
+    {
+        // Check if this credential belongs to WinRDP
+        if (credentials[i]->TargetName != NULL &&
+            wcsstr(credentials[i]->TargetName, L"WinRDP:") == credentials[i]->TargetName)
+        {
+            // Delete this credential
+            CredDeleteW(credentials[i]->TargetName, CRED_TYPE_GENERIC, 0);
+            // Note: We don't fail if individual delete fails
+        }
+    }
+    
+    // Free memory allocated by CredEnumerateW
+    CredFree(credentials);
+    
+    return TRUE;
+}
+```
+
+**Key points:**
+- `CredEnumerateW` returns **all credentials** for current user
+- We filter for ones starting with `"WinRDP:"`
+- `wcsstr(target, L"WinRDP:") == target` checks if string starts with prefix
+- Must free with `CredFree(credentials)` - it's an array
+
+### Checking for Prefix
+
+```c
+// Check if targetName starts with "WinRDP:"
+wcsstr(targetName, L"WinRDP:") == targetName
+```
+
+How it works:
+- `wcsstr(str, substr)` finds `substr` in `str`
+- Returns pointer to first occurrence
+- If `substr` is at the start, returns `str` itself
+- If not found or not at start, returns different pointer or NULL
+
+```c
+wchar_t* target = L"WinRDP:DefaultCredentials";
+
+// Find "WinRDP:" in target
+wchar_t* found = wcsstr(target, L"WinRDP:");
+// found points to start of "WinRDP:" in target
+
+// Is "WinRDP:" at the beginning?
+if (found == target)  // Yes!
+    printf("Starts with WinRDP:\n");
+```
+
+## Complete credentials.h Header
+
+```c
+#ifndef CREDENTIALS_H
+#define CREDENTIALS_H
+
+#include <windows.h>
+
+// General credential management
+BOOL SaveCredentials(const wchar_t* targetName, const wchar_t* username, 
+                     const wchar_t* password);
+BOOL LoadCredentials(const wchar_t* targetName, wchar_t* username, wchar_t* password);
+BOOL DeleteCredentials(const wchar_t* targetName);
+
+// RDP-specific credential management
+BOOL SaveRDPCredentials(const wchar_t* hostname, const wchar_t* username, 
+                        const wchar_t* password);
+BOOL LoadRDPCredentials(const wchar_t* hostname, wchar_t* username, wchar_t* password);
+BOOL DeleteRDPCredentials(const wchar_t* hostname);
+BOOL DeleteAllWinRDPCredentials(void);
+
+#endif // CREDENTIALS_H
+```
+
+## Testing the Module
+
+Simple test program:
+
+```c
+#include <stdio.h>
+#include <windows.h>
+#include "credentials.h"
+
+int main(void)
+{
+    wchar_t username[256];
+    wchar_t password[256];
+    
+    // Test 1: Save global credentials
+    printf("Saving global credentials...\n");
+    SaveCredentials(NULL, L"john.doe", L"SecurePassword123");
+    
+    // Test 2: Load global credentials
+    printf("Loading global credentials...\n");
+    if (LoadCredentials(NULL, username, password))
+    {
+        wprintf(L"Username: %s\n", username);
+        wprintf(L"Password: %s\n", password);
+    }
+    
+    // Test 3: Save per-host credentials
+    printf("\nSaving credentials for server1...\n");
+    SaveRDPCredentials(L"server1.company.com", L"admin", L"AdminPass456");
+    
+    printf("Saving credentials for server2...\n");
+    SaveRDPCredentials(L"192.168.1.100", L"devuser", L"DevPass789");
+    
+    // Test 4: Load per-host credentials
+    printf("\nLoading credentials for server1...\n");
+    if (LoadRDPCredentials(L"server1.company.com", username, password))
+    {
+        wprintf(L"Username: %s\n", username);
+        wprintf(L"Password: %s\n", password);
+    }
+    
+    // Test 5: Delete specific credential
+    printf("\nDeleting credentials for server2...\n");
+    DeleteRDPCredentials(L"192.168.1.100");
+    
+    // Test 6: Try to load deleted credential
+    printf("Trying to load deleted credential...\n");
+    if (!LoadRDPCredentials(L"192.168.1.100", username, password))
+    {
+        printf("Correctly returned FALSE - credential deleted!\n");
+    }
+    
+    // Test 7: Clean up all WinRDP credentials
+    printf("\nDeleting all WinRDP credentials...\n");
+    DeleteAllWinRDPCredentials();
+    
+    printf("\nAll tests complete!\n");
+    return 0;
+}
+```
+
+**Verify with Windows Credential Manager:**
+1. Run the test program
+2. Open Credential Manager (`control /name Microsoft.CredentialManager`)
+3. Look under "Windows Credentials" → "Generic Credentials"
+4. You should see `WinRDP:DefaultCredentials` and `WinRDP:TERMSRV/server1.company.com`
+
+## Security Best Practices
+
+### 1. Zero Memory After Use
+
+```c
+// Load password
+wchar_t password[256];
+LoadCredentials(NULL, username, password);
+
+// Use password
+ConnectToServer(hostname, username, password);
+
+// IMPORTANT: Clear password from memory
+SecureZeroMemory(password, sizeof(password));
+```
+
+**Why?**
+- Passwords stay in memory until overwritten
+- Memory dumps could expose them
+- `SecureZeroMemory` prevents compiler optimization from removing the zeroing
+
+### 2. Never Log Passwords
+
+```c
+// NEVER DO THIS!
+wprintf(L"Debug: Password is %s\n", password);
+OutputDebugStringW(password);
+fprintf(logfile, "Password: %s", password);
+
+// Instead
+wprintf(L"Debug: Password loaded: %s\n", password[0] ? L"Yes" : L"No");
+```
+
+### 3. Validate Before Storing
+
+```c
+BOOL SaveCredentials(const wchar_t* targetName, const wchar_t* username, 
+                     const wchar_t* password)
+{
+    // Validate inputs
+    if (username == NULL || wcslen(username) == 0)
+    {
+        MessageBoxW(NULL, L"Username cannot be empty", L"Error", MB_OK);
+        return FALSE;
+    }
+    
+    if (password == NULL || wcslen(password) == 0)
+    {
+        MessageBoxW(NULL, L"Password cannot be empty", L"Error", MB_OK);
+        return FALSE;
+    }
+    
+    // Proceed with saving...
+}
+```
+
+### 4. Handle Errors Gracefully
+
+```c
+if (!SaveCredentials(NULL, username, password))
+{
+    // Don't reveal why it failed to potential attackers
+    MessageBoxW(NULL, 
+               L"Failed to save credentials. Please try again.", 
+               L"Error", 
+               MB_OK | MB_ICONERROR);
+    // Log detailed error internally for debugging
+    DebugLog(L"CredWriteW failed with error %lu", GetLastError());
+}
+```
+
+### 5. Limit Password Length
+
+```c
+#define MAX_PASSWORD_LEN 256
+
+// Prevent buffer overflows
+if (wcslen(password) >= MAX_PASSWORD_LEN)
+{
+    MessageBoxW(NULL, L"Password too long", L"Error", MB_OK);
+    return FALSE;
+}
+```
+
+## Common Mistakes
+
+### Mistake 1: Storing Plain Text Passwords
+
+```c
+// WRONG - NEVER DO THIS!
+fprintf(file, "%s,%s,%s\n", hostname, username, password);
+
+// CORRECT - Use Credential Manager
+SaveRDPCredentials(hostname, username, password);
+```
+
+### Mistake 2: Forgetting to Free Memory
+
+```c
+// WRONG
+PCREDENTIALW pcred = NULL;
+CredReadW(targetName, CRED_TYPE_GENERIC, 0, &pcred);
+// Use pcred...
+// Oops! Forgot CredFree(pcred) - memory leak!
+
+// CORRECT
+PCREDENTIALW pcred = NULL;
+if (CredReadW(targetName, CRED_TYPE_GENERIC, 0, &pcred))
+{
+    // Use pcred...
+    CredFree(pcred);  // Always free!
+}
+```
+
+### Mistake 3: Wrong Blob Size
+
+```c
+// WRONG - Forgot to multiply by sizeof(wchar_t)
+cred.CredentialBlobSize = wcslen(password);  // This is character count!
+
+// CORRECT - Size in bytes
+cred.CredentialBlobSize = wcslen(password) * sizeof(wchar_t);
+```
+
+### Mistake 4: Not Null-Terminating
+
+```c
+// WRONG - No null terminator!
+size_t len = pcred->CredentialBlobSize / sizeof(wchar_t);
+wcsncpy_s(password, MAX_PASSWORD_LEN, (wchar_t*)pcred->CredentialBlob, len);
+// password may not be null-terminated!
+
+// CORRECT - Explicitly null-terminate
+wcsncpy_s(password, MAX_PASSWORD_LEN, (wchar_t*)pcred->CredentialBlob, len);
+password[len] = L'\0';  // Ensure null termination
+```
+
+### Mistake 5: Using free() Instead of CredFree()
+
+```c
+// WRONG
+PCREDENTIALW pcred = NULL;
+CredReadW(targetName, CRED_TYPE_GENERIC, 0, &pcred);
+free(pcred);  // Wrong! Use CredFree()
+
+// CORRECT
+CredFree(pcred);
+```
+
+## Exercises
+
+### Exercise 1: Credential Validation
+
+Add validation to `SaveCredentials`:
+
+```c
+BOOL SaveCredentials(const wchar_t* targetName, const wchar_t* username, 
+                     const wchar_t* password)
+{
+    // Validate username
+    if (username == NULL || wcslen(username) == 0) {
+        MessageBoxW(NULL, L"Username cannot be empty", L"Error", MB_OK);
+        return FALSE;
+    }
+    
+    // Validate password
+    if (password == NULL || wcslen(password) == 0) {
+        MessageBoxW(NULL, L"Password cannot be empty", L"Error", MB_OK);
+        return FALSE;
+    }
+    
+    // Validate password length
+    if (wcslen(password) >= MAX_PASSWORD_LEN) {
+        MessageBoxW(NULL, L"Password too long", L"Error", MB_OK);
+        return FALSE;
+    }
+    
+    // TODO: Add more validations
+    // - Check for invalid characters in username
+    // - Ensure password meets complexity requirements
+    // - Validate targetName format
+    
+    // Rest of SaveCredentials...
+}
+```
+
+### Exercise 2: Password Strength Checker
+
+Write a function to check password strength:
+
+```c
+typedef enum {
+    WEAK,
+    MEDIUM,
+    STRONG
+} PasswordStrength;
+
+PasswordStrength CheckPasswordStrength(const wchar_t* password)
+{
+    size_t len = wcslen(password);
+    BOOL hasUpper = FALSE;
+    BOOL hasLower = FALSE;
+    BOOL hasDigit = FALSE;
+    BOOL hasSpecial = FALSE;
+    
+    // Check length
+    if (len < 8)
+        return WEAK;
+    
+    // Analyze characters
+    for (size_t i = 0; i < len; i++)
+    {
+        if (iswupper(password[i])) hasUpper = TRUE;
+        if (iswlower(password[i])) hasLower = TRUE;
+        if (iswdigit(password[i])) hasDigit = TRUE;
+        if (wcschr(L"!@#$%^&*()_+-=[]{}|;:,.<>?", password[i])) 
+            hasSpecial = TRUE;
+    }
+    
+    // Determine strength
+    int criteria = hasUpper + hasLower + hasDigit + hasSpecial;
+    
+    if (criteria >= 3 && len >= 12)
+        return STRONG;
+    else if (criteria >= 2 && len >= 8)
+        return MEDIUM;
+    else
+        return WEAK;
+}
+```
+
+### Exercise 3: Credential Export/Import
+
+For backup purposes (user must provide master password):
+
+```c
+// Export credentials to encrypted file
+BOOL ExportCredentials(const wchar_t* filename, const wchar_t* masterPassword)
+{
+    // TODO: 
+    // 1. Enumerate all WinRDP credentials
+    // 2. Encrypt with masterPassword
+    // 3. Write to file
+    return FALSE;
+}
+
+// Import credentials from encrypted file
+BOOL ImportCredentials(const wchar_t* filename, const wchar_t* masterPassword)
+{
+    // TODO:
+    // 1. Read encrypted file
+    // 2. Decrypt with masterPassword
+    // 3. Restore credentials to Credential Manager
+    return FALSE;
+}
+```
+
+### Exercise 4: Credential History
+
+Track when credentials were last used:
+
+```c
+typedef struct {
+    wchar_t hostname[256];
+    wchar_t username[256];
+    SYSTEMTIME lastUsed;
+} CredentialInfo;
+
+BOOL SaveCredentialHistory(const wchar_t* hostname, const wchar_t* username)
+{
+    SYSTEMTIME st;
+    GetLocalTime(&st);
+    
+    // TODO: Save to registry or file
+    return FALSE;
+}
+
+BOOL GetCredentialHistory(CredentialInfo** history, int* count)
+{
+    // TODO: Load from registry or file
+    return FALSE;
+}
+```
+
+### Exercise 5: Credential Change Detection
+
+Notify user if credentials haven't been changed in 90 days:
+
+```c
+BOOL ShouldChangePassword(const wchar_t* hostname)
+{
+    // TODO:
+    // 1. Get lastChanged date from metadata
+    // 2. Calculate days since change
+    // 3. Return TRUE if > 90 days
+    return FALSE;
+}
+
+void CheckPasswordExpiry(void)
+{
+    // TODO:
+    // 1. Enumerate all credentials
+    // 2. Check each with ShouldChangePassword
+    // 3. Show warning for expired passwords
+}
+```
+
+## Integration with WinRDP
+
+How we'll use credentials in the main application:
+
+### 1. Login Dialog
+
+```c
+// When user clicks "Save Credentials" checkbox and logs in
+if (IsDlgButtonChecked(hDlg, IDC_SAVE_CREDENTIALS) == BST_CHECKED)
+{
+    wchar_t username[256], password[256];
+    GetDlgItemTextW(hDlg, IDC_USERNAME, username, 256);
+    GetDlgItemTextW(hDlg, IDC_PASSWORD, password, 256);
+    
+    SaveCredentials(NULL, username, password);
+}
+```
+
+### 2. Per-Host Credentials Dialog
+
+```c
+// Save credentials for specific host
+void OnSaveHostCredentials(HWND hDlg, const wchar_t* hostname)
+{
+    wchar_t username[256], password[256];
+    GetDlgItemTextW(hDlg, IDC_USERNAME, username, 256);
+    GetDlgItemTextW(hDlg, IDC_PASSWORD, password, 256);
+    
+    SaveRDPCredentials(hostname, username, password);
+}
+```
+
+### 3. Auto-Login on Startup
+
+```c
+// In WinMain
+wchar_t username[256], password[256];
+
+if (LoadCredentials(NULL, username, password))
+{
+    // Auto-login with saved credentials
+    g_isLoggedIn = TRUE;
+    ShowMainWindow();
+}
+else
+{
+    // Show login dialog
+    ShowLoginDialog();
+}
+```
+
+### 4. RDP Connection
+
+```c
+// When connecting to a host
+void ConnectToHost(const wchar_t* hostname)
+{
+    wchar_t username[256], password[256];
+    
+    // Try per-host credentials first
+    if (!LoadRDPCredentials(hostname, username, password))
+    {
+        // Fall back to global credentials
+        if (!LoadCredentials(NULL, username, password))
+        {
+            MessageBoxW(NULL, L"No credentials saved", L"Info", MB_OK);
+            return;
+        }
+    }
+    
+    // Launch RDP with credentials
+    LaunchRDP(hostname, username, password);
+    
+    // Clear password from memory
+    SecureZeroMemory(password, sizeof(password));
+}
+```
+
+## Windows Credential Manager Limitations
+
+Be aware of these limitations:
+
+### 1. Per-User Storage
+
+```c
+// Credentials are per Windows user
+// User A cannot access User B's credentials
+// This is a security feature, not a bug!
+```
+
+### 2. No Password Sharing
+
+```c
+// Cannot share credentials between applications
+// Each app should have unique TargetName prefix
+// e.g., "WinRDP:...", "MyApp:...", "AnotherApp:..."
+```
+
+### 3. Size Limits
+
+```c
+// TargetName: 256 characters max
+// UserName: 513 characters max
+// CredentialBlob: 512 bytes max (256 wchar_t characters)
+```
+
+### 4. No Built-in Expiration
+
+```c
+// Credentials don't expire automatically
+// You must implement expiration logic yourself
+// Use Comment field or separate metadata file
+```
+
+## Alternative Storage Options
+
+For comparison, here are other ways to store credentials:
+
+### 1. Windows Registry (❌ Not Secure)
+
+```c
+// DON'T DO THIS!
+RegSetValueExW(hKey, L"Password", 0, REG_SZ, 
+              (BYTE*)password, wcslen(password) * sizeof(wchar_t));
+```
+
+**Problems:**
+- Plain text in registry
+- Easy to export and read
+- Not encrypted
+
+### 2. Configuration File (❌ Very Bad)
+
+```c
+// NEVER DO THIS!
+fprintf(file, "password=%s\n", password);
+```
+
+**Problems:**
+- Plain text on disk
+- Visible in backups
+- Can't control file permissions reliably
+
+### 3. Database (❌ Still Not Secure Without Encryption)
+
+```c
+// INSECURE!
+sqlite3_exec(db, "INSERT INTO creds VALUES ('user', 'password')", ...);
+```
+
+**Problems:**
+- Plain text in database file
+- Database files are easy to copy
+
+### 4. Encrypted File (✅ Possible but Complex)
+
+```c
+// Better, but you have to implement encryption yourself
+EncryptPasswordToFile(password, "creds.dat", encryptionKey);
+```
+
+**Challenges:**
+- Where do you store the encryption key?
+- Have to implement secure encryption
+- Error-prone
+
+### 5. Windows Credential Manager (✅ Best Choice)
+
+```c
+// CORRECT!
+SaveCredentials(NULL, username, password);
+```
+
+**Advantages:**
+- ✅ Built-in encryption
+- ✅ Integrated with Windows security
+- ✅ No key management needed
+- ✅ Simple API
+- ✅ Per-user isolation
+
+**Conclusion:** Use Windows Credential Manager for Windows applications!
+
+## Summary
+
+You've learned:
+- ✅ **Windows Credential Manager** - Secure password storage API
+- ✅ **CREDENTIALW structure** - How credentials are represented
+- ✅ **CredWriteW/CredReadW/CredDeleteW** - Core API functions
+- ✅ **CredFree** - Proper memory management
+- ✅ **Per-host vs. global credentials** - Flexible credential organization
+- ✅ **Security best practices** - Zero memory, avoid logging, validate inputs
+- ✅ **Target naming conventions** - Organizing credentials logically
+- ✅ **Credential enumeration** - Finding all application credentials
+
+**You now have:**
+- Secure credential storage module (`credentials.h` and `credentials.c`)
+- Ability to save/load passwords safely
+- Per-host credential support for flexibility
+- Foundation for secure RDP connections
+
+**Next chapter:** We'll implement the main application window with system tray icon and login dialog!
+
