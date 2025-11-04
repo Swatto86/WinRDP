@@ -20,14 +20,13 @@ These chapters introduce core C concepts that form the foundation:
 7. **Strings** ✅ - Character arrays, string functions, manipulation, wide strings for Windows
 8. **Structures** ✅ - typedef struct, nested structures, organizing data, arrays of structures
 
-### Part II: Advanced C Concepts (Chapters 9-12)
+### Part II: Advanced C Concepts (Chapters 9-12) ✅ COMPLETE
+**Status**: All 4 chapters fully written
 
-**What these chapters will cover:**
-
-9. **Dynamic Memory Management** - malloc, realloc, free, memory leaks, best practices
-10. **File Input/Output** - Opening, reading, writing files, CSV parsing, UTF-8 handling
-11. **Function Pointers and Callbacks** - Function pointers, Windows callbacks, event handling
-12. **Preprocessor and Multi-File Programs** - #include, #define, header guards, modular code
+9. **Dynamic Memory Management** ✅ - malloc, realloc, free, memory leaks, best practices
+10. **File Input/Output** ✅ - Opening, reading, writing files, CSV parsing, UTF-8 handling
+11. **Function Pointers and Callbacks** ✅ - Function pointers, Windows callbacks, event handling
+12. **Preprocessor and Multi-File Programs** ✅ - #include, #define, header guards, modular code
 
 **Prepares you for:**
 - Understanding the `hosts.c` module (dynamic arrays, CSV file management)
@@ -48,7 +47,7 @@ These chapters introduce core C concepts that form the foundation:
 - Handling button clicks and user input
 
 ### Part IV: Building WinRDP Core (Chapters 17-24) 🔨 IN PROGRESS
-**Status**: First 2 chapters fully written
+**Status**: First 2 chapters fully written (Chapters 17-18 ✅ COMPLETE)
 
 **Progressive application building - each chapter adds functionality:**
 
@@ -480,9 +479,9 @@ By the end of this book, you'll have created:
 
 ## Book Status
 
-### Current Status: Chapters 1-18 Complete (Parts I, III, and IV Started!)
+### Current Status: Chapters 1-18 Complete! (Parts I, II, III, and IV Started!)
 
-**Completed** (Fully written with examples and exercises):
+**Completed** (Fully written with examples and explanations):
 
 **Part I: C Fundamentals** ✅ **COMPLETE!**
 - ✅ Chapter 1: Introduction to C Programming
@@ -494,18 +493,29 @@ By the end of this book, you'll have created:
 - ✅ Chapter 7: Strings: Text Processing in C
 - ✅ Chapter 8: Structures: Organizing Related Data
 
-**Part III: Windows Programming Basics** 
+**Part II: Advanced C Concepts** ✅ **COMPLETE!**
+- ✅ Chapter 9: Dynamic Memory Management
+- ✅ Chapter 10: File Input/Output
+- ✅ Chapter 11: Function Pointers and Callbacks
+- ✅ Chapter 12: Preprocessor and Multi-File Programs
+
+**Part III: Windows Programming Basics** ✅ **COMPLETE!**
 - ✅ Chapter 13: Introduction to Windows Programming
 - ✅ Chapter 14: Your First Windows Application
 - ✅ Chapter 15: Windows Message System
 - ✅ Chapter 16: Dialog Boxes and Controls
 
-**Part IV: Building WinRDP Core**
+**Part IV: Building WinRDP Core** 🔨 **IN PROGRESS**
 - ✅ Chapter 17: Project Setup and Architecture
 - ✅ Chapter 18: Configuration and Utilities
+- 📝 Chapter 19: CSV File Management (hosts.c)
+- 📝 Chapter 20: Windows Credential Manager (credentials.c)
+- 📝 Chapter 21: Main Application Window (main.c)
+- 📝 Chapter 22: ListView Control for Host Display
+- 📝 Chapter 23: RDP Connection Logic (rdp.c)
+- 📝 Chapter 24: System Tray Integration
 
 **To Be Written** (Outlined, structure defined):
-- 📝 Chapters 9-12: Advanced C Concepts (Part II)
 - 📝 Chapters 19-24: Building WinRDP Core (continued)
 - 📝 Chapters 25-29: Advanced Features (Part V)
 - 📝 Appendices A-D
