@@ -32,7 +32,7 @@
 16. [Dialog Boxes and Controls](#chapter-16-dialog-boxes-and-controls)
 
 ## Part IV: Building WinRDP Core
-17. [Project Setup: WinRDP Architecture](#chapter-17-project-setup-winrdp-architecture) ✅
+17. [Project Setup and Architecture](#chapter-17-project-setup-and-architecture) ✅
 18. [Configuration and Utilities](#chapter-18-configuration-and-utilities) ✅
 19. [CSV File Management](#chapter-19-csv-file-management) ✅
 20. [Windows Credential Manager](#chapter-20-windows-credential-manager) ✅
@@ -47,6 +47,9 @@
 27. [Dark Mode Support](#chapter-27-dark-mode-support) 📝 *To Be Written*
 28. [Network Computer Discovery](#chapter-28-network-computer-discovery) 📝 *To Be Written*
 29. [Building and Distribution](#chapter-29-building-and-distribution) 📝 *To Be Written*
+
+## Part VI: Testing and Quality Assurance
+30. [System Testing and Integration](#chapter-30-system-testing-and-integration) ✅
 
 ## Appendices
 - [A: Setting Up Your Development Environment](#appendix-a-setting-up-your-development-environment) 📝 *To Be Written*
@@ -16401,6 +16404,1053 @@ Based on the pattern established in the existing chapters:
 
 ---
 
+# Part VI: Testing and Quality Assurance
+
+# Chapter 30: System Testing and Integration
+
+## Introduction
+
+Testing is a critical phase in software development that ensures your application works correctly, reliably, and meets its requirements. In this chapter, we'll explore various testing strategies for Windows applications, focusing on how to test WinRDP comprehensively.
+
+While C doesn't have built-in testing frameworks like some modern languages, we can still implement systematic testing approaches that ensure our application is production-ready.
+
+## Why Testing Matters
+
+Before diving into testing strategies, let's understand why testing is crucial:
+
+1. **Catch bugs early**: Find issues before users do
+2. **Prevent regressions**: Ensure new changes don't break existing functionality
+3. **Document behavior**: Tests serve as living documentation
+4. **Build confidence**: Ship updates knowing they won't break production
+5. **Save time**: Automated tests are faster than manual testing
+
+## Types of Testing
+
+### 1. Unit Testing
+
+**Unit testing** focuses on testing individual functions in isolation.
+
+**Example: Testing String Validation**
+
+```c
+// utils.c - Function to test
+BOOL IsValidHostname(const wchar_t* hostname)
+{
+    if (hostname == NULL || wcslen(hostname) == 0)
+        return FALSE;
+    
+    if (wcspbrk(hostname, L"<>:\"/\\|?*") != NULL)
+        return FALSE;
+    
+    if (wcslen(hostname) > 255)
+        return FALSE;
+    
+    return TRUE;
+}
+
+// test_utils.c - Unit test
+void TestIsValidHostname(void)
+{
+    // Test NULL input
+    assert(IsValidHostname(NULL) == FALSE);
+    
+    // Test empty string
+    assert(IsValidHostname(L"") == FALSE);
+    
+    // Test valid hostnames
+    assert(IsValidHostname(L"server1") == TRUE);
+    assert(IsValidHostname(L"192.168.1.100") == TRUE);
+    assert(IsValidHostname(L"my-server.domain.com") == TRUE);
+    
+    // Test invalid characters
+    assert(IsValidHostname(L"server<1>") == FALSE);
+    assert(IsValidHostname(L"server:123") == FALSE);
+    
+    // Test too long
+    wchar_t longName[300];
+    wmemset(longName, L'a', 299);
+    longName[299] = L'\0';
+    assert(IsValidHostname(longName) == FALSE);
+    
+    printf("✓ All hostname validation tests passed\n");
+}
+```
+
+**Creating a Simple Test Framework**
+
+```c
+// test_framework.h
+#ifndef TEST_FRAMEWORK_H
+#define TEST_FRAMEWORK_H
+
+#include <stdio.h>
+#include <assert.h>
+
+// Test statistics
+typedef struct {
+    int total;
+    int passed;
+    int failed;
+} TestStats;
+
+static TestStats g_TestStats = {0, 0, 0};
+
+// Macros for testing
+#define TEST_ASSERT(condition, message) \
+    do { \
+        g_TestStats.total++; \
+        if (condition) { \
+            g_TestStats.passed++; \
+            printf("  ✓ PASS: %s\n", message); \
+        } else { \
+            g_TestStats.failed++; \
+            printf("  ✗ FAIL: %s\n", message); \
+        } \
+    } while(0)
+
+#define TEST_ASSERT_EQUAL(expected, actual, message) \
+    TEST_ASSERT((expected) == (actual), message)
+
+#define TEST_ASSERT_NOT_NULL(ptr, message) \
+    TEST_ASSERT((ptr) != NULL, message)
+
+#define RUN_TEST(test_func) \
+    do { \
+        printf("\n▶ Running %s...\n", #test_func); \
+        test_func(); \
+    } while(0)
+
+#define PRINT_TEST_SUMMARY() \
+    do { \
+        printf("\n" \
+               "═══════════════════════════════════\n" \
+               "Test Summary\n" \
+               "═══════════════════════════════════\n" \
+               "Total:  %d\n" \
+               "Passed: %d (%.1f%%)\n" \
+               "Failed: %d\n" \
+               "═══════════════════════════════════\n", \
+               g_TestStats.total, \
+               g_TestStats.passed, \
+               g_TestStats.total > 0 ? (g_TestStats.passed * 100.0 / g_TestStats.total) : 0, \
+               g_TestStats.failed); \
+    } while(0)
+
+#endif // TEST_FRAMEWORK_H
+```
+
+### 2. Integration Testing
+
+**Integration testing** verifies that multiple components work together correctly.
+
+**Example: Testing CSV File Operations**
+
+```c
+// test_hosts.c
+#include "test_framework.h"
+#include "hosts.h"
+
+void TestLoadSaveHosts(void)
+{
+    const wchar_t* testFile = L"test_hosts.csv";
+    
+    // Create test data
+    HostEntry* hosts = NULL;
+    int count = 0;
+    
+    // Add some test hosts
+    if (AddHost(&hosts, &count, L"TestServer1", L"192.168.1.100", L"testuser1"))
+    {
+        TEST_ASSERT(TRUE, "Added first test host");
+    }
+    
+    if (AddHost(&hosts, &count, L"TestServer2", L"192.168.1.101", L"testuser2"))
+    {
+        TEST_ASSERT(TRUE, "Added second test host");
+    }
+    
+    TEST_ASSERT_EQUAL(2, count, "Host count is correct");
+    
+    // Save to file
+    BOOL saved = SaveHosts(testFile, hosts, count);
+    TEST_ASSERT(saved, "Hosts saved to file");
+    
+    // Clear current hosts
+    FreeHosts(hosts, count);
+    hosts = NULL;
+    count = 0;
+    
+    // Load from file
+    hosts = LoadHosts(testFile, &count);
+    TEST_ASSERT_NOT_NULL(hosts, "Hosts loaded from file");
+    TEST_ASSERT_EQUAL(2, count, "Loaded correct number of hosts");
+    
+    // Verify data
+    if (hosts && count >= 2)
+    {
+        TEST_ASSERT(wcscmp(hosts[0].name, L"TestServer1") == 0, 
+                   "First host name correct");
+        TEST_ASSERT(wcscmp(hosts[0].address, L"192.168.1.100") == 0, 
+                   "First host address correct");
+        TEST_ASSERT(wcscmp(hosts[1].name, L"TestServer2") == 0, 
+                   "Second host name correct");
+    }
+    
+    // Cleanup
+    FreeHosts(hosts, count);
+    DeleteFileW(testFile);
+}
+
+void TestHostSearch(void)
+{
+    HostEntry* hosts = NULL;
+    int count = 0;
+    
+    // Add test data
+    AddHost(&hosts, &count, L"WebServer", L"192.168.1.100", L"admin");
+    AddHost(&hosts, &count, L"DatabaseServer", L"192.168.1.101", L"dbadmin");
+    AddHost(&hosts, &count, L"FileServer", L"192.168.1.102", L"admin");
+    
+    // Test search
+    int* results = NULL;
+    int resultCount = 0;
+    
+    SearchHosts(hosts, count, L"server", &results, &resultCount);
+    TEST_ASSERT_EQUAL(3, resultCount, "Search 'server' found all hosts");
+    
+    free(results);
+    results = NULL;
+    resultCount = 0;
+    
+    SearchHosts(hosts, count, L"Web", &results, &resultCount);
+    TEST_ASSERT_EQUAL(1, resultCount, "Search 'Web' found one host");
+    
+    // Cleanup
+    free(results);
+    FreeHosts(hosts, count);
+}
+```
+
+### 3. Functional Testing
+
+**Functional testing** verifies that features work according to specifications.
+
+**Testing Credential Management**
+
+```c
+// test_credentials.c
+void TestCredentialOperations(void)
+{
+    const wchar_t* testHostname = L"test-server.local";
+    const wchar_t* testUsername = L"testuser";
+    const wchar_t* testPassword = L"testpass123";
+    
+    // Test saving credentials
+    BOOL saved = SaveRDPCredentials(testHostname, testUsername, testPassword);
+    TEST_ASSERT(saved, "Credentials saved successfully");
+    
+    // Test retrieving credentials
+    wchar_t retrievedUser[256] = {0};
+    wchar_t retrievedPass[256] = {0};
+    
+    BOOL retrieved = GetRDPCredentials(testHostname, 
+                                       retrievedUser, sizeof(retrievedUser)/sizeof(wchar_t),
+                                       retrievedPass, sizeof(retrievedPass)/sizeof(wchar_t));
+    
+    TEST_ASSERT(retrieved, "Credentials retrieved successfully");
+    TEST_ASSERT(wcscmp(retrievedUser, testUsername) == 0, "Username matches");
+    TEST_ASSERT(wcscmp(retrievedPass, testPassword) == 0, "Password matches");
+    
+    // Test deleting credentials
+    BOOL deleted = DeleteRDPCredentials(testHostname);
+    TEST_ASSERT(deleted, "Credentials deleted successfully");
+    
+    // Verify deletion
+    retrieved = GetRDPCredentials(testHostname, 
+                                  retrievedUser, sizeof(retrievedUser)/sizeof(wchar_t),
+                                  retrievedPass, sizeof(retrievedPass)/sizeof(wchar_t));
+    
+    TEST_ASSERT(!retrieved, "Credentials no longer exist after deletion");
+}
+```
+
+### 4. System Testing
+
+**System testing** validates the entire application in a production-like environment.
+
+**Manual Test Checklist**
+
+Create a comprehensive test plan covering all features:
+
+```c
+// test_plan.h - System test checklist
+
+typedef struct {
+    const char* testCase;
+    const char* expectedResult;
+    BOOL passed;
+} SystemTestCase;
+
+SystemTestCase g_SystemTests[] = {
+    // Application Startup
+    {"Launch application", "System tray icon appears", FALSE},
+    {"Double-click tray icon", "Main window opens", FALSE},
+    {"Check dark mode", "Theme applied correctly", FALSE},
+    
+    // Host Management
+    {"Add new host", "Host appears in list", FALSE},
+    {"Edit existing host", "Changes saved correctly", FALSE},
+    {"Delete host", "Host removed from list", FALSE},
+    {"Search hosts", "Matching hosts highlighted", FALSE},
+    
+    // Credential Management
+    {"Save credentials", "Stored in Credential Manager", FALSE},
+    {"Update credentials", "New credentials work", FALSE},
+    {"Delete credentials", "Credentials removed", FALSE},
+    
+    // RDP Connection
+    {"Connect to host", "RDP client launches", FALSE},
+    {"Connect with credentials", "Auto-login works", FALSE},
+    {"Quick connect", "Dialog works correctly", FALSE},
+    
+    // Advanced Features
+    {"Global hotkey", "Window activates on hotkey", FALSE},
+    {"Network scan", "Discovers computers", FALSE},
+    {"Export hosts", "CSV file created", FALSE},
+    {"Import hosts", "Hosts loaded correctly", FALSE},
+    
+    // Settings
+    {"Toggle autostart", "Registry key updated", FALSE},
+    {"Toggle dark mode", "Theme switches", FALSE},
+    {"Change hotkey", "New hotkey works", FALSE},
+    
+    // Error Handling
+    {"Invalid hostname", "Error message shown", FALSE},
+    {"Network error", "Graceful error handling", FALSE},
+    {"Missing credentials", "Prompts for credentials", FALSE},
+    
+    // Performance
+    {"Load 100+ hosts", "No lag or slowdown", FALSE},
+    {"Rapid search", "Instant results", FALSE},
+    {"Multiple connections", "All work correctly", FALSE}
+};
+
+void PrintSystemTestReport(void)
+{
+    int total = sizeof(g_SystemTests) / sizeof(SystemTestCase);
+    int passed = 0;
+    
+    printf("\n═══════════════════════════════════════════════════════\n");
+    printf("                 SYSTEM TEST REPORT                    \n");
+    printf("═══════════════════════════════════════════════════════\n\n");
+    
+    for (int i = 0; i < total; i++)
+    {
+        printf("%c %-40s | %s\n",
+               g_SystemTests[i].passed ? '✓' : '✗',
+               g_SystemTests[i].testCase,
+               g_SystemTests[i].expectedResult);
+        
+        if (g_SystemTests[i].passed)
+            passed++;
+    }
+    
+    printf("\n═══════════════════════════════════════════════════════\n");
+    printf("Results: %d/%d passed (%.1f%%)\n", 
+           passed, total, (passed * 100.0) / total);
+    printf("═══════════════════════════════════════════════════════\n");
+}
+```
+
+## Creating a Test Suite
+
+Let's create a complete test suite for WinRDP:
+
+```c
+// test_main.c - Main test runner
+#include <windows.h>
+#include "test_framework.h"
+#include "hosts.h"
+#include "credentials.h"
+#include "utils.h"
+
+// Forward declarations
+void TestIsValidHostname(void);
+void TestLoadSaveHosts(void);
+void TestHostSearch(void);
+void TestCredentialOperations(void);
+void TestRDPFileGeneration(void);
+void TestMemoryManagement(void);
+
+int main(void)
+{
+    // Initialize (if needed)
+    printf("═══════════════════════════════════\n");
+    printf("   WinRDP Test Suite v1.0\n");
+    printf("═══════════════════════════════════\n");
+    
+    // Run all unit tests
+    printf("\n▶▶▶ UNIT TESTS\n");
+    RUN_TEST(TestIsValidHostname);
+    RUN_TEST(TestMemoryManagement);
+    
+    // Run integration tests
+    printf("\n▶▶▶ INTEGRATION TESTS\n");
+    RUN_TEST(TestLoadSaveHosts);
+    RUN_TEST(TestHostSearch);
+    
+    // Run functional tests
+    printf("\n▶▶▶ FUNCTIONAL TESTS\n");
+    RUN_TEST(TestCredentialOperations);
+    RUN_TEST(TestRDPFileGeneration);
+    
+    // Print summary
+    PRINT_TEST_SUMMARY();
+    
+    return g_TestStats.failed == 0 ? 0 : 1;
+}
+
+void TestMemoryManagement(void)
+{
+    // Test memory allocation and deallocation
+    HostEntry* hosts = NULL;
+    int count = 0;
+    
+    // Add multiple hosts
+    for (int i = 0; i < 10; i++)
+    {
+        wchar_t name[64];
+        wchar_t addr[64];
+        swprintf(name, 64, L"Server%d", i);
+        swprintf(addr, 64, L"192.168.1.%d", 100 + i);
+        
+        BOOL added = AddHost(&hosts, &count, name, addr, L"user");
+        TEST_ASSERT(added, "Host added successfully");
+    }
+    
+    TEST_ASSERT_EQUAL(10, count, "All hosts added");
+    TEST_ASSERT_NOT_NULL(hosts, "Host array allocated");
+    
+    // Free memory
+    FreeHosts(hosts, count);
+    
+    // Note: Can't directly verify memory was freed,
+    // but should run with memory leak detector
+    printf("  ℹ Run with memory leak detector to verify\n");
+}
+
+void TestRDPFileGeneration(void)
+{
+    wchar_t rdpPath[MAX_PATH];
+    
+    BOOL created = CreateRDPFile(L"test-server", L"testuser", 
+                                  rdpPath, MAX_PATH);
+    
+    TEST_ASSERT(created, "RDP file created");
+    TEST_ASSERT_NOT_NULL(wcsstr(rdpPath, L".rdp"), "File has .rdp extension");
+    
+    // Verify file exists
+    DWORD attrs = GetFileAttributesW(rdpPath);
+    TEST_ASSERT(attrs != INVALID_FILE_ATTRIBUTES, "RDP file exists on disk");
+    
+    // Read and verify contents
+    FILE* file = NULL;
+    errno_t err = _wfopen_s(&file, rdpPath, L"r");
+    TEST_ASSERT(err == 0 && file != NULL, "RDP file can be opened");
+    
+    if (file)
+    {
+        wchar_t line[256];
+        BOOL foundFullAddress = FALSE;
+        BOOL foundUsername = FALSE;
+        
+        while (fgetws(line, 256, file))
+        {
+            if (wcsstr(line, L"full address:s:test-server"))
+                foundFullAddress = TRUE;
+            if (wcsstr(line, L"username:s:testuser"))
+                foundUsername = TRUE;
+        }
+        
+        fclose(file);
+        
+        TEST_ASSERT(foundFullAddress, "RDP file contains hostname");
+        TEST_ASSERT(foundUsername, "RDP file contains username");
+    }
+    
+    // Cleanup
+    DeleteFileW(rdpPath);
+}
+```
+
+## Automated Testing with Scripts
+
+Create batch files to automate testing:
+
+**test.bat**
+```batch
+@echo off
+echo ═══════════════════════════════════
+echo   Building Test Suite
+echo ═══════════════════════════════════
+
+gcc -o test_suite.exe ^
+    test_main.c ^
+    src/hosts.c ^
+    src/credentials.c ^
+    src/utils.c ^
+    src/rdp.c ^
+    -I./src ^
+    -ladvapi32 ^
+    -lcredui ^
+    -std=c11 ^
+    -Wall
+
+if %ERRORLEVEL% NEQ 0 (
+    echo Build failed!
+    exit /b 1
+)
+
+echo.
+echo ═══════════════════════════════════
+echo   Running Tests
+echo ═══════════════════════════════════
+echo.
+
+test_suite.exe
+
+set TEST_RESULT=%ERRORLEVEL%
+
+echo.
+if %TEST_RESULT% EQU 0 (
+    echo ════════════════════════════════
+    echo   ✓ All Tests Passed!
+    echo ════════════════════════════════
+) else (
+    echo ════════════════════════════════
+    echo   ✗ Some Tests Failed
+    echo ════════════════════════════════
+)
+
+exit /b %TEST_RESULT%
+```
+
+## Memory Leak Detection
+
+Use tools to detect memory leaks:
+
+**Windows: Application Verifier**
+```batch
+# Enable Application Verifier
+appverif -enable Heaps Locks -for WinRDP.exe
+
+# Run application
+WinRDP.exe
+
+# Check for leaks in log
+```
+
+**Manual Memory Tracking**
+```c
+// debug_memory.h - Simple memory tracker
+#ifdef DEBUG_MEMORY
+
+typedef struct {
+    void* ptr;
+    size_t size;
+    const char* file;
+    int line;
+} MemAlloc;
+
+static MemAlloc g_Allocations[1000];
+static int g_AllocCount = 0;
+
+#define MALLOC(size) debug_malloc(size, __FILE__, __LINE__)
+#define FREE(ptr) debug_free(ptr, __FILE__, __LINE__)
+
+void* debug_malloc(size_t size, const char* file, int line)
+{
+    void* ptr = malloc(size);
+    if (ptr && g_AllocCount < 1000)
+    {
+        g_Allocations[g_AllocCount].ptr = ptr;
+        g_Allocations[g_AllocCount].size = size;
+        g_Allocations[g_AllocCount].file = file;
+        g_Allocations[g_AllocCount].line = line;
+        g_AllocCount++;
+    }
+    return ptr;
+}
+
+void debug_free(void* ptr, const char* file, int line)
+{
+    // Remove from tracking
+    for (int i = 0; i < g_AllocCount; i++)
+    {
+        if (g_Allocations[i].ptr == ptr)
+        {
+            // Shift remaining allocations
+            for (int j = i; j < g_AllocCount - 1; j++)
+            {
+                g_Allocations[j] = g_Allocations[j + 1];
+            }
+            g_AllocCount--;
+            break;
+        }
+    }
+    free(ptr);
+}
+
+void PrintMemoryLeaks(void)
+{
+    if (g_AllocCount > 0)
+    {
+        printf("═══════════════════════════════════\n");
+        printf("   MEMORY LEAKS DETECTED!\n");
+        printf("═══════════════════════════════════\n");
+        
+        for (int i = 0; i < g_AllocCount; i++)
+        {
+            printf("Leak: %zu bytes at %p\n"
+                   "      Allocated in %s:%d\n",
+                   g_Allocations[i].size,
+                   g_Allocations[i].ptr,
+                   g_Allocations[i].file,
+                   g_Allocations[i].line);
+        }
+    }
+    else
+    {
+        printf("✓ No memory leaks detected\n");
+    }
+}
+
+#else
+#define MALLOC(size) malloc(size)
+#define FREE(ptr) free(ptr)
+#define PrintMemoryLeaks()
+#endif // DEBUG_MEMORY
+```
+
+## Performance Testing
+
+Test application performance under load:
+
+```c
+// test_performance.c
+#include <windows.h>
+#include <stdio.h>
+#include "hosts.h"
+
+void TestLargeHostList(void)
+{
+    LARGE_INTEGER frequency, start, end;
+    QueryPerformanceFrequency(&frequency);
+    
+    HostEntry* hosts = NULL;
+    int count = 0;
+    
+    // Test adding 1000 hosts
+    QueryPerformanceCounter(&start);
+    
+    for (int i = 0; i < 1000; i++)
+    {
+        wchar_t name[64], addr[64];
+        swprintf(name, 64, L"Server%04d", i);
+        swprintf(addr, 64, L"192.168.%d.%d", i / 256, i % 256);
+        AddHost(&hosts, &count, name, addr, L"user");
+    }
+    
+    QueryPerformanceCounter(&end);
+    
+    double elapsed = (double)(end.QuadPart - start.QuadPart) / frequency.QuadPart;
+    printf("Added 1000 hosts in %.3f seconds (%.2f ms per host)\n",
+           elapsed, elapsed * 1000.0 / 1000.0);
+    
+    // Test searching
+    int* results = NULL;
+    int resultCount = 0;
+    
+    QueryPerformanceCounter(&start);
+    SearchHosts(hosts, count, L"Server05", &results, &resultCount);
+    QueryPerformanceCounter(&end);
+    
+    elapsed = (double)(end.QuadPart - start.QuadPart) / frequency.QuadPart;
+    printf("Searched 1000 hosts in %.3f milliseconds\n", elapsed * 1000.0);
+    printf("Found %d matches\n", resultCount);
+    
+    // Cleanup
+    free(results);
+    FreeHosts(hosts, count);
+}
+
+void TestFileIOPerformance(void)
+{
+    LARGE_INTEGER frequency, start, end;
+    QueryPerformanceFrequency(&frequency);
+    
+    // Create large test file
+    HostEntry* hosts = NULL;
+    int count = 0;
+    
+    for (int i = 0; i < 1000; i++)
+    {
+        wchar_t name[64], addr[64];
+        swprintf(name, 64, L"Server%04d", i);
+        swprintf(addr, 64, L"192.168.%d.%d", i / 256, i % 256);
+        AddHost(&hosts, &count, name, addr, L"user");
+    }
+    
+    // Test save performance
+    QueryPerformanceCounter(&start);
+    SaveHosts(L"perf_test.csv", hosts, count);
+    QueryPerformanceCounter(&end);
+    
+    double saveTime = (double)(end.QuadPart - start.QuadPart) / frequency.QuadPart;
+    printf("Saved 1000 hosts in %.3f milliseconds\n", saveTime * 1000.0);
+    
+    FreeHosts(hosts, count);
+    hosts = NULL;
+    count = 0;
+    
+    // Test load performance
+    QueryPerformanceCounter(&start);
+    hosts = LoadHosts(L"perf_test.csv", &count);
+    QueryPerformanceCounter(&end);
+    
+    double loadTime = (double)(end.QuadPart - start.QuadPart) / frequency.QuadPart;
+    printf("Loaded 1000 hosts in %.3f milliseconds\n", loadTime * 1000.0);
+    
+    // Cleanup
+    FreeHosts(hosts, count);
+    DeleteFileW(L"perf_test.csv");
+}
+```
+
+## UI Testing
+
+Manual UI testing checklist:
+
+### Visual Testing
+1. **Layout**: All controls properly positioned
+2. **Fonts**: Text readable in all themes
+3. **Colors**: Dark mode works correctly
+4. **Icons**: Displayed at correct size
+5. **Scaling**: Works at different DPI settings
+
+### Interaction Testing
+1. **Buttons**: All respond to clicks
+2. **Keyboard**: Tab order correct, shortcuts work
+3. **Mouse**: Hover effects, right-click menus
+4. **Resizing**: Window resizes smoothly
+5. **Dialogs**: Modal dialogs work correctly
+
+### Accessibility Testing
+1. **Keyboard navigation**: All features accessible via keyboard
+2. **Screen readers**: Labels read correctly
+3. **High contrast**: Visible in high contrast mode
+4. **Focus indicators**: Clear visual focus
+
+## Error Condition Testing
+
+Test how application handles errors:
+
+```c
+// test_errors.c
+void TestErrorHandling(void)
+{
+    printf("\n▶ Testing Error Handling\n");
+    
+    // Test NULL parameters
+    TEST_ASSERT(!IsValidHostname(NULL), "Handles NULL hostname");
+    TEST_ASSERT(!SaveHosts(NULL, NULL, 0), "Handles NULL in SaveHosts");
+    TEST_ASSERT(LoadHosts(L"nonexistent.csv", NULL) == NULL, 
+                "Handles missing file");
+    
+    // Test invalid file paths
+    TEST_ASSERT(!SaveHosts(L"C:\\InvalidPath\\<>test.csv", NULL, 0),
+                "Handles invalid file path");
+    
+    // Test disk full (difficult to test automatically)
+    printf("  ℹ Manual test: Disk full scenario\n");
+    
+    // Test permission denied
+    printf("  ℹ Manual test: Permission denied scenario\n");
+    
+    // Test corrupted data
+    // Create a corrupted CSV file
+    FILE* file = NULL;
+    _wfopen_s(&file, L"corrupted.csv", L"w");
+    if (file)
+    {
+        fwprintf(file, L"Invalid,CSV,Data,Without,Proper,Format\n");
+        fwprintf(file, L"Missing,Fields\n");
+        fclose(file);
+    }
+    
+    int count = 0;
+    HostEntry* hosts = LoadHosts(L"corrupted.csv", &count);
+    TEST_ASSERT(hosts == NULL || count == 0, 
+                "Handles corrupted CSV gracefully");
+    
+    DeleteFileW(L"corrupted.csv");
+}
+```
+
+## Regression Testing
+
+Create a baseline test suite to prevent regressions:
+
+```batch
+REM regression_test.bat
+@echo off
+
+echo Running regression tests...
+
+REM Save baseline
+if not exist baseline_results.txt (
+    echo Creating baseline...
+    test_suite.exe > baseline_results.txt
+    echo Baseline created. Run again to compare.
+    exit /b 0
+)
+
+REM Run current tests
+echo Running current tests...
+test_suite.exe > current_results.txt
+
+REM Compare results
+fc baseline_results.txt current_results.txt > nul
+if %ERRORLEVEL% EQU 0 (
+    echo ✓ All tests match baseline - No regressions!
+) else (
+    echo ✗ Tests differ from baseline - Possible regression!
+    echo Differences:
+    fc baseline_results.txt current_results.txt
+)
+```
+
+## Continuous Integration
+
+For larger projects, set up CI/CD:
+
+**.github/workflows/test.yml** (if using GitHub)
+```yaml
+name: Run Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Setup MinGW
+      uses: egor-tensin/setup-mingw@v2
+      
+    - name: Build Tests
+      run: gcc -o test_suite.exe test_main.c src/*.c -I./src
+      
+    - name: Run Tests
+      run: ./test_suite.exe
+      
+    - name: Build Application
+      run: ./build.bat
+```
+
+## Best Practices for Testing
+
+### 1. Test Early and Often
+```c
+// Don't wait until the end - test as you develop
+void NewFeature(void)
+{
+    // Implement feature
+    // ...
+    
+    // Write test immediately
+    TestNewFeature();
+}
+```
+
+### 2. Test Edge Cases
+```c
+// Don't just test the happy path
+void TestStringCopy(void)
+{
+    // Normal case
+    TEST_ASSERT(CopyString(dest, src) == TRUE, "Normal copy works");
+    
+    // Edge cases
+    TEST_ASSERT(CopyString(NULL, src) == FALSE, "Handles NULL dest");
+    TEST_ASSERT(CopyString(dest, NULL) == FALSE, "Handles NULL src");
+    TEST_ASSERT(CopyString(dest, "") == TRUE, "Handles empty string");
+    TEST_ASSERT(CopyString(dest, veryLongString) == FALSE, "Handles overflow");
+}
+```
+
+### 3. Keep Tests Independent
+```c
+// Each test should be able to run alone
+void TestA(void)
+{
+    // Setup
+    Initialize();
+    
+    // Test
+    DoSomething();
+    
+    // Cleanup
+    Cleanup();
+}
+
+void TestB(void)
+{
+    // Don't depend on TestA running first!
+    Initialize();  // Own setup
+    // ...
+}
+```
+
+### 4. Make Tests Readable
+```c
+// Good - Clear what's being tested
+void TestHostAddition(void)
+{
+    // Given: Empty host list
+    HostEntry* hosts = NULL;
+    int count = 0;
+    
+    // When: Adding a host
+    BOOL result = AddHost(&hosts, &count, L"Server1", L"192.168.1.1", L"user");
+    
+    // Then: Host is added successfully
+    TEST_ASSERT(result == TRUE, "Host added successfully");
+    TEST_ASSERT(count == 1, "Count is 1");
+    TEST_ASSERT(wcscmp(hosts[0].name, L"Server1") == 0, "Name is correct");
+}
+```
+
+### 5. Test What Matters
+```c
+// Don't test trivial getters/setters
+// DO test business logic, algorithms, edge cases
+
+// Skip this:
+void TestGetName(void)
+{
+    host.name = L"Server1";
+    TEST_ASSERT(GetName(&host) == host.name, "Returns name");
+}
+
+// Test this instead:
+void TestHostValidation(void)
+{
+    // Complex logic that can have bugs
+    TEST_ASSERT(ValidateHost(&invalidHost) == FALSE, "Rejects invalid");
+    TEST_ASSERT(ValidateHost(&validHost) == TRUE, "Accepts valid");
+}
+```
+
+## Integration with Build Process
+
+Update build.bat to include testing:
+
+```batch
+REM build.bat - Updated with testing
+@echo off
+echo ═══════════════════════════════════
+echo   Building WinRDP
+echo ═══════════════════════════════════
+
+gcc src/*.c -o build/WinRDP.exe -mwindows -lcomctl32 -lnetapi32 -lcredui
+
+if %ERRORLEVEL% NEQ 0 (
+    echo Build failed!
+    exit /b 1
+)
+
+echo Build successful!
+
+REM Run tests if requested
+if "%1"=="test" (
+    echo.
+    echo Running tests...
+    call test.bat
+)
+
+echo.
+echo To run with tests: build.bat test
+```
+
+## Exercises
+
+### Exercise 1: Write Unit Tests
+Create unit tests for utility functions in `utils.c`:
+- Test `CreateTempPath()`
+- Test `GetConfigDirectory()`
+- Test string validation functions
+
+### Exercise 2: Integration Test
+Write an integration test that:
+1. Creates a new host list
+2. Saves to file
+3. Modifies the list
+4. Reloads from file
+5. Verifies original data is preserved
+
+### Exercise 3: Performance Baseline
+Create performance tests and establish baselines:
+- Measure load time for 1000 hosts
+- Measure search time
+- Compare against baselines
+
+### Exercise 4: Error Injection
+Test error handling by:
+- Creating read-only files
+- Filling disk space
+- Corrupting data files
+- Testing network failures
+
+## Summary
+
+In this chapter, you learned:
+
+- **Different types of testing**: Unit, integration, functional, and system testing
+- **Creating test frameworks**: Building simple testing infrastructure in C
+- **Automated testing**: Using scripts to run tests automatically
+- **Memory leak detection**: Tools and techniques to find memory issues
+- **Performance testing**: Measuring and optimizing application performance
+- **Error handling**: Testing failure scenarios
+- **Best practices**: Writing maintainable, effective tests
+
+Testing is not just about finding bugs—it's about building confidence in your code and ensuring your application works reliably for users.
+
+## Key Takeaways
+
+1. **Test early**: Don't wait until the end to start testing
+2. **Test often**: Run tests after every change
+3. **Test edge cases**: Don't just test the happy path
+4. **Automate**: Manual testing is slow and error-prone
+5. **Measure**: Use performance tests to catch slowdowns
+6. **Document**: Tests serve as documentation of expected behavior
+7. **Keep improving**: Add tests when bugs are found
+
+## What's Next
+
+Now that you understand testing, you can:
+- Implement a complete test suite for WinRDP
+- Set up automated testing in your build process
+- Add performance monitoring
+- Create a regression test baseline
+- Explore continuous integration tools
+
+Testing makes you a better developer by forcing you to think about edge cases, error conditions, and how your code will be used. It's an investment that pays dividends in code quality and reliability!
+
+---
+
 ## What You Can Do Now
 
 Even without the remaining chapters, you have a **fully functional RDP connection manager**! You can:
@@ -16449,7 +17499,7 @@ Use what you've learned to create your own Windows application:
 
 ## Congratulations! 🎉
 
-You've completed **23 chapters** and built a **real, working application**. That's a significant achievement! You now have:
+You've completed **24 chapters** (23 core chapters + 1 testing chapter) and built a **real, working application**. That's a significant achievement! You now have:
 
 - **Strong C fundamentals**
 - **Windows programming skills**
