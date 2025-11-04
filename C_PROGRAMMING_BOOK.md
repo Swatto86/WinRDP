@@ -384,22 +384,97 @@ printf("Grade: %c\n", grade);       // %c for char
 
 ### Format Specifiers
 
+Format specifiers tell `printf` how to display variables. They always start with `%` and end with a letter indicating the data type.
+
+#### Common Format Specifiers
+
 | Specifier | Type | Example |
 |-----------|------|---------|
-| `%d` | int | `printf("%d", 42);` |
+| `%d` or `%i` | int | `printf("%d", 42);` |
+| `%u` | unsigned int | `printf("%u", 42u);` |
+| `%ld` | long int | `printf("%ld", 123456L);` |
+| `%lld` | long long int | `printf("%lld", 123456789LL);` |
 | `%f` | float/double | `printf("%f", 3.14);` |
+| `%lf` | double (scanf only) | `scanf("%lf", &d);` |
 | `%c` | char | `printf("%c", 'A');` |
 | `%s` | string | `printf("%s", "Hello");` |
 | `%p` | pointer | `printf("%p", ptr);` |
-| `%x` | hexadecimal | `printf("%x", 255);` |
+| `%x` | hexadecimal (lowercase) | `printf("%x", 255);` |
+| `%X` | hexadecimal (uppercase) | `printf("%X", 255);` |
+| `%o` | octal | `printf("%o", 8);` |
+| `%%` | literal % | `printf("50%%");` |
 
-### Formatting Numbers
+### Format Specifier Anatomy
+
+A complete format specifier has this structure:
+```
+%[flags][width][.precision][length]specifier
+```
+
+**Example**: `%.2f` means "float with 2 decimal places"
+- `%` = start of specifier
+- `.2` = precision (2 decimal places)
+- `f` = float/double type
+
+### Precision Control
+
+Control decimal places for floating-point numbers:
 
 ```c
-printf("%.2f", 3.14159);     // 3.14 (2 decimal places)
-printf("%5d", 42);           // "   42" (width 5, right-aligned)
-printf("%-5d", 42);          // "42   " (width 5, left-aligned)
-printf("%05d", 42);          // "00042" (zero-padded)
+float pi = 3.14159;
+
+printf("%f\n", pi);      // 3.141590 (default: 6 decimals)
+printf("%.1f\n", pi);    // 3.1 (1 decimal place)
+printf("%.2f\n", pi);    // 3.14 (2 decimal places)
+printf("%.3f\n", pi);    // 3.142 (3 decimal places)
+printf("%.0f\n", pi);    // 3 (no decimal places, rounded)
+```
+
+### Width Control
+
+Control the minimum number of characters to print:
+
+```c
+int num = 42;
+
+printf("%d\n", num);     // "42" (no padding)
+printf("%5d\n", num);    // "   42" (width 5, right-aligned)
+printf("%2d\n", num);    // "42" (width smaller than number, no effect)
+printf("%-5d\n", num);   // "42   " (width 5, left-aligned)
+printf("%05d\n", num);   // "00042" (zero-padded, width 5)
+```
+
+### Combining Width and Precision
+
+```c
+float price = 19.5;
+
+printf("%8.2f\n", price);    // "   19.50" (width 8, 2 decimals, right-aligned)
+printf("%-8.2f\n", price);   // "19.50   " (width 8, 2 decimals, left-aligned)
+printf("%08.2f\n", price);   // "00019.50" (width 8, 2 decimals, zero-padded)
+```
+
+### Practical Examples
+
+```c
+// Currency formatting
+float cost = 29.99;
+printf("Price: $%.2f\n", cost);  // Price: $29.99
+
+// Temperature with 1 decimal
+float temp = 72.456;
+printf("Temperature: %.1f°F\n", temp);  // Temperature: 72.5°F
+
+// Alignment in tables
+printf("%-10s %8.2f\n", "Apples", 2.50);
+printf("%-10s %8.2f\n", "Bananas", 1.99);
+// Output:
+// Apples        2.50
+// Bananas       1.99
+
+// Percentage with 1 decimal
+float percent = 87.654;
+printf("Score: %.1f%%\n", percent);  // Score: 87.7%
 ```
 
 ## scanf: Reading Input

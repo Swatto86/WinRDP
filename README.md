@@ -72,7 +72,6 @@ pacman -S mingw-w64-x86_64-gcc
 
 **Learning Resources:**
 - **C_PROGRAMMING_BOOK.md** - Complete C programming book (34 chapters, 100% COMPLETE! 🎉)
-- **BOOK_STATUS.md** - Detailed book progress and chapter status
 - Source code files are heavily commented for educational purposes
 
 **Reference:**
