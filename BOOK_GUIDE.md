@@ -11,12 +11,12 @@ This book teaches C programming from absolute basics to building a complete, pro
 
 These chapters introduce core C concepts that form the foundation:
 
-1. **Introduction to C Programming** - Hello World, compilation, basic syntax
-2. **Variables, Data Types, and Operators** - int, float, char, arithmetic, printf/scanf
-3. **Control Flow** - if/else, switch, loops (while, for, do-while)
-4. **Functions** - Declaration, definition, parameters, return values, scope
-5. **Arrays** - Single and multi-dimensional arrays, iteration, common operations
-6. **Pointers** - Memory addresses, dereferencing, pointer arithmetic, pass-by-reference
+1. **Introduction to C Programming** ✅ - Hello World, compilation, basic syntax
+2. **Variables, Data Types, and Operators** ✅ - int, float, char, arithmetic, printf/scanf
+3. **Control Flow** ✅ - if/else, switch, loops (while, for, do-while)
+4. **Functions** ✅ - Declaration, definition, parameters, return values, scope
+5. **Arrays** ✅ - Single and multi-dimensional arrays, iteration, common operations
+6. **Pointers** ✅ - Memory addresses, dereferencing, pointer arithmetic, pass-by-reference
 7. **Strings** - Character arrays, string functions, manipulation (TO BE WRITTEN)
 8. **Structures** - typedef struct, nested structures, organizing data (TO BE WRITTEN)
 
@@ -34,33 +34,35 @@ These chapters introduce core C concepts that form the foundation:
 - Managing memory like WinRDP does (LoadHosts, FreeHosts functions)
 - Setting up multi-file project structure
 
-### Part III: Windows Programming Basics (Chapters 13-16)
+### Part III: Windows Programming Basics (Chapters 13-16) ✅ COMPLETE
+**Status**: All 4 chapters fully written
 
-**What these chapters will cover:**
-
-13. **Introduction to Windows Programming** - Win32 API, Windows architecture, message-driven model
-14. **Your First Windows Application** - WinMain, window registration, basic window
-15. **Windows Message System** - Message loop, WndProc, handling events
-16. **Dialog Boxes and Controls** - Creating dialogs, buttons, edit controls, resource files
+13. **Introduction to Windows Programming** ✅ - Win32 API, Windows architecture, message-driven model
+14. **Your First Windows Application** ✅ - WinMain, window registration, basic window
+15. **Windows Message System** ✅ - Message loop, WndProc, handling events
+16. **Dialog Boxes and Controls** ✅ - Creating dialogs, buttons, edit controls, resource files
 
 **Prepares you for:**
 - Understanding how WinRDP's main window works
 - Creating the login dialog
 - Handling button clicks and user input
 
-### Part IV: Building WinRDP Core (Chapters 17-24)
+### Part IV: Building WinRDP Core (Chapters 17-24) 🔨 IN PROGRESS
+**Status**: First 2 chapters fully written
 
 **Progressive application building - each chapter adds functionality:**
 
-17. **Project Setup: WinRDP Architecture**
+17. **Project Setup: WinRDP Architecture** ✅
     - Project structure, build system, header files
     - config.h: Application constants and configuration
     - Creating the basic project skeleton
+    - **Milestone**: Compiling skeleton application
     
-18. **Configuration and Utilities**
+18. **Configuration and Utilities** ✅
     - utils.c: Helper functions (CenterWindow, ShowError)
-    - Setting up Windows development environment
-    - First successful compilation
+    - String manipulation and file path utilities
+    - Debug logging and error handling
+    - **Milestone**: Complete utility library ready
     
 19. **CSV File Management**
     - hosts.h/hosts.c: Host structure, LoadHosts, SaveHosts
@@ -478,9 +480,11 @@ By the end of this book, you'll have created:
 
 ## Book Status
 
-### Current Status: Chapters 1-6 Complete (Part I)
+### Current Status: Chapters 1-18 Complete (Parts I, III, and IV Started!)
 
 **Completed** (Fully written with examples and exercises):
+
+**Part I: C Fundamentals**
 - ✅ Chapter 1: Introduction to C Programming
 - ✅ Chapter 2: Variables, Data Types, and Operators
 - ✅ Chapter 3: Control Flow: Making Decisions
@@ -488,13 +492,22 @@ By the end of this book, you'll have created:
 - ✅ Chapter 5: Arrays: Working with Multiple Values
 - ✅ Chapter 6: Pointers: The Heart of C
 
+**Part III: Windows Programming Basics** 
+- ✅ Chapter 13: Introduction to Windows Programming
+- ✅ Chapter 14: Your First Windows Application
+- ✅ Chapter 15: Windows Message System
+- ✅ Chapter 16: Dialog Boxes and Controls
+
+**Part IV: Building WinRDP Core**
+- ✅ Chapter 17: Project Setup and Architecture
+- ✅ Chapter 18: Configuration and Utilities
+
 **To Be Written** (Outlined, structure defined):
 - 📝 Chapter 7: Strings: Text Processing in C
 - 📝 Chapter 8: Structures: Organizing Related Data
-- 📝 Chapters 9-12: Advanced C Concepts
-- 📝 Chapters 13-16: Windows Programming Basics
-- 📝 Chapters 17-24: Building WinRDP Core
-- 📝 Chapters 25-29: Advanced Features
+- 📝 Chapters 9-12: Advanced C Concepts (Part II)
+- 📝 Chapters 19-24: Building WinRDP Core (continued)
+- 📝 Chapters 25-29: Advanced Features (Part V)
 - 📝 Appendices A-D
 
 The foundation is solid and the path is clear. Each remaining chapter follows the same pattern: clear explanations, working examples, hands-on exercises, and progressive building toward the complete application.
