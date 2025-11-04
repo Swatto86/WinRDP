@@ -67,16 +67,13 @@ pacman -S mingw-w64-x86_64-gcc
 ## 📚 Documentation
 
 **Getting Started:**
-- **00_START_HERE.md** - Quick start guide
+- **README.md** - This file - Overview, features, and quick start
 - **BUILD.md** - Installation and build instructions
-- **GETTING_STARTED.md** - Learning path and exercises
 
 **Learning Resources:**
-- **C_PROGRAMMING_BOOK.md** - Complete C programming book (Chapters 1-23)
-- **BOOK_GUIDE.md** - Book guide and learning paths
-- **PROJECT_SUMMARY.md** - Architecture overview
-- **CODE_COMMENTARY.md** - Windows API deep-dive and implementation details
-- **APPLICATION_FLOW_DIAGRAM.md** - Architecture visualization
+- **C_PROGRAMMING_BOOK.md** - Complete C programming book (34 chapters, 100% COMPLETE! 🎉)
+- **BOOK_STATUS.md** - Detailed book progress and chapter status
+- Source code files are heavily commented for educational purposes
 
 **Reference:**
 - **CHANGELOG.md** - Version history and changes

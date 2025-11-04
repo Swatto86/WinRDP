@@ -39,23 +39,23 @@
 21. [Main Application Window](#chapter-21-main-application-window) ✅
 22. [ListView Control for Host Display](#chapter-22-listview-control-for-host-display) ✅
 23. [RDP Connection Logic](#chapter-23-rdp-connection-logic) ✅
-24. [System Tray Integration](#chapter-24-system-tray-integration) 📝 *To Be Written*
+24. [System Tray Integration](#chapter-24-system-tray-integration) ✅
 
 ## Part V: Advanced Features
-25. [Registry Operations and Autostart](#chapter-25-registry-operations-and-autostart) 📝 *To Be Written*
-26. [Global Hotkeys](#chapter-26-global-hotkeys) 📝 *To Be Written*
-27. [Dark Mode Support](#chapter-27-dark-mode-support) 📝 *To Be Written*
-28. [Network Computer Discovery](#chapter-28-network-computer-discovery) 📝 *To Be Written*
-29. [Building and Distribution](#chapter-29-building-and-distribution) 📝 *To Be Written*
+25. [Registry Operations and Autostart](#chapter-25-registry-operations-and-autostart) ✅
+26. [Global Hotkeys](#chapter-26-global-hotkeys) ✅
+27. [Dark Mode Support](#chapter-27-dark-mode-support) ✅
+28. [Network Computer Discovery](#chapter-28-network-computer-discovery) ✅
+29. [Building and Distribution](#chapter-29-building-and-distribution) ✅
 
 ## Part VI: Testing and Quality Assurance
 30. [System Testing and Integration](#chapter-30-system-testing-and-integration) ✅
 
 ## Appendices
-- [A: Setting Up Your Development Environment](#appendix-a-setting-up-your-development-environment) 📝 *To Be Written*
-- [B: Common Mistakes and How to Avoid Them](#appendix-b-common-mistakes-and-how-to-avoid-them) 📝 *To Be Written*
-- [C: Windows API Quick Reference](#appendix-c-windows-api-quick-reference) 📝 *To Be Written*
-- [D: Further Learning Resources](#appendix-d-further-learning-resources) 📝 *To Be Written*
+- [A: Setting Up Your Development Environment](#appendix-a-setting-up-your-development-environment) ✅
+- [B: Common Mistakes and How to Avoid Them](#appendix-b-common-mistakes-and-how-to-avoid-them) ✅
+- [C: Windows API Quick Reference](#appendix-c-windows-api-quick-reference) ✅
+- [D: Further Learning Resources](#appendix-d-further-learning-resources) ✅
 
 ---
 
@@ -16404,6 +16404,3226 @@ Based on the pattern established in the existing chapters:
 
 ---
 
+# Chapter 24: System Tray Integration
+
+**What You'll Learn:**
+- Understanding the Windows system tray (notification area)
+- Working with NOTIFYICONDATA structure
+- Shell_NotifyIcon API for tray management
+- Creating context menus for tray icons
+- Handling tray icon messages and events
+- Implementing show/hide window functionality
+
+## Introduction
+
+The Windows system tray (also called the notification area) is that small section in the bottom-right corner of your screen where icons for background applications appear. Adding system tray support transforms WinRDP from a simple window application into a professional tool that can run in the background and be accessed instantly when needed.
+
+In this chapter, we'll implement full system tray integration, allowing users to:
+- Minimize WinRDP to the system tray
+- Right-click the tray icon for a context menu
+- Restore the window by clicking the icon
+- Exit the application from the tray menu
+
+## Understanding the System Tray
+
+### What Is the System Tray?
+
+The system tray is perfect for applications that:
+- Run in the background
+- Don't need constant user attention
+- Provide quick access when needed
+- Show status or notifications
+
+Common examples: antivirus software, cloud sync apps, volume control, network status.
+
+### Windows API for System Tray
+
+Windows provides the **Shell_NotifyIcon** function to interact with the system tray. This function can:
+- Add an icon to the tray
+- Remove an icon from the tray
+- Modify an existing icon
+- Display balloon notifications (modern Windows shows toast notifications)
+
+## The NOTIFYICONDATA Structure
+
+The core of system tray programming is the `NOTIFYICONDATA` structure:
+
+```c
+typedef struct _NOTIFYICONDATA {
+    DWORD cbSize;              // Size of this structure
+    HWND hWnd;                 // Window to receive messages
+    UINT uID;                  // Icon identifier
+    UINT uFlags;               // Flags indicating which fields are valid
+    UINT uCallbackMessage;     // Message sent to hWnd
+    HICON hIcon;               // Icon handle
+    WCHAR szTip[128];          // Tooltip text
+    DWORD dwState;             // State flags
+    DWORD dwStateMask;         // State mask
+    WCHAR szInfo[256];         // Balloon notification text
+    UINT uTimeout;             // Balloon notification timeout
+    WCHAR szInfoTitle[64];     // Balloon notification title
+    DWORD dwInfoFlags;         // Balloon notification flags
+} NOTIFYICONDATA;
+```
+
+**Key Fields:**
+- `cbSize`: Always set to `sizeof(NOTIFYICONDATA)`
+- `hWnd`: Your window that will receive tray icon messages
+- `uID`: Unique ID for this tray icon (use a constant like `ID_TRAYICON`)
+- `uFlags`: Combination of flags (NIF_ICON, NIF_MESSAGE, NIF_TIP, etc.)
+- `uCallbackMessage`: Custom message ID (like `WM_TRAYICON`)
+- `hIcon`: The icon to display
+- `szTip`: Tooltip shown when hovering over icon
+
+## Implementing System Tray Support
+
+### Step 1: Define Constants
+
+Add these to your `resource.h`:
+
+```c
+// Tray icon
+#define ID_TRAYICON     1001
+#define WM_TRAYICON     (WM_USER + 1)
+
+// Tray menu items
+#define IDM_OPEN        2001
+#define IDM_EXIT        2002
+#define IDM_ABOUT       2003
+```
+
+### Step 2: Create the InitSystemTray Function
+
+```c
+// main.c
+BOOL InitSystemTray(HWND hwnd)
+{
+    NOTIFYICONDATA nid = {0};
+    
+    nid.cbSize = sizeof(NOTIFYICONDATA);
+    nid.hWnd = hwnd;
+    nid.uID = ID_TRAYICON;
+    nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
+    nid.uCallbackMessage = WM_TRAYICON;
+    
+    // Load the application icon
+    nid.hIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_APPICON));
+    if (nid.hIcon == NULL) {
+        nid.hIcon = LoadIcon(NULL, IDI_APPLICATION);  // Fallback to default icon
+    }
+    
+    // Set tooltip text
+    wcscpy_s(nid.szTip, sizeof(nid.szTip) / sizeof(WCHAR), L"WinRDP - RDP Connection Manager");
+    
+    // Add icon to system tray
+    if (!Shell_NotifyIcon(NIM_ADD, &nid)) {
+        MessageBox(hwnd, L"Failed to add system tray icon", L"Error", MB_OK | MB_ICONERROR);
+        return FALSE;
+    }
+    
+    return TRUE;
+}
+```
+
+**What This Does:**
+1. Creates a `NOTIFYICONDATA` structure
+2. Sets required fields (size, window handle, icon ID)
+3. Specifies flags: NIF_ICON (has icon), NIF_MESSAGE (sends messages), NIF_TIP (has tooltip)
+4. Sets custom message `WM_TRAYICON` to receive tray events
+5. Loads application icon (or uses default)
+6. Sets tooltip text
+7. Calls `Shell_NotifyIcon` with `NIM_ADD` to add icon to tray
+
+### Step 3: Handle Tray Icon Messages
+
+Add to your `WndProc`:
+
+```c
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+        case WM_CREATE:
+        {
+            // Initialize system tray icon
+            if (!InitSystemTray(hwnd)) {
+                return -1;  // Fail window creation
+            }
+            return 0;
+        }
+        
+        case WM_TRAYICON:
+        {
+            // Handle tray icon events
+            switch (LOWORD(lParam))
+            {
+                case WM_LBUTTONDOWN:
+                case WM_LBUTTONDBLCLK:
+                {
+                    // Left click or double-click - show main dialog
+                    ShowMainDialog(hwnd);
+                    break;
+                }
+                
+                case WM_RBUTTONDOWN:
+                case WM_CONTEXTMENU:
+                {
+                    // Right click - show context menu
+                    ShowTrayMenu(hwnd);
+                    break;
+                }
+            }
+            return 0;
+        }
+        
+        case WM_COMMAND:
+        {
+            switch (LOWORD(wParam))
+            {
+                case IDM_OPEN:
+                    ShowMainDialog(hwnd);
+                    break;
+                    
+                case IDM_ABOUT:
+                    ShowAboutDialog(hwnd);
+                    break;
+                    
+                case IDM_EXIT:
+                    PostMessage(hwnd, WM_CLOSE, 0, 0);
+                    break;
+            }
+            return 0;
+        }
+        
+        case WM_DESTROY:
+        {
+            // Remove tray icon before exiting
+            NOTIFYICONDATA nid = {0};
+            nid.cbSize = sizeof(NOTIFYICONDATA);
+            nid.hWnd = hwnd;
+            nid.uID = ID_TRAYICON;
+            Shell_NotifyIcon(NIM_DELETE, &nid);
+            
+            PostQuitMessage(0);
+            return 0;
+        }
+    }
+    
+    return DefWindowProc(hwnd, msg, wParam, lParam);
+}
+```
+
+**Understanding the Message Handling:**
+
+1. **WM_CREATE**: Initialize tray icon when window is created
+2. **WM_TRAYICON**: Custom message sent when user interacts with tray icon
+   - `LOWORD(lParam)` contains the mouse message (WM_LBUTTONDOWN, WM_RBUTTONDOWN, etc.)
+3. **WM_COMMAND**: Handle menu item selections
+4. **WM_DESTROY**: Remove tray icon before application exits
+
+### Step 4: Create the Context Menu
+
+```c
+void ShowTrayMenu(HWND hwnd)
+{
+    POINT pt;
+    HMENU hMenu, hSubMenu;
+    
+    // Get cursor position
+    GetCursorPos(&pt);
+    
+    // Create popup menu
+    hMenu = CreatePopupMenu();
+    if (hMenu == NULL)
+        return;
+    
+    // Add menu items
+    AppendMenu(hMenu, MF_STRING, IDM_OPEN, L"&Open WinRDP");
+    AppendMenu(hMenu, MF_STRING, IDM_ABOUT, L"&About");
+    AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenu(hMenu, MF_STRING, IDM_EXIT, L"E&xit");
+    
+    // Set default menu item (bold text)
+    SetMenuDefaultItem(hMenu, IDM_OPEN, FALSE);
+    
+    // Required for proper popup behavior
+    SetForegroundWindow(hwnd);
+    
+    // Display menu
+    TrackPopupMenu(hMenu, TPM_BOTTOMALIGN | TPM_LEFTALIGN,
+                   pt.x, pt.y, 0, hwnd, NULL);
+    
+    // Clean up
+    DestroyMenu(hMenu);
+    
+    // Required for proper popup behavior
+    PostMessage(hwnd, WM_NULL, 0, 0);
+}
+```
+
+**Key Points:**
+
+- `GetCursorPos`: Get mouse position for menu placement
+- `CreatePopupMenu`: Create temporary popup menu
+- `AppendMenu`: Add menu items
+- `SetMenuDefaultItem`: Make "Open" bold (default action)
+- `SetForegroundWindow`: Required before showing popup (Windows quirk)
+- `TrackPopupMenu`: Display menu and wait for selection
+- `DestroyMenu`: Clean up menu when done
+- `PostMessage(WM_NULL)`: Required for proper menu dismissal (Windows quirk)
+
+### Step 5: Show/Hide Window Functions
+
+```c
+// Global to track if main dialog is open
+static HWND g_hwndMainDialog = NULL;
+
+void ShowMainDialog(HWND hwndParent)
+{
+    // If dialog already exists, just bring it to front
+    if (g_hwndMainDialog != NULL && IsWindow(g_hwndMainDialog)) {
+        SetForegroundWindow(g_hwndMainDialog);
+        return;
+    }
+    
+    // Check if credentials exist
+    wchar_t username[256], password[256];
+    if (!LoadCredentials(NULL, username, sizeof(username)/sizeof(wchar_t),
+                         password, sizeof(password)/sizeof(wchar_t))) {
+        // No credentials - show login dialog first
+        DialogBox(GetModuleHandle(NULL), 
+                  MAKEINTRESOURCE(IDD_LOGIN),
+                  hwndParent,
+                  LoginDialogProc);
+    }
+    
+    // Show main dialog
+    g_hwndMainDialog = CreateDialog(GetModuleHandle(NULL),
+                                    MAKEINTRESOURCE(IDD_MAIN),
+                                    hwndParent,
+                                    MainDialogProc);
+    
+    if (g_hwndMainDialog != NULL) {
+        ShowWindow(g_hwndMainDialog, SW_SHOW);
+    }
+}
+```
+
+## Complete System Tray Example
+
+Here's a complete, minimal example demonstrating system tray integration:
+
+```c
+#include <windows.h>
+#include <shellapi.h>
+#include "resource.h"
+
+#define WM_TRAYICON (WM_USER + 1)
+#define ID_TRAYICON 1001
+#define IDM_OPEN 2001
+#define IDM_EXIT 2002
+
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+void ShowTrayMenu(HWND hwnd);
+
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+                    LPWSTR lpCmdLine, int nCmdShow)
+{
+    WNDCLASSW wc = {0};
+    wc.lpfnWndProc = WndProc;
+    wc.hInstance = hInstance;
+    wc.lpszClassName = L"SystemTrayDemo";
+    
+    RegisterClassW(&wc);
+    
+    // Create hidden window (just for receiving messages)
+    HWND hwnd = CreateWindowW(L"SystemTrayDemo", L"System Tray Demo",
+                              0, 0, 0, 0, 0, NULL, NULL, hInstance, NULL);
+    
+    // Message loop
+    MSG msg;
+    while (GetMessage(&msg, NULL, 0, 0)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    
+    return (int)msg.wParam;
+}
+
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    static NOTIFYICONDATA nid = {0};
+    
+    switch (msg)
+    {
+        case WM_CREATE:
+        {
+            // Initialize tray icon
+            nid.cbSize = sizeof(NOTIFYICONDATA);
+            nid.hWnd = hwnd;
+            nid.uID = ID_TRAYICON;
+            nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
+            nid.uCallbackMessage = WM_TRAYICON;
+            nid.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+            wcscpy_s(nid.szTip, 128, L"System Tray Demo");
+            
+            Shell_NotifyIcon(NIM_ADD, &nid);
+            return 0;
+        }
+        
+        case WM_TRAYICON:
+        {
+            switch (LOWORD(lParam))
+            {
+                case WM_LBUTTONDBLCLK:
+                    MessageBox(hwnd, L"Tray icon double-clicked!", L"Demo", MB_OK);
+                    break;
+                    
+                case WM_RBUTTONDOWN:
+                    ShowTrayMenu(hwnd);
+                    break;
+            }
+            return 0;
+        }
+        
+        case WM_COMMAND:
+        {
+            switch (LOWORD(wParam))
+            {
+                case IDM_OPEN:
+                    MessageBox(hwnd, L"Open clicked", L"Demo", MB_OK);
+                    break;
+                    
+                case IDM_EXIT:
+                    PostMessage(hwnd, WM_CLOSE, 0, 0);
+                    break;
+            }
+            return 0;
+        }
+        
+        case WM_DESTROY:
+        {
+            Shell_NotifyIcon(NIM_DELETE, &nid);
+            PostQuitMessage(0);
+            return 0;
+        }
+    }
+    
+    return DefWindowProc(hwnd, msg, wParam, lParam);
+}
+
+void ShowTrayMenu(HWND hwnd)
+{
+    POINT pt;
+    GetCursorPos(&pt);
+    
+    HMENU hMenu = CreatePopupMenu();
+    AppendMenu(hMenu, MF_STRING, IDM_OPEN, L"&Open");
+    AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenu(hMenu, MF_STRING, IDM_EXIT, L"E&xit");
+    
+    SetForegroundWindow(hwnd);
+    TrackPopupMenu(hMenu, TPM_BOTTOMALIGN, pt.x, pt.y, 0, hwnd, NULL);
+    DestroyMenu(hMenu);
+    PostMessage(hwnd, WM_NULL, 0, 0);
+}
+```
+
+## Updating Icons Dynamically
+
+You can change the tray icon to show status:
+
+```c
+void UpdateTrayIcon(HWND hwnd, HICON hNewIcon, const wchar_t* newTooltip)
+{
+    NOTIFYICONDATA nid = {0};
+    nid.cbSize = sizeof(NOTIFYICONDATA);
+    nid.hWnd = hwnd;
+    nid.uID = ID_TRAYICON;
+    nid.uFlags = NIF_ICON | NIF_TIP;
+    nid.hIcon = hNewIcon;
+    wcscpy_s(nid.szTip, 128, newTooltip);
+    
+    Shell_NotifyIcon(NIM_MODIFY, &nid);
+}
+```
+
+**Use Cases:**
+- Show different icons for online/offline status
+- Animate icon during activity
+- Update tooltip with current information
+
+## Balloon Notifications (Legacy)
+
+Modern Windows shows toast notifications, but older systems use balloons:
+
+```c
+void ShowBalloonNotification(HWND hwnd, const wchar_t* title, const wchar_t* message)
+{
+    NOTIFYICONDATA nid = {0};
+    nid.cbSize = sizeof(NOTIFYICONDATA);
+    nid.hWnd = hwnd;
+    nid.uID = ID_TRAYICON;
+    nid.uFlags = NIF_INFO;
+    
+    wcscpy_s(nid.szInfoTitle, 64, title);
+    wcscpy_s(nid.szInfo, 256, message);
+    nid.dwInfoFlags = NIIF_INFO;  // Info icon (can be NIIF_WARNING, NIIF_ERROR)
+    nid.uTimeout = 3000;  // Deprecated, but can set to 0 for default
+    
+    Shell_NotifyIcon(NIM_MODIFY, &nid);
+}
+```
+
+## Best Practices for System Tray Applications
+
+### 1. Always Remove Icon on Exit
+```c
+case WM_DESTROY:
+{
+    NOTIFYICONDATA nid = {0};
+    nid.cbSize = sizeof(NOTIFYICONDATA);
+    nid.hWnd = hwnd;
+    nid.uID = ID_TRAYICON;
+    Shell_NotifyIcon(NIM_DELETE, &nid);
+    
+    PostQuitMessage(0);
+    return 0;
+}
+```
+
+**Why:** Prevents "ghost icons" that remain after application crashes.
+
+### 2. Provide Multiple Ways to Open
+
+- Left-click: Show main window
+- Double-click: Show main window
+- Right-click → Open: Show main window
+- Global hotkey: Show main window (we'll add this in Chapter 26)
+
+**Why:** Different users have different preferences.
+
+### 3. Always Include Exit Option
+
+```c
+AppendMenu(hMenu, MF_STRING, IDM_EXIT, L"E&xit");
+```
+
+**Why:** Users must be able to close your application easily.
+
+### 4. Use Descriptive Tooltips
+
+```c
+wcscpy_s(nid.szTip, 128, L"WinRDP - 5 servers configured");
+```
+
+**Why:** Tooltip helps users identify your app among many tray icons.
+
+### 5. Handle Explorer Crashes
+
+Windows Explorer can crash and restart, taking tray icons with it. Handle this:
+
+```c
+case WM_TASKBARCREATED:  // Custom message (register with RegisterWindowMessage)
+{
+    // Re-add tray icon after Explorer restarts
+    InitSystemTray(hwnd);
+    return 0;
+}
+```
+
+Register the message:
+
+```c
+// Global variable
+UINT g_uTaskbarCreated = 0;
+
+// In wWinMain, before message loop
+g_uTaskbarCreated = RegisterWindowMessage(L"TaskbarCreated");
+
+// In WndProc
+if (msg == g_uTaskbarCreated) {
+    InitSystemTray(hwnd);
+    return 0;
+}
+```
+
+## Integrating with WinRDP
+
+Now let's integrate system tray into the complete WinRDP application:
+
+### Updated WinRDP main.c Structure
+
+```c
+// Global state
+static HWND g_hwndMain = NULL;
+static HWND g_hwndMainDialog = NULL;
+static UINT g_uTaskbarCreated = 0;
+
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+                    LPWSTR lpCmdLine, int nCmdShow)
+{
+    // Check single instance (using mutex from earlier chapters)
+    HANDLE hMutex = CreateMutexW(NULL, TRUE, L"WinRDP_SingleInstance");
+    if (GetLastError() == ERROR_ALREADY_EXISTS) {
+        CloseHandle(hMutex);
+        return 0;
+    }
+    
+    // Initialize common controls
+    INITCOMMONCONTROLSEX icex;
+    icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
+    icex.dwICC = ICC_LISTVIEW_CLASSES;
+    InitCommonControlsEx(&icex);
+    
+    // Register custom message for taskbar recreation
+    g_uTaskbarCreated = RegisterWindowMessage(L"TaskbarCreated");
+    
+    // Register window class
+    WNDCLASSEXW wc = {0};
+    wc.cbSize = sizeof(WNDCLASSEXW);
+    wc.lpfnWndProc = WndProc;
+    wc.hInstance = hInstance;
+    wc.lpszClassName = L"WinRDP_MainWindow";
+    wc.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APPICON));
+    RegisterClassExW(&wc);
+    
+    // Create hidden main window (for messages)
+    g_hwndMain = CreateWindowExW(0, L"WinRDP_MainWindow", L"WinRDP",
+                                 0, 0, 0, 0, 0, NULL, NULL, hInstance, NULL);
+    
+    if (g_hwndMain == NULL) {
+        MessageBox(NULL, L"Failed to create window", L"Error", MB_OK | MB_ICONERROR);
+        return 1;
+    }
+    
+    // Initialize system tray
+    if (!InitSystemTray(g_hwndMain)) {
+        MessageBox(NULL, L"Failed to initialize system tray", L"Error", MB_OK | MB_ICONERROR);
+        DestroyWindow(g_hwndMain);
+        return 1;
+    }
+    
+    // Show login dialog on startup
+    DialogBox(hInstance, MAKEINTRESOURCE(IDD_LOGIN), g_hwndMain, LoginDialogProc);
+    
+    // Message loop
+    MSG msg;
+    while (GetMessage(&msg, NULL, 0, 0)) {
+        // Check if dialog exists and handle dialog messages
+        if (g_hwndMainDialog == NULL || !IsDialogMessage(g_hwndMainDialog, &msg)) {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+    }
+    
+    CloseHandle(hMutex);
+    return (int)msg.wParam;
+}
+```
+
+## Exercise 24.1: Basic System Tray
+
+Create a minimal application that:
+1. Shows a system tray icon on startup
+2. Opens a message box when icon is double-clicked
+3. Shows a context menu on right-click with "Exit" option
+4. Properly removes icon when exiting
+
+**Challenge:** Add a menu item to change the tooltip text.
+
+## Exercise 24.2: Status Icon
+
+Create an application that:
+1. Shows different colored icons based on status (green = OK, red = error)
+2. Updates the icon every 5 seconds randomly
+3. Shows current status in tooltip
+4. Has menu options to manually set status
+
+**Hint:** Use `SetTimer` to trigger status changes.
+
+## Exercise 24.3: Notification System
+
+Add to Exercise 24.2:
+1. Show balloon notification when status changes
+2. Allow user to disable notifications via menu
+3. Keep count of status changes and show in tooltip
+
+## Common Mistakes and Solutions
+
+### Mistake 1: Forgetting to Remove Icon
+
+```c
+// WRONG - Icon persists after crash
+case WM_DESTROY:
+    PostQuitMessage(0);
+    return 0;
+
+// CORRECT - Always clean up
+case WM_DESTROY:
+    NOTIFYICONDATA nid = {0};
+    nid.cbSize = sizeof(NOTIFYICONDATA);
+    nid.hWnd = hwnd;
+    nid.uID = ID_TRAYICON;
+    Shell_NotifyIcon(NIM_DELETE, &nid);
+    PostQuitMessage(0);
+    return 0;
+```
+
+### Mistake 2: Menu Doesn't Dismiss Properly
+
+```c
+// WRONG - Menu stays visible
+TrackPopupMenu(hMenu, TPM_BOTTOMALIGN, pt.x, pt.y, 0, hwnd, NULL);
+DestroyMenu(hMenu);
+
+// CORRECT - Requires SetForegroundWindow and WM_NULL
+SetForegroundWindow(hwnd);  // Before TrackPopupMenu
+TrackPopupMenu(hMenu, TPM_BOTTOMALIGN, pt.x, pt.y, 0, hwnd, NULL);
+DestroyMenu(hMenu);
+PostMessage(hwnd, WM_NULL, 0, 0);  // After TrackPopupMenu
+```
+
+**Why:** Windows has special requirements for popup menus from tray icons. These calls ensure proper behavior.
+
+### Mistake 3: Icon Not Recreated After Explorer Crash
+
+```c
+// WRONG - Icon disappears permanently if Explorer crashes
+
+// CORRECT - Handle TaskbarCreated message
+g_uTaskbarCreated = RegisterWindowMessage(L"TaskbarCreated");
+
+// In WndProc:
+if (msg == g_uTaskbarCreated) {
+    InitSystemTray(hwnd);
+    return 0;
+}
+```
+
+## Advanced Features
+
+### Multiple Tray Icons
+
+You can have multiple tray icons by using different IDs:
+
+```c
+#define ID_TRAYICON_MAIN   1001
+#define ID_TRAYICON_STATUS 1002
+
+// Add first icon
+nid.uID = ID_TRAYICON_MAIN;
+Shell_NotifyIcon(NIM_ADD, &nid);
+
+// Add second icon
+nid.uID = ID_TRAYICON_STATUS;
+nid.hIcon = LoadIcon(NULL, IDI_INFORMATION);
+wcscpy_s(nid.szTip, 128, L"Status Icon");
+Shell_NotifyIcon(NIM_ADD, &nid);
+```
+
+### Animated Tray Icons
+
+Create animation by cycling through icons:
+
+```c
+HICON g_animIcons[4];  // Array of animation frames
+int g_currentFrame = 0;
+
+void AnimateTrayIcon(HWND hwnd)
+{
+    NOTIFYICONDATA nid = {0};
+    nid.cbSize = sizeof(NOTIFYICONDATA);
+    nid.hWnd = hwnd;
+    nid.uID = ID_TRAYICON;
+    nid.uFlags = NIF_ICON;
+    nid.hIcon = g_animIcons[g_currentFrame];
+    
+    Shell_NotifyIcon(NIM_MODIFY, &nid);
+    
+    g_currentFrame = (g_currentFrame + 1) % 4;
+}
+
+// Call from WM_TIMER handler
+SetTimer(hwnd, IDT_ANIMATE, 500, NULL);  // 500ms per frame
+```
+
+## Testing Your System Tray Implementation
+
+### Test Checklist
+
+1. ☐ Icon appears in system tray on startup
+2. ☐ Tooltip shows when hovering over icon
+3. ☐ Left-click opens main window
+4. ☐ Double-click opens main window
+5. ☐ Right-click shows context menu
+6. ☐ Menu items work correctly
+7. ☐ Icon disappears when application exits
+8. ☐ Application can be closed from tray menu
+9. ☐ Icon reappears after Explorer restart (kill and restart explorer.exe)
+10. ☐ No ghost icons remain after crashes
+
+### Testing Explorer Crash Recovery
+
+1. Run your application
+2. Open Task Manager
+3. Find "Windows Explorer" process
+4. Right-click → End Task (desktop will disappear)
+5. File → Run new task → explorer.exe (desktop returns)
+6. Your tray icon should reappear automatically
+
+## Summary
+
+In this chapter, you learned:
+
+### **System Tray Fundamentals**
+- ✅ Understanding Windows notification area
+- ✅ NOTIFYICONDATA structure
+- ✅ Shell_NotifyIcon API (NIM_ADD, NIM_DELETE, NIM_MODIFY)
+- ✅ Tray icon messages and callbacks
+
+### **Implementation Skills**
+- ✅ Adding icons to system tray
+- ✅ Creating context menus
+- ✅ Handling tray icon clicks
+- ✅ Showing/hiding windows
+- ✅ Updating icons dynamically
+
+### **Best Practices**
+- ✅ Always remove icon on exit
+- ✅ Handle Explorer crashes
+- ✅ Provide multiple access methods
+- ✅ Use descriptive tooltips
+- ✅ Always include Exit option
+
+### **Your WinRDP Application Now Has:**
+- ✅ Full system tray integration
+- ✅ Background operation capability
+- ✅ Quick access from system tray
+- ✅ Professional Windows application behavior
+
+**Congratulations!** You've completed Part IV. Your WinRDP application now has all core functionality and can operate as a professional background application. In Part V, we'll add advanced features that make WinRDP truly stand out.
+
+---
+
+# Part V: Advanced Features
+
+# Chapter 25: Registry Operations and Autostart
+
+**What You'll Learn:**
+- Understanding the Windows Registry structure
+- Reading and writing registry values
+- Working with registry keys and paths
+- Implementing "Start with Windows" functionality
+- Best practices for registry operations
+- Error handling and security considerations
+
+## Introduction
+
+The Windows Registry is a hierarchical database that stores configuration settings and options for the Windows operating system and installed applications. Learning to work with the registry is essential for implementing features like:
+- Automatically starting your application when Windows boots
+- Storing application preferences
+- Reading system configuration
+- Integrating with Windows properly
+
+In this chapter, we'll implement autostart functionality for WinRDP, allowing it to launch automatically when Windows starts - a feature expected in professional system tray applications.
+
+## Understanding the Windows Registry
+
+### What Is the Registry?
+
+The Registry replaced the old .INI files used in early Windows versions. It provides:
+- **Centralized storage** for system and application settings
+- **Hierarchical structure** (like folders and files)
+- **Different data types** (strings, numbers, binary data)
+- **Security** (access control on keys)
+- **Performance** (optimized for quick lookups)
+
+### Registry Structure
+
+The registry is organized into **hives** (root keys):
+
+```
+HKEY_LOCAL_MACHINE (HKLM)
+│   System-wide settings, available to all users
+│   Requires administrator rights to modify
+│
+HKEY_CURRENT_USER (HKCU)
+│   Settings for currently logged-in user
+│   User can modify without admin rights
+│
+HKEY_CLASSES_ROOT (HKCR)
+│   File associations and COM registration
+│
+HKEY_USERS (HKU)
+│   Settings for all user profiles
+│
+HKEY_CURRENT_CONFIG (HKCC)
+    Current hardware profile settings
+```
+
+**For WinRDP, we'll use HKEY_CURRENT_USER** because:
+- User-specific settings (each user can choose whether to autostart)
+- No administrator rights required
+- Follows Windows best practices
+
+### Common Registry Paths
+
+```
+HKCU\Software\YourCompanyName\YourAppName
+    Your application settings
+
+HKCU\Software\Microsoft\Windows\CurrentVersion\Run
+    Programs that start with Windows (current user)
+
+HKLM\Software\Microsoft\Windows\CurrentVersion\Run
+    Programs that start with Windows (all users, requires admin)
+```
+
+## Windows Registry API
+
+### Key Functions
+
+```c
+// Open a registry key
+LONG RegOpenKeyExW(
+    HKEY hKey,              // Root key (HKEY_CURRENT_USER, etc.)
+    LPCWSTR lpSubKey,       // Path to subkey
+    DWORD ulOptions,        // Reserved, must be 0
+    REGSAM samDesired,      // Access rights (KEY_READ, KEY_WRITE, etc.)
+    PHKEY phkResult         // Receives handle to opened key
+);
+
+// Create a new key (or open if exists)
+LONG RegCreateKeyExW(
+    HKEY hKey,
+    LPCWSTR lpSubKey,
+    DWORD Reserved,
+    LPWSTR lpClass,
+    DWORD dwOptions,
+    REGSAM samDesired,
+    LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+    PHKEY phkResult,
+    LPDWORD lpdwDisposition
+);
+
+// Read a value
+LONG RegQueryValueExW(
+    HKEY hKey,              // Handle to open key
+    LPCWSTR lpValueName,    // Name of value
+    LPDWORD lpReserved,     // Reserved, must be NULL
+    LPDWORD lpType,         // Receives value type
+    LPBYTE lpData,          // Buffer for value data
+    LPDWORD lpcbData        // Size of buffer
+);
+
+// Write a value
+LONG RegSetValueExW(
+    HKEY hKey,
+    LPCWSTR lpValueName,
+    DWORD Reserved,
+    DWORD dwType,           // Value type (REG_SZ, REG_DWORD, etc.)
+    const BYTE *lpData,     // Value data
+    DWORD cbData            // Size of data
+);
+
+// Delete a value
+LONG RegDeleteValueW(
+    HKEY hKey,
+    LPCWSTR lpValueName
+);
+
+// Close a key handle
+LONG RegCloseKey(
+    HKEY hKey
+);
+```
+
+### Return Values
+
+All registry functions return `ERROR_SUCCESS` (0) on success, or an error code:
+
+```c
+ERROR_SUCCESS          // 0 - Success
+ERROR_FILE_NOT_FOUND   // Key or value doesn't exist
+ERROR_ACCESS_DENIED    // Insufficient permissions
+ERROR_MORE_DATA        // Buffer too small
+```
+
+## Implementing Autostart
+
+### Step 1: Enable Autostart
+
+```c
+// registry.c
+#include <windows.h>
+
+BOOL EnableAutostart(void)
+{
+    HKEY hKey;
+    wchar_t szPath[MAX_PATH];
+    LONG result;
+    
+    // Get full path to current executable
+    if (GetModuleFileNameW(NULL, szPath, MAX_PATH) == 0) {
+        return FALSE;
+    }
+    
+    // Open the Run key
+    result = RegOpenKeyExW(
+        HKEY_CURRENT_USER,
+        L"Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+        0,
+        KEY_WRITE,
+        &hKey
+    );
+    
+    if (result != ERROR_SUCCESS) {
+        return FALSE;
+    }
+    
+    // Write the value
+    result = RegSetValueExW(
+        hKey,
+        L"WinRDP",                              // Value name
+        0,
+        REG_SZ,                                 // String type
+        (BYTE*)szPath,                          // Executable path
+        (DWORD)((wcslen(szPath) + 1) * sizeof(wchar_t))  // Size in bytes
+    );
+    
+    RegCloseKey(hKey);
+    
+    return (result == ERROR_SUCCESS);
+}
+```
+
+**What This Does:**
+1. Gets full path to the running executable using `GetModuleFileNameW`
+2. Opens the `Run` registry key with write access
+3. Creates/updates a value named "WinRDP" with the executable path
+4. Windows will now launch this program on startup
+5. Closes the registry key handle
+
+### Step 2: Disable Autostart
+
+```c
+BOOL DisableAutostart(void)
+{
+    HKEY hKey;
+    LONG result;
+    
+    // Open the Run key
+    result = RegOpenKeyExW(
+        HKEY_CURRENT_USER,
+        L"Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+        0,
+        KEY_WRITE,
+        &hKey
+    );
+    
+    if (result != ERROR_SUCCESS) {
+        return FALSE;
+    }
+    
+    // Delete the value
+    result = RegDeleteValueW(hKey, L"WinRDP");
+    
+    RegCloseKey(hKey);
+    
+    // ERROR_FILE_NOT_FOUND means it wasn't there - that's OK
+    return (result == ERROR_SUCCESS || result == ERROR_FILE_NOT_FOUND);
+}
+```
+
+### Step 3: Check Autostart Status
+
+```c
+BOOL IsAutostartEnabled(void)
+{
+    HKEY hKey;
+    LONG result;
+    wchar_t szValue[MAX_PATH];
+    DWORD dwSize = sizeof(szValue);
+    DWORD dwType;
+    
+    // Open the Run key for reading
+    result = RegOpenKeyExW(
+        HKEY_CURRENT_USER,
+        L"Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+        0,
+        KEY_READ,
+        &hKey
+    );
+    
+    if (result != ERROR_SUCCESS) {
+        return FALSE;
+    }
+    
+    // Try to read the value
+    result = RegQueryValueExW(
+        hKey,
+        L"WinRDP",
+        NULL,
+        &dwType,
+        (LPBYTE)szValue,
+        &dwSize
+    );
+    
+    RegCloseKey(hKey);
+    
+    // If value exists and is a string, autostart is enabled
+    return (result == ERROR_SUCCESS && dwType == REG_SZ);
+}
+```
+
+### Step 4: Toggle Function
+
+```c
+BOOL ToggleAutostart(void)
+{
+    if (IsAutostartEnabled()) {
+        return DisableAutostart();
+    } else {
+        return EnableAutostart();
+    }
+}
+```
+
+## Complete Registry Module
+
+Here's a complete `registry.h` and `registry.c`:
+
+**registry.h:**
+```c
+#ifndef REGISTRY_H
+#define REGISTRY_H
+
+#include <windows.h>
+
+// Autostart functions
+BOOL EnableAutostart(void);
+BOOL DisableAutostart(void);
+BOOL IsAutostartEnabled(void);
+BOOL ToggleAutostart(void);
+
+// Application settings (optional)
+BOOL SaveStringSetting(const wchar_t* name, const wchar_t* value);
+BOOL LoadStringSetting(const wchar_t* name, wchar_t* value, DWORD valueSize);
+BOOL SaveDwordSetting(const wchar_t* name, DWORD value);
+BOOL LoadDwordSetting(const wchar_t* name, DWORD* value);
+
+#endif // REGISTRY_H
+```
+
+**registry.c:**
+```c
+#include "registry.h"
+#include <wchar.h>
+
+#define APP_REG_PATH L"Software\\WinRDP"
+#define RUN_REG_PATH L"Software\\Microsoft\\Windows\\CurrentVersion\\Run"
+#define APP_NAME L"WinRDP"
+
+// Autostart implementation
+BOOL EnableAutostart(void)
+{
+    HKEY hKey;
+    wchar_t szPath[MAX_PATH];
+    LONG result;
+    
+    if (GetModuleFileNameW(NULL, szPath, MAX_PATH) == 0)
+        return FALSE;
+    
+    result = RegOpenKeyExW(HKEY_CURRENT_USER, RUN_REG_PATH, 0, KEY_WRITE, &hKey);
+    if (result != ERROR_SUCCESS)
+        return FALSE;
+    
+    result = RegSetValueExW(hKey, APP_NAME, 0, REG_SZ, (BYTE*)szPath,
+                            (DWORD)((wcslen(szPath) + 1) * sizeof(wchar_t)));
+    
+    RegCloseKey(hKey);
+    return (result == ERROR_SUCCESS);
+}
+
+BOOL DisableAutostart(void)
+{
+    HKEY hKey;
+    LONG result;
+    
+    result = RegOpenKeyExW(HKEY_CURRENT_USER, RUN_REG_PATH, 0, KEY_WRITE, &hKey);
+    if (result != ERROR_SUCCESS)
+        return FALSE;
+    
+    result = RegDeleteValueW(hKey, APP_NAME);
+    RegCloseKey(hKey);
+    
+    return (result == ERROR_SUCCESS || result == ERROR_FILE_NOT_FOUND);
+}
+
+BOOL IsAutostartEnabled(void)
+{
+    HKEY hKey;
+    LONG result;
+    wchar_t szValue[MAX_PATH];
+    DWORD dwSize = sizeof(szValue);
+    DWORD dwType;
+    
+    result = RegOpenKeyExW(HKEY_CURRENT_USER, RUN_REG_PATH, 0, KEY_READ, &hKey);
+    if (result != ERROR_SUCCESS)
+        return FALSE;
+    
+    result = RegQueryValueExW(hKey, APP_NAME, NULL, &dwType, (LPBYTE)szValue, &dwSize);
+    RegCloseKey(hKey);
+    
+    return (result == ERROR_SUCCESS && dwType == REG_SZ);
+}
+
+BOOL ToggleAutostart(void)
+{
+    return IsAutostartEnabled() ? DisableAutostart() : EnableAutostart();
+}
+
+// Application settings implementation
+BOOL SaveStringSetting(const wchar_t* name, const wchar_t* value)
+{
+    HKEY hKey;
+    LONG result;
+    
+    // Create or open our application key
+    result = RegCreateKeyExW(HKEY_CURRENT_USER, APP_REG_PATH, 0, NULL, 0,
+                            KEY_WRITE, NULL, &hKey, NULL);
+    if (result != ERROR_SUCCESS)
+        return FALSE;
+    
+    result = RegSetValueExW(hKey, name, 0, REG_SZ, (BYTE*)value,
+                            (DWORD)((wcslen(value) + 1) * sizeof(wchar_t)));
+    
+    RegCloseKey(hKey);
+    return (result == ERROR_SUCCESS);
+}
+
+BOOL LoadStringSetting(const wchar_t* name, wchar_t* value, DWORD valueSize)
+{
+    HKEY hKey;
+    LONG result;
+    DWORD dwType;
+    DWORD dwSize = valueSize * sizeof(wchar_t);
+    
+    result = RegOpenKeyExW(HKEY_CURRENT_USER, APP_REG_PATH, 0, KEY_READ, &hKey);
+    if (result != ERROR_SUCCESS)
+        return FALSE;
+    
+    result = RegQueryValueExW(hKey, name, NULL, &dwType, (LPBYTE)value, &dwSize);
+    RegCloseKey(hKey);
+    
+    return (result == ERROR_SUCCESS && dwType == REG_SZ);
+}
+
+BOOL SaveDwordSetting(const wchar_t* name, DWORD value)
+{
+    HKEY hKey;
+    LONG result;
+    
+    result = RegCreateKeyExW(HKEY_CURRENT_USER, APP_REG_PATH, 0, NULL, 0,
+                            KEY_WRITE, NULL, &hKey, NULL);
+    if (result != ERROR_SUCCESS)
+        return FALSE;
+    
+    result = RegSetValueExW(hKey, name, 0, REG_DWORD, (BYTE*)&value, sizeof(DWORD));
+    
+    RegCloseKey(hKey);
+    return (result == ERROR_SUCCESS);
+}
+
+BOOL LoadDwordSetting(const wchar_t* name, DWORD* value)
+{
+    HKEY hKey;
+    LONG result;
+    DWORD dwType;
+    DWORD dwSize = sizeof(DWORD);
+    
+    result = RegOpenKeyExW(HKEY_CURRENT_USER, APP_REG_PATH, 0, KEY_READ, &hKey);
+    if (result != ERROR_SUCCESS)
+        return FALSE;
+    
+    result = RegQueryValueExW(hKey, name, NULL, &dwType, (LPBYTE)value, &dwSize);
+    RegCloseKey(hKey);
+    
+    return (result == ERROR_SUCCESS && dwType == REG_DWORD);
+}
+```
+
+## Integrating with WinRDP UI
+
+### Add Menu Item
+
+In your `resources.rc`, add a menu item:
+
+```rc
+POPUP "Options"
+BEGIN
+    MENUITEM "Start with Windows", IDM_AUTOSTART
+END
+```
+
+### Handle Menu Click
+
+In your dialog procedure:
+
+```c
+case WM_INITDIALOG:
+{
+    // ... other initialization ...
+    
+    // Check menu item if autostart is enabled
+    HMENU hMenu = GetMenu(hwnd);
+    if (IsAutostartEnabled()) {
+        CheckMenuItem(hMenu, IDM_AUTOSTART, MF_CHECKED);
+    }
+    return TRUE;
+}
+
+case WM_COMMAND:
+{
+    switch (LOWORD(wParam))
+    {
+        case IDM_AUTOSTART:
+        {
+            HMENU hMenu = GetMenu(hwnd);
+            
+            if (IsAutostartEnabled()) {
+                if (DisableAutostart()) {
+                    CheckMenuItem(hMenu, IDM_AUTOSTART, MF_UNCHECKED);
+                    MessageBox(hwnd, L"Autostart disabled", L"WinRDP", MB_OK | MB_ICONINFORMATION);
+                }
+            } else {
+                if (EnableAutostart()) {
+                    CheckMenuItem(hMenu, IDM_AUTOSTART, MF_CHECKED);
+                    MessageBox(hwnd, L"WinRDP will now start with Windows", L"WinRDP", MB_OK | MB_ICONINFORMATION);
+                }
+            }
+            break;
+        }
+    }
+    return TRUE;
+}
+```
+
+## Registry Data Types
+
+### Common Types
+
+```c
+REG_SZ          // Null-terminated string
+REG_EXPAND_SZ   // String with environment variables (%USERPROFILE%)
+REG_DWORD       // 32-bit number
+REG_QWORD       // 64-bit number
+REG_BINARY      // Binary data
+REG_MULTI_SZ    // Multiple null-terminated strings
+```
+
+### Examples
+
+**String:**
+```c
+wchar_t* value = L"Hello, World!";
+RegSetValueExW(hKey, L"MyString", 0, REG_SZ, (BYTE*)value,
+               (wcslen(value) + 1) * sizeof(wchar_t));
+```
+
+**DWORD (number):**
+```c
+DWORD value = 42;
+RegSetValueExW(hKey, L"MyNumber", 0, REG_DWORD, (BYTE*)&value, sizeof(DWORD));
+```
+
+**Binary Data:**
+```c
+BYTE data[] = {0x01, 0x02, 0x03, 0x04};
+RegSetValueExW(hKey, L"MyData", 0, REG_BINARY, data, sizeof(data));
+```
+
+## Best Practices
+
+### 1. Always Close Registry Keys
+
+```c
+HKEY hKey;
+RegOpenKeyExW(HKEY_CURRENT_USER, L"Some\\Path", 0, KEY_READ, &hKey);
+
+// ... use the key ...
+
+RegCloseKey(hKey);  // ALWAYS close!
+```
+
+**Why:** Leaked handles waste resources and can cause issues.
+
+### 2. Check Return Values
+
+```c
+LONG result = RegOpenKeyExW(...);
+if (result != ERROR_SUCCESS) {
+    // Handle error
+    return FALSE;
+}
+```
+
+**Why:** Registry operations can fail for many reasons (permissions, missing keys, etc.)
+
+### 3. Use Appropriate Access Rights
+
+```c
+// Reading only - use KEY_READ
+RegOpenKeyExW(hKey, path, 0, KEY_READ, &hKey);
+
+// Writing only - use KEY_WRITE
+RegOpenKeyExW(hKey, path, 0, KEY_WRITE, &hKey);
+
+// Both - use KEY_READ | KEY_WRITE
+RegOpenKeyExW(hKey, path, 0, KEY_READ | KEY_WRITE, &hKey);
+```
+
+**Why:** Requesting minimum necessary permissions follows security best practices.
+
+### 4. Use Your Company/App Path
+
+```c
+// GOOD: Use your own path
+HKCU\Software\YourCompany\YourApp
+
+// BAD: Write to root Software key
+HKCU\Software\MySetting
+```
+
+**Why:** Prevents conflicts with other applications.
+
+### 5. Handle Missing Keys Gracefully
+
+```c
+BOOL LoadSetting(void)
+{
+    HKEY hKey;
+    if (RegOpenKeyExW(...) != ERROR_SUCCESS) {
+        // Key doesn't exist - use default value
+        return FALSE;
+    }
+    
+    // ... read value ...
+}
+```
+
+**Why:** First-run applications won't have registry entries yet.
+
+## Security Considerations
+
+### UAC and Admin Rights
+
+```c
+// HKCU - No admin rights needed ✓
+RegOpenKeyExW(HKEY_CURRENT_USER, ...);
+
+// HKLM - Requires admin rights ✗
+RegOpenKeyExW(HKEY_LOCAL_MACHINE, ...);
+```
+
+**For WinRDP:** Always use HKEY_CURRENT_USER to avoid requiring admin rights.
+
+### Registry Virtualization
+
+On modern Windows, applications without admin rights writing to HKLM get **virtualized** - Windows redirects writes to a per-user location. Avoid this by:
+- Using HKEY_CURRENT_USER for user settings
+- Requesting admin rights explicitly if you must write to HKLM
+
+## Advanced Registry Operations
+
+### Enumerating Values
+
+```c
+void EnumerateValues(HKEY hKey)
+{
+    DWORD index = 0;
+    wchar_t valueName[256];
+    DWORD valueNameSize;
+    
+    while (TRUE)
+    {
+        valueNameSize = sizeof(valueName) / sizeof(wchar_t);
+        
+        LONG result = RegEnumValueW(hKey, index, valueName, &valueNameSize,
+                                     NULL, NULL, NULL, NULL);
+        
+        if (result == ERROR_NO_MORE_ITEMS)
+            break;
+        
+        if (result != ERROR_SUCCESS)
+            break;
+        
+        wprintf(L"Value: %s\n", valueName);
+        index++;
+    }
+}
+```
+
+### Enumerating Subkeys
+
+```c
+void EnumerateSubkeys(HKEY hKey)
+{
+    DWORD index = 0;
+    wchar_t subkeyName[256];
+    DWORD subkeyNameSize;
+    
+    while (TRUE)
+    {
+        subkeyNameSize = sizeof(subkeyName) / sizeof(wchar_t);
+        
+        LONG result = RegEnumKeyExW(hKey, index, subkeyName, &subkeyNameSize,
+                                     NULL, NULL, NULL, NULL);
+        
+        if (result == ERROR_NO_MORE_ITEMS)
+            break;
+        
+        if (result != ERROR_SUCCESS)
+            break;
+        
+        wprintf(L"Subkey: %s\n", subkeyName);
+        index++;
+    }
+}
+```
+
+### Deleting a Key
+
+```c
+BOOL DeleteRegistryKey(void)
+{
+    LONG result = RegDeleteKeyW(HKEY_CURRENT_USER, L"Software\\WinRDP\\Temp");
+    return (result == ERROR_SUCCESS || result == ERROR_FILE_NOT_FOUND);
+}
+```
+
+**Warning:** Be very careful with `RegDeleteKey` - it can delete entire branches!
+
+## Testing Autostart
+
+### Manual Testing
+
+1. **Enable autostart** in your application
+2. **Open Registry Editor** (regedit.exe)
+3. Navigate to: `HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run`
+4. Verify "WinRDP" entry exists with correct path
+5. **Log out and log back in** (or restart)
+6. Verify application starts automatically
+7. **Disable autostart** in your application
+8. Verify registry entry is removed
+9. Log out and log back in - application should NOT start
+
+### Programmatic Testing
+
+```c
+void TestAutostart(void)
+{
+    printf("Testing autostart functionality...\n");
+    
+    // Initial state should be disabled (for clean test)
+    if (IsAutostartEnabled()) {
+        printf("Disabling autostart for clean test...\n");
+        DisableAutostart();
+    }
+    
+    // Test enabling
+    if (EnableAutostart()) {
+        printf("✓ EnableAutostart() succeeded\n");
+    } else {
+        printf("✗ EnableAutostart() failed\n");
+    }
+    
+    // Verify enabled
+    if (IsAutostartEnabled()) {
+        printf("✓ IsAutostartEnabled() returns TRUE\n");
+    } else {
+        printf("✗ IsAutostartEnabled() returns FALSE\n");
+    }
+    
+    // Test disabling
+    if (DisableAutostart()) {
+        printf("✓ DisableAutostart() succeeded\n");
+    } else {
+        printf("✗ DisableAutostart() failed\n");
+    }
+    
+    // Verify disabled
+    if (!IsAutostartEnabled()) {
+        printf("✓ IsAutostartEnabled() returns FALSE\n");
+    } else {
+        printf("✗ IsAutostartEnabled() returns TRUE\n");
+    }
+    
+    printf("Autostart test complete!\n");
+}
+```
+
+## Storing Other Application Settings
+
+Beyond autostart, you can store various settings:
+
+### Window Position
+
+```c
+// Save window position
+BOOL SaveWindowPosition(int x, int y, int width, int height)
+{
+    HKEY hKey;
+    if (RegCreateKeyExW(HKEY_CURRENT_USER, L"Software\\WinRDP\\Window",
+                       0, NULL, 0, KEY_WRITE, NULL, &hKey, NULL) != ERROR_SUCCESS)
+        return FALSE;
+    
+    RegSetValueExW(hKey, L"X", 0, REG_DWORD, (BYTE*)&x, sizeof(DWORD));
+    RegSetValueExW(hKey, L"Y", 0, REG_DWORD, (BYTE*)&y, sizeof(DWORD));
+    RegSetValueExW(hKey, L"Width", 0, REG_DWORD, (BYTE*)&width, sizeof(DWORD));
+    RegSetValueExW(hKey, L"Height", 0, REG_DWORD, (BYTE*)&height, sizeof(DWORD));
+    
+    RegCloseKey(hKey);
+    return TRUE;
+}
+
+// Load window position
+BOOL LoadWindowPosition(int* x, int* y, int* width, int* height)
+{
+    HKEY hKey;
+    DWORD dwSize = sizeof(DWORD);
+    
+    if (RegOpenKeyExW(HKEY_CURRENT_USER, L"Software\\WinRDP\\Window",
+                     0, KEY_READ, &hKey) != ERROR_SUCCESS)
+        return FALSE;
+    
+    RegQueryValueExW(hKey, L"X", NULL, NULL, (LPBYTE)x, &dwSize);
+    RegQueryValueExW(hKey, L"Y", NULL, NULL, (LPBYTE)y, &dwSize);
+    RegQueryValueExW(hKey, L"Width", NULL, NULL, (LPBYTE)width, &dwSize);
+    RegQueryValueExW(hKey, L"Height", NULL, NULL, (LPBYTE)height, &dwSize);
+    
+    RegCloseKey(hKey);
+    return TRUE;
+}
+```
+
+### User Preferences
+
+```c
+typedef struct {
+    BOOL showNotifications;
+    BOOL minimizeToTray;
+    BOOL confirmBeforeConnect;
+    wchar_t defaultDomain[64];
+} AppPreferences;
+
+BOOL SavePreferences(const AppPreferences* prefs)
+{
+    HKEY hKey;
+    if (RegCreateKeyExW(HKEY_CURRENT_USER, L"Software\\WinRDP\\Preferences",
+                       0, NULL, 0, KEY_WRITE, NULL, &hKey, NULL) != ERROR_SUCCESS)
+        return FALSE;
+    
+    DWORD dwValue;
+    
+    dwValue = prefs->showNotifications;
+    RegSetValueExW(hKey, L"ShowNotifications", 0, REG_DWORD, (BYTE*)&dwValue, sizeof(DWORD));
+    
+    dwValue = prefs->minimizeToTray;
+    RegSetValueExW(hKey, L"MinimizeToTray", 0, REG_DWORD, (BYTE*)&dwValue, sizeof(DWORD));
+    
+    dwValue = prefs->confirmBeforeConnect;
+    RegSetValueExW(hKey, L"ConfirmBeforeConnect", 0, REG_DWORD, (BYTE*)&dwValue, sizeof(DWORD));
+    
+    RegSetValueExW(hKey, L"DefaultDomain", 0, REG_SZ, (BYTE*)prefs->defaultDomain,
+                   (wcslen(prefs->defaultDomain) + 1) * sizeof(wchar_t));
+    
+    RegCloseKey(hKey);
+    return TRUE;
+}
+```
+
+## Common Mistakes and Solutions
+
+### Mistake 1: Not Multiplying String Length by sizeof(wchar_t)
+
+```c
+// WRONG - Only writes first half of string
+RegSetValueExW(hKey, L"Value", 0, REG_SZ, (BYTE*)str, wcslen(str));
+
+// CORRECT - Multiply by sizeof(wchar_t), add 1 for null terminator
+RegSetValueExW(hKey, L"Value", 0, REG_SZ, (BYTE*)str,
+               (wcslen(str) + 1) * sizeof(wchar_t));
+```
+
+### Mistake 2: Forgetting to Close Keys
+
+```c
+// WRONG - Leaks handle
+HKEY hKey;
+RegOpenKeyExW(..., &hKey);
+if (someCondition) {
+    return FALSE;  // Forgot to close hKey!
+}
+RegCloseKey(hKey);
+
+// CORRECT - Always close
+HKEY hKey;
+RegOpenKeyExW(..., &hKey);
+if (someCondition) {
+    RegCloseKey(hKey);
+    return FALSE;
+}
+RegCloseKey(hKey);
+```
+
+### Mistake 3: Not Checking Return Values
+
+```c
+// WRONG - Assumes success
+RegOpenKeyExW(...);  // What if this fails?
+RegQueryValueExW(...);  // Will crash if key not opened!
+
+// CORRECT - Check errors
+if (RegOpenKeyExW(...) != ERROR_SUCCESS) {
+    return FALSE;
+}
+```
+
+## Exercise 25.1: Basic Registry
+
+Write a program that:
+1. Saves your name to the registry
+2. Reads it back and displays it
+3. Deletes the value
+4. Handles errors gracefully
+
+**Key:** `HKCU\Software\MyApp`
+**Value:** "UserName"
+
+## Exercise 25.2: Settings Manager
+
+Create a settings system that:
+1. Saves and loads window position
+2. Saves and loads user preferences (3+ boolean options)
+3. Provides default values if registry entries don't exist
+4. Has a "Reset to Defaults" function
+
+## Exercise 25.3: Autostart with Arguments
+
+Enhance the autostart feature:
+1. Add `/minimized` argument when starting with Windows
+2. Parse command-line arguments in wWinMain
+3. Start minimized to tray if `/minimized` is present
+4. Show normal window if argument not present
+
+**Hint:**
+```c
+wchar_t szPath[MAX_PATH * 2];
+GetModuleFileNameW(NULL, szPath, MAX_PATH);
+wcscat_s(szPath, MAX_PATH * 2, L" /minimized");
+// Now save szPath to registry
+```
+
+## Summary
+
+In this chapter, you learned:
+
+### **Registry Fundamentals**
+- ✅ Understanding Windows Registry structure
+- ✅ Registry hives (HKCU, HKLM, etc.)
+- ✅ Registry data types (REG_SZ, REG_DWORD, etc.)
+- ✅ Best practices and security considerations
+
+### **Registry API**
+- ✅ RegOpenKeyExW - Opening keys
+- ✅ RegCreateKeyExW - Creating keys
+- ✅ RegQueryValueExW - Reading values
+- ✅ RegSetValueExW - Writing values
+- ✅ RegDeleteValueW - Deleting values
+- ✅ RegCloseKey - Closing handles
+
+### **Autostart Implementation**
+- ✅ EnableAutostart() - Add to Windows startup
+- ✅ DisableAutostart() - Remove from startup
+- ✅ IsAutostartEnabled() - Check status
+- ✅ ToggleAutostart() - Switch on/off
+
+### **Application Settings**
+- ✅ Storing user preferences
+- ✅ Saving window positions
+- ✅ Loading default values
+- ✅ Managing configuration data
+
+### **Your WinRDP Application Now Has:**
+- ✅ "Start with Windows" functionality
+- ✅ Professional Windows integration
+- ✅ Persistent application settings
+- ✅ Registry-based configuration
+
+**Next:** In Chapter 26, we'll add global hotkeys so users can instantly access WinRDP from anywhere in Windows with a keyboard shortcut!
+
+---
+
+# Chapter 26: Global Hotkeys
+
+**What You'll Learn:**
+- Understanding Windows hotkey system
+- RegisterHotKey and UnregisterHotKey APIs
+- Handling WM_HOTKEY messages
+- Virtual key codes and modifier keys
+- Implementing Ctrl+Shift+R for WinRDP
+- Best practices for hotkey management
+
+## Introduction
+
+Global hotkeys (also called system-wide keyboard shortcuts) allow users to trigger your application from anywhere in Windows - even when your application doesn't have focus. This is a powerful feature that makes WinRDP instantly accessible with a simple keyboard combination.
+
+In this chapter, we'll implement **Ctrl+Shift+R** to open WinRDP from anywhere, making it as convenient as the Windows Task Manager (Ctrl+Shift+Esc) or Task Switcher (Alt+Tab).
+
+## Why Global Hotkeys Matter
+
+Global hotkeys provide:
+- **Instant access** - No need to find window in taskbar or system tray
+- **Professional feel** - Modern applications support keyboard shortcuts
+- **Efficiency** - Power users love keyboard-driven workflows
+- **Accessibility** - Quick access without mouse navigation
+
+**Common Examples:**
+- **Ctrl+Shift+Esc** - Task Manager
+- **Win+D** - Show Desktop
+- **Win+L** - Lock Computer
+- **Ctrl+Alt+Del** - Security options
+
+## Understanding Windows Hotkeys
+
+### How Hotkeys Work
+
+1. Application **registers** a hotkey with Windows
+2. Windows **monitors** all keyboard input system-wide
+3. When the key combination is pressed, Windows sends **WM_HOTKEY** message to your window
+4. Your application **handles** the message and performs the action
+5. When application exits, it **unregisters** the hotkey
+
+### Virtual Key Codes
+
+Windows uses **virtual key codes** to identify keys, independent of keyboard layout:
+
+```c
+// Letter keys
+'A' through 'Z'         // 0x41 through 0x5A
+'0' through '9'         // 0x30 through 0x39
+
+// Function keys
+VK_F1 through VK_F12    // Function keys
+
+// Special keys
+VK_ESCAPE               // Escape key
+VK_RETURN               // Enter key
+VK_SPACE                // Space bar
+VK_BACK                 // Backspace
+VK_TAB                  // Tab key
+VK_DELETE               // Delete key
+VK_INSERT               // Insert key
+
+// Navigation keys
+VK_HOME, VK_END         // Home, End
+VK_PRIOR, VK_NEXT       // Page Up, Page Down
+VK_UP, VK_DOWN          // Arrow keys
+VK_LEFT, VK_RIGHT
+
+// Media keys
+VK_VOLUME_MUTE          // Mute
+VK_VOLUME_DOWN          // Volume down
+VK_VOLUME_UP            // Volume up
+VK_MEDIA_PLAY_PAUSE     // Play/Pause
+```
+
+### Modifier Keys
+
+Modifiers are combined with regular keys to create shortcuts:
+
+```c
+MOD_CONTROL     // Ctrl key
+MOD_SHIFT       // Shift key
+MOD_ALT         // Alt key
+MOD_WIN         // Windows key (use carefully!)
+
+// Combine with bitwise OR:
+MOD_CONTROL | MOD_SHIFT                  // Ctrl+Shift
+MOD_CONTROL | MOD_ALT                    // Ctrl+Alt
+MOD_CONTROL | MOD_SHIFT | MOD_ALT        // Ctrl+Shift+Alt
+```
+
+## The RegisterHotKey API
+
+```c
+BOOL RegisterHotKey(
+    HWND hWnd,          // Window to receive WM_HOTKEY messages
+    int id,             // Hotkey identifier (unique per window)
+    UINT fsModifiers,   // Modifier keys (MOD_CONTROL, etc.)
+    UINT vk             // Virtual key code
+);
+```
+
+**Parameters:**
+- `hWnd`: Your window handle (can be NULL for thread message queue)
+- `id`: Unique identifier for this hotkey (you define this)
+- `fsModifiers`: Combination of MOD_* flags
+- `vk`: Virtual key code for the key
+
+**Returns:**
+- `TRUE` if successful
+- `FALSE` if failed (hotkey already in use, invalid parameters, etc.)
+
+## Implementing Global Hotkeys in WinRDP
+
+### Step 1: Define Hotkey Constants
+
+Add to `resource.h`:
+
+```c
+// Hotkey IDs
+#define ID_HOTKEY_OPEN      1001    // Ctrl+Shift+R - Open WinRDP
+#define ID_HOTKEY_BULK_DELETE 1002  // Ctrl+Shift+Alt+D - Bulk delete (secret)
+```
+
+### Step 2: Register Hotkeys on Startup
+
+```c
+// In WndProc, handle WM_CREATE
+case WM_CREATE:
+{
+    // Register Ctrl+Shift+R to open WinRDP
+    if (!RegisterHotKey(hwnd, ID_HOTKEY_OPEN, 
+                        MOD_CONTROL | MOD_SHIFT, 'R')) {
+        // Hotkey registration failed (maybe already in use)
+        // Application still works, just without hotkey
+        OutputDebugString(L"Failed to register Ctrl+Shift+R hotkey\n");
+    }
+    
+    // Register secret bulk delete hotkey: Ctrl+Shift+Alt+D
+    if (!RegisterHotKey(hwnd, ID_HOTKEY_BULK_DELETE,
+                        MOD_CONTROL | MOD_SHIFT | MOD_ALT, 'D')) {
+        OutputDebugString(L"Failed to register Ctrl+Shift+Alt+D hotkey\n");
+    }
+    
+    return 0;
+}
+```
+
+**Important:** Don't fail window creation if hotkey registration fails. The application should work fine without hotkeys.
+
+### Step 3: Handle Hotkey Messages
+
+```c
+case WM_HOTKEY:
+{
+    switch (wParam)  // wParam contains the hotkey ID
+    {
+        case ID_HOTKEY_OPEN:
+        {
+            // Ctrl+Shift+R pressed - open main dialog
+            
+            // Check if credentials exist
+            wchar_t username[256], password[256];
+            if (!LoadCredentials(NULL, username, sizeof(username)/sizeof(wchar_t),
+                                password, sizeof(password)/sizeof(wchar_t))) {
+                // No credentials - show login dialog first
+                DialogBox(GetModuleHandle(NULL), 
+                         MAKEINTRESOURCE(IDD_LOGIN),
+                         hwnd,
+                         LoginDialogProc);
+            }
+            
+            // Show main dialog
+            ShowMainDialog(hwnd);
+            break;
+        }
+        
+        case ID_HOTKEY_BULK_DELETE:
+        {
+            // Ctrl+Shift+Alt+D pressed - secret bulk delete feature
+            
+            // Confirm action (this is destructive!)
+            int result = MessageBox(hwnd,
+                L"This will delete ALL hosts and credentials!\n\n"
+                L"Are you sure you want to continue?",
+                L"Bulk Delete - Confirmation Required",
+                MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2);
+            
+            if (result == IDYES) {
+                // Delete all hosts
+                DeleteAllHosts();
+                
+                // Delete all credentials
+                DeleteAllCredentials();
+                
+                MessageBox(hwnd,
+                    L"All data has been deleted.",
+                    L"Bulk Delete Complete",
+                    MB_OK | MB_ICONINFORMATION);
+            }
+            break;
+        }
+    }
+    return 0;
+}
+```
+
+### Step 4: Unregister Hotkeys on Exit
+
+```c
+case WM_DESTROY:
+{
+    // Unregister all hotkeys
+    UnregisterHotKey(hwnd, ID_HOTKEY_OPEN);
+    UnregisterHotKey(hwnd, ID_HOTKEY_BULK_DELETE);
+    
+    // Remove tray icon
+    NOTIFYICONDATA nid = {0};
+    nid.cbSize = sizeof(NOTIFYICONDATA);
+    nid.hWnd = hwnd;
+    nid.uID = ID_TRAYICON;
+    Shell_NotifyIcon(NIM_DELETE, &nid);
+    
+    PostQuitMessage(0);
+    return 0;
+}
+```
+
+**Why unregister?** If you don't unregister, the hotkey remains registered to your (now dead) window, and no one can use that combination until the user logs out.
+
+## Complete Hotkey Example
+
+Here's a complete minimal example:
+
+```c
+#include <windows.h>
+
+#define ID_HOTKEY_HELLO 1001
+#define ID_HOTKEY_EXIT  1002
+
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+                    LPWSTR lpCmdLine, int nCmdShow)
+{
+    WNDCLASSW wc = {0};
+    wc.lpfnWndProc = WndProc;
+    wc.hInstance = hInstance;
+    wc.lpszClassName = L"HotkeyDemo";
+    
+    RegisterClassW(&wc);
+    
+    // Create hidden window (just for messages)
+    HWND hwnd = CreateWindowW(L"HotkeyDemo", L"Hotkey Demo",
+                              0, 0, 0, 0, 0, NULL, NULL, hInstance, NULL);
+    
+    MessageBox(NULL,
+        L"Hotkeys registered:\n\n"
+        L"Ctrl+Shift+H - Show message\n"
+        L"Ctrl+Shift+Q - Exit application",
+        L"Hotkey Demo",
+        MB_OK | MB_ICONINFORMATION);
+    
+    // Message loop
+    MSG msg;
+    while (GetMessage(&msg, NULL, 0, 0)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    
+    return (int)msg.wParam;
+}
+
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+        case WM_CREATE:
+        {
+            // Register Ctrl+Shift+H
+            if (!RegisterHotKey(hwnd, ID_HOTKEY_HELLO, MOD_CONTROL | MOD_SHIFT, 'H')) {
+                MessageBox(hwnd, L"Failed to register Ctrl+Shift+H", L"Error", MB_OK);
+            }
+            
+            // Register Ctrl+Shift+Q
+            if (!RegisterHotKey(hwnd, ID_HOTKEY_EXIT, MOD_CONTROL | MOD_SHIFT, 'Q')) {
+                MessageBox(hwnd, L"Failed to register Ctrl+Shift+Q", L"Error", MB_OK);
+            }
+            
+            return 0;
+        }
+        
+        case WM_HOTKEY:
+        {
+            switch (wParam)
+            {
+                case ID_HOTKEY_HELLO:
+                    MessageBox(hwnd, L"Hello from global hotkey!", L"Hotkey Demo", MB_OK);
+                    break;
+                    
+                case ID_HOTKEY_EXIT:
+                    PostMessage(hwnd, WM_CLOSE, 0, 0);
+                    break;
+            }
+            return 0;
+        }
+        
+        case WM_DESTROY:
+        {
+            UnregisterHotKey(hwnd, ID_HOTKEY_HELLO);
+            UnregisterHotKey(hwnd, ID_HOTKEY_EXIT);
+            PostQuitMessage(0);
+            return 0;
+        }
+    }
+    
+    return DefWindowProc(hwnd, msg, wParam, lParam);
+}
+```
+
+**Test it:** Compile and run, then press Ctrl+Shift+H from any application - the message box appears!
+
+## Advanced Hotkey Techniques
+
+### Dynamic Hotkey Registration
+
+Allow users to customize hotkeys:
+
+```c
+typedef struct {
+    int id;
+    UINT modifiers;
+    UINT vk;
+    const wchar_t* description;
+} HotkeyConfig;
+
+HotkeyConfig g_hotkeys[] = {
+    {ID_HOTKEY_OPEN, MOD_CONTROL | MOD_SHIFT, 'R', L"Open WinRDP"},
+    {ID_HOTKEY_CONNECT, MOD_CONTROL | MOD_SHIFT, 'C', L"Quick Connect"},
+    {0, 0, 0, NULL}  // Sentinel
+};
+
+BOOL RegisterAllHotkeys(HWND hwnd)
+{
+    int registered = 0;
+    
+    for (int i = 0; g_hotkeys[i].id != 0; i++) {
+        if (RegisterHotKey(hwnd, g_hotkeys[i].id,
+                          g_hotkeys[i].modifiers,
+                          g_hotkeys[i].vk)) {
+            registered++;
+        } else {
+            wchar_t msg[256];
+            swprintf_s(msg, 256, L"Failed to register: %s", 
+                      g_hotkeys[i].description);
+            OutputDebugString(msg);
+        }
+    }
+    
+    return registered > 0;  // Success if at least one registered
+}
+
+void UnregisterAllHotkeys(HWND hwnd)
+{
+    for (int i = 0; g_hotkeys[i].id != 0; i++) {
+        UnregisterHotKey(hwnd, g_hotkeys[i].id);
+    }
+}
+```
+
+### Checking Hotkey Availability
+
+Before registering, check if hotkey is available:
+
+```c
+BOOL IsHotkeyAvailable(UINT modifiers, UINT vk)
+{
+    // Try to register the hotkey
+    BOOL success = RegisterHotKey(NULL, 0, modifiers, vk);
+    
+    if (success) {
+        // It worked - unregister it
+        UnregisterHotKey(NULL, 0);
+        return TRUE;
+    }
+    
+    return FALSE;
+}
+
+// Usage:
+if (IsHotkeyAvailable(MOD_CONTROL | MOD_SHIFT, 'R')) {
+    // Can use Ctrl+Shift+R
+} else {
+    // Already in use, suggest alternative
+}
+```
+
+### MOD_NOREPEAT Flag
+
+Prevent repeated WM_HOTKEY messages when key is held:
+
+```c
+// Windows 7+
+RegisterHotKey(hwnd, id, MOD_CONTROL | MOD_SHIFT | MOD_NOREPEAT, 'R');
+```
+
+**Without MOD_NOREPEAT:** Holding Ctrl+Shift+R sends multiple WM_HOTKEY messages  
+**With MOD_NOREPEAT:** Only one WM_HOTKEY message, even if held down
+
+## Best Practices
+
+### 1. Don't Fail If Hotkey Registration Fails
+
+```c
+// WRONG - Application won't start if hotkey is in use
+if (!RegisterHotKey(hwnd, ID_HOTKEY, MOD_CONTROL | MOD_SHIFT, 'R')) {
+    MessageBox(NULL, L"Failed to register hotkey!", L"Error", MB_OK);
+    return -1;  // Fail window creation
+}
+
+// CORRECT - Application works fine without hotkey
+if (!RegisterHotKey(hwnd, ID_HOTKEY, MOD_CONTROL | MOD_SHIFT, 'R')) {
+    // Log the failure but continue
+    OutputDebugString(L"Note: Hotkey Ctrl+Shift+R not available\n");
+}
+```
+
+### 2. Always Unregister Hotkeys
+
+```c
+case WM_DESTROY:
+{
+    // ALWAYS unregister before exiting
+    UnregisterHotKey(hwnd, ID_HOTKEY_OPEN);
+    UnregisterHotKey(hwnd, ID_HOTKEY_BULK_DELETE);
+    
+    PostQuitMessage(0);
+    return 0;
+}
+```
+
+### 3. Use Uncommon Key Combinations
+
+```c
+// AVOID - Too common, likely already in use
+RegisterHotKey(hwnd, id, MOD_CONTROL, 'C');  // Ctrl+C - Copy!
+RegisterHotKey(hwnd, id, MOD_ALT, VK_F4);    // Alt+F4 - Close window!
+
+// GOOD - Less likely to conflict
+RegisterHotKey(hwnd, id, MOD_CONTROL | MOD_SHIFT, 'R');
+RegisterHotKey(hwnd, id, MOD_CONTROL | MOD_ALT, 'R');
+```
+
+### 4. Document Your Hotkeys
+
+```c
+// In your About dialog or Help:
+MessageBox(hwnd,
+    L"Global Hotkeys:\n\n"
+    L"Ctrl+Shift+R - Open WinRDP\n"
+    L"Ctrl+Shift+Alt+D - Bulk Delete (with confirmation)",
+    L"Keyboard Shortcuts",
+    MB_OK | MB_ICONINFORMATION);
+```
+
+### 5. Be Careful with Win Key
+
+```c
+// Use MOD_WIN sparingly - these are system shortcuts
+RegisterHotKey(hwnd, id, MOD_WIN, 'R');  // Win+R opens Run dialog!
+
+// If you must use Win key, combine with others:
+RegisterHotKey(hwnd, id, MOD_WIN | MOD_SHIFT, 'R');  // Safer
+```
+
+## Common Hotkey Conflicts
+
+### Avoiding System Hotkeys
+
+Windows reserves many hotkey combinations. Avoid these:
+
+```
+Win+D          - Show Desktop
+Win+E          - Explorer
+Win+L          - Lock
+Win+R          - Run dialog
+Win+Tab        - Task View
+Alt+Tab        - Switch windows
+Alt+F4         - Close window
+Ctrl+Alt+Del   - Security options
+Ctrl+Shift+Esc - Task Manager
+Ctrl+C/V/X/Z   - Clipboard/Undo
+```
+
+### Testing for Conflicts
+
+```c
+void TestHotkey(UINT modifiers, UINT vk, const wchar_t* description)
+{
+    if (RegisterHotKey(NULL, 0, modifiers, vk)) {
+        UnregisterHotKey(NULL, 0);
+        wprintf(L"✓ Available: %s\n", description);
+    } else {
+        wprintf(L"✗ In use: %s\n", description);
+    }
+}
+
+// Test various combinations
+TestHotkey(MOD_CONTROL | MOD_SHIFT, 'R', L"Ctrl+Shift+R");
+TestHotkey(MOD_CONTROL | MOD_ALT, 'R', L"Ctrl+Alt+R");
+TestHotkey(MOD_WIN | MOD_SHIFT, 'R', L"Win+Shift+R");
+```
+
+## Handling Hotkey Conflicts
+
+### Graceful Fallback
+
+```c
+BOOL TryRegisterHotkey(HWND hwnd)
+{
+    // Try primary hotkey
+    if (RegisterHotKey(hwnd, ID_HOTKEY_OPEN, MOD_CONTROL | MOD_SHIFT, 'R')) {
+        return TRUE;
+    }
+    
+    // Try alternative hotkey
+    if (RegisterHotKey(hwnd, ID_HOTKEY_OPEN, MOD_CONTROL | MOD_ALT, 'R')) {
+        MessageBox(hwnd,
+            L"Note: Ctrl+Shift+R was unavailable.\n"
+            L"Using Ctrl+Alt+R instead.",
+            L"WinRDP",
+            MB_OK | MB_ICONINFORMATION);
+        return TRUE;
+    }
+    
+    // Both failed
+    MessageBox(hwnd,
+        L"Could not register global hotkey.\n"
+        L"You can still access WinRDP via the system tray.",
+        L"WinRDP",
+        MB_OK | MB_ICONINFORMATION);
+    
+    return FALSE;
+}
+```
+
+### User-Configurable Hotkeys
+
+Let users choose their own hotkey:
+
+```c
+// Simple version - hardcode a few options
+void ShowHotkeySettings(HWND hwnd)
+{
+    const wchar_t* options = 
+        L"Choose hotkey:\n\n"
+        L"1. Ctrl+Shift+R (recommended)\n"
+        L"2. Ctrl+Alt+R\n"
+        L"3. Win+Shift+R\n"
+        L"4. Disable hotkey";
+    
+    // Show dialog with radio buttons
+    // Register selected hotkey
+}
+```
+
+## Advanced: Custom Hotkey Dialog
+
+```c
+INT_PTR CALLBACK HotkeyDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    static UINT g_selectedModifiers = MOD_CONTROL | MOD_SHIFT;
+    static UINT g_selectedKey = 'R';
+    
+    switch (msg)
+    {
+        case WM_INITDIALOG:
+        {
+            // Set current hotkey
+            CheckRadioButton(hwnd, IDC_RADIO_CTRL, IDC_RADIO_WIN, IDC_RADIO_CTRL);
+            CheckDlgButton(hwnd, IDC_CHECK_SHIFT, BST_CHECKED);
+            SetDlgItemText(hwnd, IDC_EDIT_KEY, L"R");
+            return TRUE;
+        }
+        
+        case WM_COMMAND:
+        {
+            if (LOWORD(wParam) == IDOK)
+            {
+                // Build modifiers from checkboxes
+                g_selectedModifiers = 0;
+                if (IsDlgButtonChecked(hwnd, IDC_CHECK_CTRL))
+                    g_selectedModifiers |= MOD_CONTROL;
+                if (IsDlgButtonChecked(hwnd, IDC_CHECK_SHIFT))
+                    g_selectedModifiers |= MOD_SHIFT;
+                if (IsDlgButtonChecked(hwnd, IDC_CHECK_ALT))
+                    g_selectedModifiers |= MOD_ALT;
+                
+                // Get key from edit control
+                wchar_t keyText[10];
+                GetDlgItemText(hwnd, IDC_EDIT_KEY, keyText, 10);
+                g_selectedKey = towupper(keyText[0]);
+                
+                // Test if available
+                if (IsHotkeyAvailable(g_selectedModifiers, g_selectedKey)) {
+                    EndDialog(hwnd, IDOK);
+                } else {
+                    MessageBox(hwnd,
+                        L"This hotkey is already in use.\n"
+                        L"Please choose another combination.",
+                        L"Hotkey In Use",
+                        MB_OK | MB_ICONWARNING);
+                }
+                return TRUE;
+            }
+            else if (LOWORD(wParam) == IDCANCEL)
+            {
+                EndDialog(hwnd, IDCANCEL);
+                return TRUE;
+            }
+            break;
+        }
+    }
+    
+    return FALSE;
+}
+```
+
+## Debugging Hotkeys
+
+### Check Registration Success
+
+```c
+void DebugHotkeys(HWND hwnd)
+{
+    wchar_t debug[1024] = L"Hotkey Status:\n\n";
+    
+    if (RegisterHotKey(NULL, 0, MOD_CONTROL | MOD_SHIFT, 'R')) {
+        UnregisterHotKey(NULL, 0);
+        wcscat_s(debug, 1024, L"Ctrl+Shift+R: Available\n");
+    } else {
+        wcscat_s(debug, 1024, L"Ctrl+Shift+R: In use\n");
+    }
+    
+    if (RegisterHotKey(NULL, 0, MOD_CONTROL | MOD_ALT, 'R')) {
+        UnregisterHotKey(NULL, 0);
+        wcscat_s(debug, 1024, L"Ctrl+Alt+R: Available\n");
+    } else {
+        wcscat_s(debug, 1024, L"Ctrl+Alt+R: In use\n");
+    }
+    
+    MessageBox(hwnd, debug, L"Hotkey Debug", MB_OK);
+}
+```
+
+### Log Hotkey Messages
+
+```c
+case WM_HOTKEY:
+{
+    wchar_t msg[256];
+    swprintf_s(msg, 256, L"WM_HOTKEY received: ID=%d\n", (int)wParam);
+    OutputDebugString(msg);
+    
+    // ... handle hotkey ...
+    
+    return 0;
+}
+```
+
+## Exercise 26.1: Simple Hotkey
+
+Create an application that:
+1. Registers Ctrl+Shift+M hotkey
+2. Shows a message box when hotkey is pressed
+3. Properly unregisters on exit
+
+## Exercise 26.2: Multiple Hotkeys
+
+Create an application with three hotkeys:
+1. Ctrl+Shift+1 - Show "Option 1"
+2. Ctrl+Shift+2 - Show "Option 2"
+3. Ctrl+Shift+3 - Show "Option 3"
+
+## Exercise 26.3: Hotkey Configuration
+
+Create an application that:
+1. Shows a dialog to configure hotkey
+2. Lets user choose modifiers (Ctrl, Shift, Alt)
+3. Lets user choose key letter
+4. Tests if hotkey is available
+5. Saves configuration to registry
+6. Loads saved hotkey on startup
+
+## Common Mistakes and Solutions
+
+### Mistake 1: Not Unregistering Hotkeys
+
+```c
+// WRONG - Hotkey remains registered after app exits
+case WM_DESTROY:
+    PostQuitMessage(0);
+    return 0;
+
+// CORRECT - Always unregister
+case WM_DESTROY:
+    UnregisterHotKey(hwnd, ID_HOTKEY_OPEN);
+    PostQuitMessage(0);
+    return 0;
+```
+
+### Mistake 2: Failing Application If Hotkey Fails
+
+```c
+// WRONG - App won't start if hotkey is in use
+if (!RegisterHotKey(hwnd, id, MOD_CONTROL | MOD_SHIFT, 'R')) {
+    MessageBox(NULL, L"Hotkey registration failed!", L"Error", MB_OK);
+    return -1;
+}
+
+// CORRECT - App works without hotkey
+if (!RegisterHotKey(hwnd, id, MOD_CONTROL | MOD_SHIFT, 'R')) {
+    // Just log it, app still works fine
+    OutputDebugString(L"Hotkey not available\n");
+}
+```
+
+### Mistake 3: Using Wrong Key Codes
+
+```c
+// WRONG - Using lowercase
+RegisterHotKey(hwnd, id, MOD_CONTROL, 'r');  // Might work, but inconsistent
+
+// CORRECT - Always use uppercase for letters
+RegisterHotKey(hwnd, id, MOD_CONTROL, 'R');
+```
+
+## Platform Compatibility
+
+### Windows Versions
+
+- **Windows 2000+**: RegisterHotKey fully supported
+- **Windows 7+**: MOD_NOREPEAT flag available
+- **Windows 10+**: No special changes
+
+### Limitations
+
+- Maximum ~16,000 hotkeys per thread (theoretical)
+- Hotkeys are per-process (can't register same hotkey twice in one app)
+- Some combinations reserved by system
+
+## Summary
+
+In this chapter, you learned:
+
+### **Hotkey Fundamentals**
+- ✅ Understanding global hotkeys
+- ✅ Virtual key codes and modifiers
+- ✅ How Windows hotkey system works
+- ✅ WM_HOTKEY message handling
+
+### **Hotkey API**
+- ✅ RegisterHotKey - Register global hotkey
+- ✅ UnregisterHotKey - Remove hotkey
+- ✅ MOD_CONTROL, MOD_SHIFT, MOD_ALT - Modifiers
+- ✅ MOD_NOREPEAT - Prevent key repeat
+
+### **Implementation Skills**
+- ✅ Registering hotkeys on startup
+- ✅ Handling WM_HOTKEY messages
+- ✅ Unregistering hotkeys properly
+- ✅ Graceful fallback when hotkey unavailable
+- ✅ Testing hotkey availability
+
+### **Best Practices**
+- ✅ Don't fail if hotkey registration fails
+- ✅ Always unregister hotkeys
+- ✅ Use uncommon key combinations
+- ✅ Document hotkeys for users
+- ✅ Test for conflicts
+
+### **Your WinRDP Application Now Has:**
+- ✅ Ctrl+Shift+R to open from anywhere
+- ✅ Ctrl+Shift+Alt+D for bulk delete
+- ✅ Instant access without mouse
+- ✅ Professional keyboard-driven workflow
+
+**Next:** In Chapter 27, we'll implement dark mode support so WinRDP automatically matches the Windows theme!
+
+---
+
+# Chapter 27: Dark Mode Support
+
+**What You'll Learn:**
+- Detecting Windows dark mode settings
+- Working with DWM (Desktop Window Manager) API
+- Custom control color handling
+- Creating dark-themed dialogs
+- Function pointers and dynamic API loading
+- Backwards compatibility techniques
+
+## Introduction
+
+Modern Windows applications should respect the user's theme preference. Since Windows 10, Microsoft has supported system-wide dark mode, and users expect applications to follow this setting automatically. In this chapter, we'll implement comprehensive dark mode support for WinRDP.
+
+## Understanding Windows Dark Mode
+
+### How Windows Dark Mode Works
+
+Windows 10 (build 1809+) introduced dark mode for applications:
+- Users can choose light or dark mode in Settings → Personalization → Colors
+- The setting is stored in the registry
+- Applications read this setting and adapt their UI
+- System APIs help apply dark theme to title bars and controls
+
+### Registry Detection
+
+Windows stores the theme preference here:
+```
+HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize
+Value: AppsUseLightTheme
+0 = Dark Mode
+1 = Light Mode (default)
+```
+
+## Implementing Dark Mode Detection
+
+### Step 1: Check Dark Mode Status
+
+```c
+// darkmode.c
+#include <windows.h>
+
+BOOL IsDarkModeEnabled(void)
+{
+    HKEY hKey;
+    DWORD dwValue = 1; // Default to light mode
+    DWORD dwSize = sizeof(DWORD);
+    
+    // Read registry setting
+    if (RegOpenKeyExW(HKEY_CURRENT_USER,
+                      L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+                      0,
+                      KEY_READ,
+                      &hKey) == ERROR_SUCCESS)
+    {
+        RegQueryValueExW(hKey, L"AppsUseLightTheme", NULL, NULL, 
+                        (LPBYTE)&dwValue, &dwSize);
+        RegCloseKey(hKey);
+    }
+    
+    // 0 = Dark Mode, 1 = Light Mode
+    return (dwValue == 0);
+}
+```
+
+### Step 2: Define Dark Mode Colors
+
+```c
+// darkmode.h
+#define DARK_BG_COLOR       RGB(32, 32, 32)      // Dark background
+#define DARK_TEXT_COLOR     RGB(220, 220, 220)   // Light text
+#define DARK_DIALOG_BG      RGB(43, 43, 43)      // Dialog background
+#define DARK_CONTROL_BG     RGB(55, 55, 55)      // Edit controls, etc.
+#define DARK_BORDER_COLOR   RGB(100, 100, 100)   // Borders
+
+// Light mode colors (default Windows)
+#define LIGHT_BG_COLOR      RGB(255, 255, 255)
+#define LIGHT_TEXT_COLOR    RGB(0, 0, 0)
+```
+
+### Step 3: Create Dark Mode Brushes
+
+```c
+// Global brushes
+static HBRUSH g_hBrushDialogBg = NULL;
+static HBRUSH g_hBrushControlBg = NULL;
+static BOOL g_bDarkModeEnabled = FALSE;
+
+void InitDarkMode(void)
+{
+    g_bDarkModeEnabled = IsDarkModeEnabled();
+    
+    if (!g_bDarkModeEnabled)
+        return;
+    
+    // Create brushes for painting backgrounds
+    g_hBrushDialogBg = CreateSolidBrush(DARK_DIALOG_BG);
+    g_hBrushControlBg = CreateSolidBrush(DARK_CONTROL_BG);
+}
+
+void CleanupDarkMode(void)
+{
+    if (g_hBrushDialogBg) {
+        DeleteObject(g_hBrushDialogBg);
+        g_hBrushDialogBg = NULL;
+    }
+    if (g_hBrushControlBg) {
+        DeleteObject(g_hBrushControlBg);
+        g_hBrushControlBg = NULL;
+    }
+}
+```
+
+## Applying Dark Mode to Dialogs
+
+### Handling WM_CTLCOLOR Messages
+
+Windows sends WM_CTLCOLOR* messages before drawing controls, allowing you to customize colors:
+
+```c
+INT_PTR HandleDarkModeMessages(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    if (!g_bDarkModeEnabled)
+        return 0;
+    
+    switch (msg)
+    {
+        case WM_CTLCOLORDLG:
+            // Dialog background
+            return (INT_PTR)g_hBrushDialogBg;
+        
+        case WM_CTLCOLORSTATIC:
+            // Static text (labels)
+            SetTextColor((HDC)wParam, DARK_TEXT_COLOR);
+            SetBkColor((HDC)wParam, DARK_DIALOG_BG);
+            return (INT_PTR)g_hBrushDialogBg;
+        
+        case WM_CTLCOLOREDIT:
+            // Edit controls
+            SetTextColor((HDC)wParam, DARK_TEXT_COLOR);
+            SetBkColor((HDC)wParam, DARK_CONTROL_BG);
+            return (INT_PTR)g_hBrushControlBg;
+        
+        case WM_CTLCOLORLISTBOX:
+            // List boxes
+            SetTextColor((HDC)wParam, DARK_TEXT_COLOR);
+            SetBkColor((HDC)wParam, DARK_CONTROL_BG);
+            return (INT_PTR)g_hBrushControlBg;
+    }
+    
+    return 0;
+}
+```
+
+### Dark Title Bar (Windows 10+)
+
+Use DWM API to make the title bar dark:
+
+```c
+#include <dwmapi.h>
+
+#ifndef DWMWA_USE_IMMERSIVE_DARK_MODE
+#define DWMWA_USE_IMMERSIVE_DARK_MODE 20
+#endif
+
+void ApplyDarkModeToDialog(HWND hwnd)
+{
+    if (!g_bDarkModeEnabled)
+        return;
+    
+    // Set dark title bar (Windows 10 build 1809+)
+    BOOL useDarkMode = TRUE;
+    DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE,
+                         &useDarkMode, sizeof(useDarkMode));
+}
+```
+
+### Integrating into Dialog Procedure
+
+```c
+INT_PTR CALLBACK MyDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+        case WM_INITDIALOG:
+        {
+            // Apply dark mode to this dialog
+            ApplyDarkModeToDialog(hwnd);
+            return TRUE;
+        }
+    }
+    
+    // Handle dark mode color messages
+    INT_PTR result = HandleDarkModeMessages(hwnd, msg, wParam, lParam);
+    if (result != 0)
+        return result;
+    
+    // ... rest of dialog handling ...
+    
+    return FALSE;
+}
+```
+
+## Complete Dark Mode Module
+
+**darkmode.h:**
+```c
+#ifndef DARKMODE_H
+#define DARKMODE_H
+
+#include <windows.h>
+
+// Color definitions
+#define DARK_BG_COLOR       RGB(32, 32, 32)
+#define DARK_TEXT_COLOR     RGB(220, 220, 220)
+#define DARK_DIALOG_BG      RGB(43, 43, 43)
+#define DARK_CONTROL_BG     RGB(55, 55, 55)
+
+// Dark mode functions
+BOOL IsDarkModeEnabled(void);
+void InitDarkMode(void);
+void CleanupDarkMode(void);
+void ApplyDarkModeToDialog(HWND hwnd);
+void ApplyDarkModeToListView(HWND hListView);
+INT_PTR HandleDarkModeMessages(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+#endif // DARKMODE_H
+```
+
+**darkmode.c:**
+```c
+#include "darkmode.h"
+#include <dwmapi.h>
+#include <uxtheme.h>
+#include <commctrl.h>
+
+#ifndef DWMWA_USE_IMMERSIVE_DARK_MODE
+#define DWMWA_USE_IMMERSIVE_DARK_MODE 20
+#endif
+
+static HBRUSH g_hBrushDialogBg = NULL;
+static HBRUSH g_hBrushControlBg = NULL;
+static BOOL g_bDarkModeEnabled = FALSE;
+
+BOOL IsDarkModeEnabled(void)
+{
+    HKEY hKey;
+    DWORD dwValue = 1;
+    DWORD dwSize = sizeof(DWORD);
+    
+    if (RegOpenKeyExW(HKEY_CURRENT_USER,
+                      L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+                      0, KEY_READ, &hKey) == ERROR_SUCCESS)
+    {
+        RegQueryValueExW(hKey, L"AppsUseLightTheme", NULL, NULL,
+                        (LPBYTE)&dwValue, &dwSize);
+        RegCloseKey(hKey);
+    }
+    
+    return (dwValue == 0);
+}
+
+void InitDarkMode(void)
+{
+    g_bDarkModeEnabled = IsDarkModeEnabled();
+    
+    if (!g_bDarkModeEnabled)
+        return;
+    
+    g_hBrushDialogBg = CreateSolidBrush(DARK_DIALOG_BG);
+    g_hBrushControlBg = CreateSolidBrush(DARK_CONTROL_BG);
+}
+
+void CleanupDarkMode(void)
+{
+    if (g_hBrushDialogBg) {
+        DeleteObject(g_hBrushDialogBg);
+        g_hBrushDialogBg = NULL;
+    }
+    if (g_hBrushControlBg) {
+        DeleteObject(g_hBrushControlBg);
+        g_hBrushControlBg = NULL;
+    }
+}
+
+void ApplyDarkModeToDialog(HWND hwnd)
+{
+    if (!g_bDarkModeEnabled)
+        return;
+    
+    BOOL useDarkMode = TRUE;
+    DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE,
+                         &useDarkMode, sizeof(useDarkMode));
+}
+
+void ApplyDarkModeToListView(HWND hListView)
+{
+    if (!g_bDarkModeEnabled)
+        return;
+    
+    // Set ListView colors for dark mode
+    ListView_SetTextColor(hListView, DARK_TEXT_COLOR);
+    ListView_SetTextBkColor(hListView, DARK_CONTROL_BG);
+    ListView_SetBkColor(hListView, DARK_CONTROL_BG);
+}
+
+INT_PTR HandleDarkModeMessages(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    if (!g_bDarkModeEnabled)
+        return 0;
+    
+    switch (msg)
+    {
+        case WM_CTLCOLORDLG:
+            return (INT_PTR)g_hBrushDialogBg;
+        
+        case WM_CTLCOLORSTATIC:
+            SetTextColor((HDC)wParam, DARK_TEXT_COLOR);
+            SetBkColor((HDC)wParam, DARK_DIALOG_BG);
+            return (INT_PTR)g_hBrushDialogBg;
+        
+        case WM_CTLCOLOREDIT:
+            SetTextColor((HDC)wParam, DARK_TEXT_COLOR);
+            SetBkColor((HDC)wParam, DARK_CONTROL_BG);
+            return (INT_PTR)g_hBrushControlBg;
+        
+        case WM_CTLCOLORLISTBOX:
+            SetTextColor((HDC)wParam, DARK_TEXT_COLOR);
+            SetBkColor((HDC)wParam, DARK_CONTROL_BG);
+            return (INT_PTR)g_hBrushControlBg;
+    }
+    
+    return 0;
+}
+```
+
+## Backwards Compatibility
+
+Support older Windows versions that don't have dark mode:
+
+```c
+void ApplyDarkModeToDialog(HWND hwnd)
+{
+    if (!g_bDarkModeEnabled)
+        return;
+    
+    // Check if running on Windows 10 build 1809+
+    OSVERSIONINFOEXW osvi = {sizeof(osvi)};
+    if (GetVersionExW((OSVERSIONINFOW*)&osvi))
+    {
+        // Windows 10 is version 10.0
+        if (osvi.dwMajorVersion >= 10 && osvi.dwBuildNumber >= 17763)
+        {
+            // Safe to use DWMWA_USE_IMMERSIVE_DARK_MODE
+            BOOL useDarkMode = TRUE;
+            DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE,
+                                 &useDarkMode, sizeof(useDarkMode));
+        }
+    }
+}
+```
+
+## Summary
+
+In this chapter, you learned:
+
+### **Dark Mode Fundamentals**
+- ✅ Detecting Windows dark mode from registry
+- ✅ Creating dark color schemes
+- ✅ Understanding WM_CTLCOLOR messages
+
+### **Implementation**
+- ✅ IsDarkModeEnabled() - Check system preference
+- ✅ InitDarkMode() - Initialize dark mode support
+- ✅ ApplyDarkModeToDialog() - Dark title bars
+- ✅ HandleDarkModeMessages() - Custom control colors
+
+### **Your WinRDP Application Now Has:**
+- ✅ Automatic dark mode detection
+- ✅ Dark-themed dialogs and controls
+- ✅ Professional Windows 10/11 integration
+- ✅ Backwards compatibility with older Windows
+
+**Next:** In Chapter 28, we'll implement network computer discovery to automatically find RDP servers!
+
+---
+
+# Chapter 28: Network Computer Discovery
+
+**What You'll Learn:**
+- Using NetAPI32 for network enumeration
+- NetServerEnum function
+- Working with SERVER_INFO structures
+- Managing NetAPI buffers
+- Filtering computer types
+
+## Introduction
+
+WinRDP can automatically discover computers on your network, saving users from manually entering hostnames. This chapter implements network scanning using Windows NetAPI32.
+
+## The NetServerEnum API
+
+```c
+#include <lm.h>  // NetAPI32 header
+
+NET_API_STATUS NetServerEnum(
+    LPCWSTR servername,        // NULL = local computer
+    DWORD level,               // Info level (101 = name + comment)
+    LPBYTE *bufptr,            // Receives buffer pointer
+    DWORD prefmaxlen,          // Buffer size preference
+    LPDWORD entriesread,       // Entries actually read
+    LPDWORD totalentries,      // Total entries available
+    DWORD servertype,          // Type filter (SV_TYPE_*)
+    LPCWSTR domain,            // Domain (NULL = current)
+    LPDWORD resume_handle      // For paging results
+);
+```
+
+## Complete Implementation
+
+**adscan.h:**
+```c
+#ifndef ADSCAN_H
+#define ADSCAN_H
+
+#include <windows.h>
+
+typedef struct {
+    wchar_t name[256];
+    wchar_t comment[256];
+    DWORD type;
+} ComputerInfo;
+
+BOOL ScanForComputers(
+    const wchar_t* domain,
+    BOOL includeWorkstations,
+    BOOL includeServers,
+    BOOL includeDomainControllers,
+    ComputerInfo** computers,
+    int* count
+);
+
+void FreeComputerList(ComputerInfo* computers);
+
+#endif
+```
+
+**adscan.c:**
+```c
+#include "adscan.h"
+#include <lm.h>
+#include <stdlib.h>
+
+#pragma comment(lib, "netapi32.lib")
+
+BOOL ScanForComputers(const wchar_t* domain, BOOL includeWorkstations,
+                      BOOL includeServers, BOOL includeDomainControllers,
+                      ComputerInfo** computers, int* count)
+{
+    SERVER_INFO_101* buffer = NULL;
+    DWORD entriesRead = 0;
+    DWORD totalEntries = 0;
+    DWORD resumeHandle = 0;
+    DWORD serverType = 0;
+    
+    *computers = NULL;
+    *count = 0;
+    
+    // Build server type filter
+    if (includeWorkstations)
+        serverType |= SV_TYPE_WORKSTATION;
+    if (includeServers)
+        serverType |= SV_TYPE_SERVER;
+    if (includeDomainControllers)
+        serverType |= SV_TYPE_DOMAIN_CTRL;
+    
+    // Enumerate servers
+    NET_API_STATUS status = NetServerEnum(
+        NULL,                    // Local computer
+        101,                     // Level 101 (name + comment)
+        (LPBYTE*)&buffer,
+        MAX_PREFERRED_LENGTH,
+        &entriesRead,
+        &totalEntries,
+        serverType,
+        domain,
+        &resumeHandle
+    );
+    
+    if (status != NERR_Success)
+        return FALSE;
+    
+    // Allocate result array
+    *computers = (ComputerInfo*)malloc(entriesRead * sizeof(ComputerInfo));
+    if (*computers == NULL) {
+        NetApiBufferFree(buffer);
+        return FALSE;
+    }
+    
+    // Copy data
+    for (DWORD i = 0; i < entriesRead; i++) {
+        wcscpy_s((*computers)[i].name, 256, buffer[i].sv101_name);
+        wcscpy_s((*computers)[i].comment, 256, 
+                buffer[i].sv101_comment ? buffer[i].sv101_comment : L"");
+        (*computers)[i].type = buffer[i].sv101_type;
+    }
+    
+    *count = (int)entriesRead;
+    
+    // MUST free NetAPI buffer
+    NetApiBufferFree(buffer);
+    
+    return TRUE;
+}
+
+void FreeComputerList(ComputerInfo* computers)
+{
+    free(computers);
+}
+```
+
+## Integration with WinRDP
+
+```c
+// In dialog procedure
+case IDC_BTN_SCAN_NETWORK:
+{
+    ComputerInfo* computers;
+    int count;
+    
+    if (ScanForComputers(NULL, TRUE, TRUE, FALSE, &computers, &count))
+    {
+        for (int i = 0; i < count; i++) {
+            AddHost(computers[i].name, computers[i].comment);
+        }
+        
+        FreeComputerList(computers);
+        
+        wchar_t msg[256];
+        swprintf_s(msg, 256, L"Found %d computers", count);
+        MessageBox(hwnd, msg, L"Scan Complete", MB_OK);
+        
+        RefreshHostList(hwnd);
+    }
+    break;
+}
+```
+
+## Summary
+
+In this chapter, you learned:
+
+### **Network APIs**
+- ✅ NetServerEnum for computer enumeration
+- ✅ SERVER_INFO_101 structure
+- ✅ NetApiBufferFree for cleanup
+
+### **Your WinRDP Application Now Has:**
+- ✅ Automatic computer discovery
+- ✅ Network scanning functionality
+- ✅ Easy host addition
+
+**Next:** In Chapter 29, we'll create a professional installer!
+
+---
+
+# Chapter 29: Building and Distribution
+
+**What You'll Learn:**
+- Creating build scripts
+- Compiling with GCC and MSVC
+- NSIS installer creation
+- Distribution best practices
+
+## Building WinRDP
+
+### Build Script (build.bat)
+
+```batch
+@echo off
+echo Building WinRDP...
+
+REM Create build directory
+if not exist build mkdir build
+if not exist build\obj mkdir build\obj
+
+REM Compile resources
+windres src\resources.rc -o build\obj\resources.o
+
+REM Compile C files
+gcc -Wall -Wextra -std=c11 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE ^
+    -c src\main.c src\credentials.c src\hosts.c src\rdp.c ^
+    src\registry.c src\darkmode.c src\adscan.c src\utils.c ^
+    -Isrc
+
+REM Move object files
+move *.o build\obj\
+
+REM Link
+gcc -mwindows -municode -o build\WinRDP.exe build\obj\*.o ^
+    -lcomctl32 -lshell32 -ladvapi32 -lcredui -ldwmapi -lnetapi32
+
+if %errorlevel% == 0 (
+    echo Build successful!
+    echo Executable: build\WinRDP.exe
+) else (
+    echo Build failed!
+)
+```
+
+## NSIS Installer
+
+**installer.nsi:**
+```nsis
+!define APP_NAME "WinRDP"
+!define APP_VERSION "1.0.0"
+!define APP_PUBLISHER "Your Name"
+!define APP_EXE "WinRDP.exe"
+
+Name "${APP_NAME}"
+OutFile "WinRDP-Setup-${APP_VERSION}.exe"
+InstallDir "$PROGRAMFILES64\${APP_NAME}"
+
+Page directory
+Page instfiles
+
+Section "Install"
+    SetOutPath "$INSTDIR"
+    File "build\${APP_EXE}"
+    
+    CreateDirectory "$SMPROGRAMS\${APP_NAME}"
+    CreateShortcut "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk" "$INSTDIR\${APP_EXE}"
+    
+    WriteUninstaller "$INSTDIR\Uninstall.exe"
+    
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" \
+                "DisplayName" "${APP_NAME}"
+    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" \
+                "UninstallString" "$INSTDIR\Uninstall.exe"
+SectionEnd
+
+Section "Uninstall"
+    Delete "$INSTDIR\${APP_EXE}"
+    Delete "$INSTDIR\Uninstall.exe"
+    Delete "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk"
+    RMDir "$SMPROGRAMS\${APP_NAME}"
+    RMDir "$INSTDIR"
+    
+    DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}"
+SectionEnd
+```
+
+Build installer:
+```batch
+makensis installer.nsi
+```
+
+## Summary
+
+### **Your WinRDP Application Is Now:**
+- ✅ Fully compiled and functional
+- ✅ Packaged in a professional installer
+- ✅ Ready for distribution!
+
+**Congratulations!** You've completed Part V and built a professional Windows application from scratch!
+
+---
+
 # Part VI: Testing and Quality Assurance
 
 # Chapter 30: System Testing and Integration
@@ -17510,4 +20730,1809 @@ You've completed **24 chapters** (23 core chapters + 1 testing chapter) and buil
 The journey doesn't end here—it's just the beginning of what you can build with C and Windows!
 
 **Keep coding, keep learning, and keep building amazing things!** 🚀
+
+---
+
+# Appendices
+
+# Appendix A: Setting Up Your Development Environment
+
+This appendix provides step-by-step instructions for setting up your C programming environment on Windows.
+
+## Option 1: MinGW-w64 (GCC) - Recommended for Beginners
+
+### Why MinGW-w64?
+- ✅ Free and open source
+- ✅ Industry-standard GCC compiler
+- ✅ Good error messages
+- ✅ Cross-platform knowledge
+- ✅ Lighter weight than Visual Studio
+
+### Installation Steps
+
+**Step 1: Download MSYS2**
+
+1. Go to https://www.msys2.org/
+2. Download the installer (msys2-x86_64-YYYYMMDD.exe)
+3. Run the installer
+4. Install to default location: `C:\msys64`
+
+**Step 2: Install MinGW-w64 Toolchain**
+
+1. Open MSYS2 MinGW 64-bit terminal (from Start Menu)
+2. Update package database:
+```bash
+pacman -Syu
+```
+3. Close terminal when prompted, reopen it
+4. Install the compiler toolchain:
+```bash
+pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-make
+```
+5. Install additional tools:
+```bash
+pacman -S mingw-w64-x86_64-gdb  # Debugger
+```
+
+**Step 3: Add to System PATH**
+
+1. Open System Environment Variables:
+   - Press `Win + R`
+   - Type `sysdm.cpl` and press Enter
+   - Go to "Advanced" tab
+   - Click "Environment Variables"
+
+2. Edit the `Path` variable (User variables):
+   - Click "New"
+   - Add: `C:\msys64\mingw64\bin`
+   - Click "OK" on all dialogs
+
+3. Verify installation:
+   - Open Command Prompt (cmd.exe)
+   - Type: `gcc --version`
+   - Should see GCC version information
+
+### Testing Your Installation
+
+Create `hello.c`:
+```c
+#include <stdio.h>
+
+int main(void)
+{
+    printf("Hello, World!\n");
+    return 0;
+}
+```
+
+Compile and run:
+```bash
+gcc hello.c -o hello.exe
+hello.exe
+```
+
+Should output: `Hello, World!`
+
+---
+
+## Option 2: Microsoft Visual Studio - Professional IDE
+
+### Why Visual Studio?
+- ✅ Professional development environment
+- ✅ Excellent debugger
+- ✅ IntelliSense code completion
+- ✅ Built-in Windows SDK
+- ✅ Industry standard for Windows development
+
+### Installation Steps
+
+**Step 1: Download Visual Studio**
+
+1. Go to https://visualstudio.microsoft.com/
+2. Download "Visual Studio Community" (free)
+3. Run the installer
+
+**Step 2: Select Workload**
+
+In the Visual Studio Installer:
+1. Select "Desktop development with C++"
+2. Ensure these are checked:
+   - MSVC v143 (or latest)
+   - Windows 10/11 SDK
+   - C++ CMake tools
+   - Just-In-Time debugger
+
+3. Click "Install" (requires several GB)
+
+**Step 3: Configure for C Development**
+
+1. Launch Visual Studio
+2. Create new project:
+   - File → New → Project
+   - Select "Empty Project" (C++)
+   - Name your project
+
+3. Add a C file:
+   - Right-click project in Solution Explorer
+   - Add → New Item
+   - Select "C++ File (.cpp)"
+   - **Rename to .c extension** (important!)
+
+4. Configure for C:
+   - Project → Properties
+   - C/C++ → Advanced
+   - Set "Compile As" to "Compile as C Code (/TC)"
+
+### Using Command Line (Optional)
+
+Open "x64 Native Tools Command Prompt":
+```bash
+cl /W4 /D_UNICODE /DUNICODE hello.c
+hello.exe
+```
+
+---
+
+## Option 3: Visual Studio Code - Lightweight Editor
+
+### Why VS Code?
+- ✅ Lightweight and fast
+- ✅ Excellent extensions
+- ✅ Works with GCC or MSVC
+- ✅ Modern interface
+- ✅ Great for learning
+
+### Setup Steps
+
+**Step 1: Install VS Code**
+
+1. Download from https://code.visualstudio.com/
+2. Install with default options
+
+**Step 2: Install Extensions**
+
+Open VS Code and install:
+- **C/C++** (by Microsoft) - IntelliSense and debugging
+- **Code Runner** (by Jun Han) - Quick execution
+
+**Step 3: Configure for GCC**
+
+Create `.vscode/c_cpp_properties.json`:
+```json
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "C:/msys64/mingw64/include"
+            ],
+            "compilerPath": "C:/msys64/mingw64/bin/gcc.exe",
+            "cStandard": "c11",
+            "intelliSenseMode": "gcc-x64"
+        }
+    ]
+}
+```
+
+**Step 4: Build Configuration**
+
+Create `.vscode/tasks.json`:
+```json
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build C",
+            "type": "shell",
+            "command": "gcc",
+            "args": [
+                "-g",
+                "${file}",
+                "-o",
+                "${fileDirname}/${fileBasenameNoExtension}.exe"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}
+```
+
+Press `Ctrl+Shift+B` to build!
+
+---
+
+## Installing NSIS (For Chapter 29)
+
+**NSIS** creates professional installers for Windows applications.
+
+**Installation:**
+1. Download from https://nsis.sourceforge.io/Download
+2. Run the installer
+3. Add to PATH: `C:\Program Files (x86)\NSIS`
+
+**Verify:**
+```bash
+makensis /VERSION
+```
+
+---
+
+## Recommended Additional Tools
+
+### Git for Version Control
+```bash
+# Download from: https://git-scm.com/
+# After installation:
+git config --global user.name "Your Name"
+git config --global user.email "your.email@example.com"
+```
+
+### DebugView for Windows Debugging
+- Download from Sysinternals: https://docs.microsoft.com/en-us/sysinternals/
+- View OutputDebugString messages
+- Essential for debugging Windows applications
+
+### Dependency Walker
+- Download from: https://www.dependencywalker.com/
+- See what DLLs your program needs
+- Helpful for distribution
+
+### Resource Hacker
+- Download from: http://www.angusj.com/resourcehacker/
+- Edit .rc resource files visually
+- Inspect compiled resources
+
+---
+
+## Troubleshooting Common Issues
+
+### "gcc not found" or "command not found"
+
+**Solution:**
+1. Verify GCC is installed: `C:\msys64\mingw64\bin\gcc.exe` exists
+2. Check PATH includes: `C:\msys64\mingw64\bin`
+3. Restart Command Prompt after PATH changes
+
+### "Cannot open include file: 'windows.h'"
+
+**Solution:**
+- **MinGW:** Reinstall with: `pacman -S mingw-w64-x86_64-headers`
+- **MSVC:** Install Windows SDK via Visual Studio Installer
+
+### "windres not found"
+
+**Solution:**
+```bash
+pacman -S mingw-w64-x86_64-binutils
+```
+
+### Programs crash immediately
+
+**Solution:**
+1. Check for missing DLLs with Dependency Walker
+2. For MinGW programs, copy required DLLs from `C:\msys64\mingw64\bin`
+3. Or compile with static linking: `-static`
+
+---
+
+## Building WinRDP
+
+Once environment is set up:
+
+```bash
+# Clone repository (or download)
+cd WinRDP
+
+# Build with GCC
+build.bat
+
+# Or build with MSVC (from x64 Native Tools prompt)
+cd src
+cl /W4 /D_UNICODE /DUNICODE /D_WIN32_WINNT=0x0601 *.c resources.rc
+link /OUT:WinRDP.exe *.obj *.res user32.lib gdi32.lib shell32.lib ^
+     comctl32.lib advapi32.lib credui.lib dwmapi.lib netapi32.lib
+```
+
+---
+
+## Editor Configuration Tips
+
+### For Better Productivity
+
+**Enable Auto-Save:**
+- VS Code: File → Auto Save
+- Visual Studio: Tools → Options → Environment → Documents → Auto-load changes
+
+**Set Tab Width to 4 Spaces:**
+```json
+// VS Code settings.json
+{
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true
+}
+```
+
+**Enable Line Numbers:**
+- All editors have this, essential for following book examples
+
+**Syntax Highlighting:**
+- Ensure C files are recognized (check bottom-right in VS Code)
+
+---
+
+## Quick Reference Commands
+
+### Compilation
+```bash
+# Simple compile
+gcc program.c -o program.exe
+
+# With warnings
+gcc -Wall -Wextra program.c -o program.exe
+
+# With debugging symbols
+gcc -g program.c -o program.exe
+
+# Windows GUI application
+gcc -mwindows program.c -o program.exe
+
+# Link libraries
+gcc program.c -o program.exe -luser32 -lgdi32
+```
+
+### Debugging
+```bash
+# GDB debugger
+gdb program.exe
+
+# Common GDB commands:
+# run - Start program
+# break main - Set breakpoint
+# step - Step one line
+# print var - Print variable
+# quit - Exit
+```
+
+### Resource Compilation
+```bash
+# Compile .rc file
+windres resources.rc -o resources.o
+
+# Link with program
+gcc main.c resources.o -o program.exe
+```
+
+---
+
+Your development environment is now ready! Proceed to Chapter 1 to begin learning C programming.
+
+---
+
+# Appendix B: Common Mistakes and How to Avoid Them
+
+This appendix covers the most common mistakes C programmers make and how to avoid them.
+
+## Memory Management Mistakes
+
+### 1. Memory Leaks
+
+**Mistake:**
+```c
+void LoadData(void)
+{
+    char* data = (char*)malloc(1024);
+    // ... use data ...
+    // Forgot to free!
+}
+```
+
+**Solution:**
+```c
+void LoadData(void)
+{
+    char* data = (char*)malloc(1024);
+    if (data == NULL) return;
+    
+    // ... use data ...
+    
+    free(data);  // Always free!
+}
+```
+
+**Rule:** Every `malloc`/`calloc`/`realloc` needs a matching `free`.
+
+### 2. Using Memory After Free
+
+**Mistake:**
+```c
+char* ptr = (char*)malloc(100);
+free(ptr);
+strcpy(ptr, "Hello");  // WRONG: Using freed memory!
+```
+
+**Solution:**
+```c
+char* ptr = (char*)malloc(100);
+strcpy(ptr, "Hello");
+free(ptr);
+ptr = NULL;  // Set to NULL after freeing
+```
+
+### 3. Freeing Stack Memory
+
+**Mistake:**
+```c
+void BadFunction(void)
+{
+    char buffer[100];
+    free(buffer);  // WRONG: Can't free stack memory!
+}
+```
+
+**Solution:**
+```c
+void GoodFunction(void)
+{
+    char buffer[100];
+    // Just let it go out of scope, no free needed
+}
+```
+
+**Rule:** Only free memory allocated with `malloc`/`calloc`/`realloc`.
+
+### 4. Double Free
+
+**Mistake:**
+```c
+char* ptr = (char*)malloc(100);
+free(ptr);
+free(ptr);  // WRONG: Double free causes crash!
+```
+
+**Solution:**
+```c
+char* ptr = (char*)malloc(100);
+free(ptr);
+ptr = NULL;  // Prevents double free
+if (ptr != NULL) free(ptr);  // Safe
+```
+
+---
+
+## Pointer Mistakes
+
+### 5. Dereferencing NULL
+
+**Mistake:**
+```c
+char* ptr = NULL;
+*ptr = 'A';  // CRASH: Dereferencing NULL!
+```
+
+**Solution:**
+```c
+char* ptr = NULL;
+if (ptr != NULL) {
+    *ptr = 'A';
+}
+```
+
+**Always check pointers before dereferencing!**
+
+### 6. Uninitialized Pointers
+
+**Mistake:**
+```c
+char* ptr;  // Contains garbage
+*ptr = 'A';  // Probably crash
+```
+
+**Solution:**
+```c
+char* ptr = NULL;  // Always initialize!
+ptr = (char*)malloc(10);
+if (ptr != NULL) {
+    *ptr = 'A';
+}
+```
+
+### 7. Buffer Overflow
+
+**Mistake:**
+```c
+char buffer[10];
+strcpy(buffer, "This string is way too long!");  // Overflow!
+```
+
+**Solution:**
+```c
+char buffer[10];
+strncpy_s(buffer, sizeof(buffer), "Long string", _TRUNCATE);
+// Or use safe functions:
+strcpy_s(buffer, sizeof(buffer), "Short");
+```
+
+### 8. Returning Pointer to Local Variable
+
+**Mistake:**
+```c
+char* GetName(void)
+{
+    char name[100] = "John";
+    return name;  // WRONG: Returns pointer to stack memory!
+}
+```
+
+**Solution:**
+```c
+char* GetName(void)
+{
+    char* name = (char*)malloc(100);
+    if (name != NULL) {
+        strcpy_s(name, 100, "John");
+    }
+    return name;  // Caller must free!
+}
+
+// Or use static (but not thread-safe):
+char* GetName(void)
+{
+    static char name[100] = "John";
+    return name;
+}
+```
+
+---
+
+## Windows API Mistakes
+
+### 9. Not Checking Return Values
+
+**Mistake:**
+```c
+HANDLE hFile = CreateFile(...);
+WriteFile(hFile, ...);  // What if CreateFile failed?
+```
+
+**Solution:**
+```c
+HANDLE hFile = CreateFile(...);
+if (hFile == INVALID_HANDLE_VALUE) {
+    // Handle error
+    return FALSE;
+}
+WriteFile(hFile, ...);
+CloseHandle(hFile);
+```
+
+### 10. Forgetting to Close Handles
+
+**Mistake:**
+```c
+HANDLE hFile = CreateFile(...);
+// ... use file ...
+// Forgot CloseHandle!
+```
+
+**Solution:**
+```c
+HANDLE hFile = CreateFile(...);
+if (hFile != INVALID_HANDLE_VALUE) {
+    // ... use file ...
+    CloseHandle(hFile);  // Always close!
+}
+```
+
+**Rule:** `CreateFile` → `CloseHandle`, `RegOpenKey` → `RegCloseKey`, etc.
+
+### 11. Mixing Unicode and ANSI
+
+**Mistake:**
+```c
+wchar_t wide[] = L"Hello";
+MessageBoxA(NULL, wide, "Title", MB_OK);  // WRONG: A = ANSI, wide = Unicode
+```
+
+**Solution:**
+```c
+wchar_t wide[] = L"Hello";
+MessageBoxW(NULL, wide, L"Title", MB_OK);  // W = Wide/Unicode
+```
+
+**Rule:** Use `W` functions with `wchar_t`, `A` functions with `char`.
+
+### 12. Not Multiplying String Size for Unicode
+
+**Mistake:**
+```c
+wchar_t str[] = L"Hello";
+RegSetValueExW(hKey, L"Value", 0, REG_SZ, (BYTE*)str, wcslen(str));
+// WRONG: Size should be in bytes!
+```
+
+**Solution:**
+```c
+wchar_t str[] = L"Hello";
+RegSetValueExW(hKey, L"Value", 0, REG_SZ, (BYTE*)str,
+               (wcslen(str) + 1) * sizeof(wchar_t));  // Bytes, not chars!
+```
+
+---
+
+## String Mistakes
+
+### 13. Off-by-One Errors
+
+**Mistake:**
+```c
+char name[5] = "John";  // Needs 5 chars: J-o-h-n-\0
+char bad[4] = "John";   // WRONG: No room for \0!
+```
+
+**Solution:**
+```c
+char name[5] = "John";  // Correct: includes \0
+// Or let compiler calculate:
+char name[] = "John";   // Automatically [5]
+```
+
+### 14. Not Null-Terminating Strings
+
+**Mistake:**
+```c
+char str[10];
+strncpy(str, "LongString", 10);  // Might not null-terminate!
+printf("%s", str);  // Could crash
+```
+
+**Solution:**
+```c
+char str[10];
+strncpy(str, "LongString", 10);
+str[9] = '\0';  // Ensure null termination
+
+// Or use safe version:
+strncpy_s(str, sizeof(str), "LongString", _TRUNCATE);
+```
+
+---
+
+## Logic Mistakes
+
+### 15. Assignment in Condition
+
+**Mistake:**
+```c
+if (x = 5) {  // WRONG: Assignment, not comparison!
+    printf("x is 5");
+}
+```
+
+**Solution:**
+```c
+if (x == 5) {  // Correct: Comparison
+    printf("x is 5");
+}
+```
+
+**Tip:** Some prefer: `if (5 == x)` - can't accidentally assign to constant.
+
+### 16. Comparing Strings with ==
+
+**Mistake:**
+```c
+char* str1 = "Hello";
+char* str2 = "Hello";
+if (str1 == str2) {  // WRONG: Compares addresses!
+    printf("Equal");
+}
+```
+
+**Solution:**
+```c
+char* str1 = "Hello";
+char* str2 = "Hello";
+if (strcmp(str1, str2) == 0) {  // Correct: Compares contents
+    printf("Equal");
+}
+
+// For wide strings:
+if (wcscmp(wstr1, wstr2) == 0) {
+    printf("Equal");
+}
+```
+
+### 17. Integer Division
+
+**Mistake:**
+```c
+int a = 5, b = 2;
+float result = a / b;  // Result is 2.0, not 2.5!
+```
+
+**Solution:**
+```c
+int a = 5, b = 2;
+float result = (float)a / b;  // Cast to float first
+// Or:
+float result = a / (float)b;
+```
+
+---
+
+## Windows-Specific Mistakes
+
+### 18. Not Initializing COM
+
+**Mistake:**
+```c
+// Using COM objects without initialization
+CoCreateInstance(...);  // Might fail
+```
+
+**Solution:**
+```c
+CoInitialize(NULL);  // Or CoInitializeEx
+// ... use COM ...
+CoUninitialize();
+```
+
+### 19. Wrong Subsystem
+
+**Mistake:**
+```c
+// GUI application showing console window
+```
+
+**Solution:**
+```bash
+# Compile with -mwindows (GCC) or /SUBSYSTEM:WINDOWS (MSVC)
+gcc -mwindows program.c -o program.exe
+```
+
+### 20. Not Handling DPI Scaling
+
+**Mistake:**
+```c
+// Hard-coded pixel sizes look wrong on high-DPI displays
+```
+
+**Solution:**
+```c
+// Declare DPI-aware in manifest:
+<dpiAware>true</dpiAware>
+
+// Or set programmatically:
+SetProcessDPIAware();
+```
+
+---
+
+## Debugging Tips
+
+### Finding Memory Leaks
+
+**Windows:**
+Use Visual Studio's diagnostic tools or manually:
+```c
+#ifdef _DEBUG
+    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+#endif
+```
+
+**General Approach:**
+- Count `malloc` vs `free` calls
+- Use debug allocators
+- Valgrind (Linux) or Dr. Memory (Windows)
+
+### Finding NULL Pointer Crashes
+
+**Enable crash dumps:**
+- Run in debugger
+- Note crash address
+- Check call stack
+- Look for recently dereferenced pointers
+
+### Finding Buffer Overflows
+
+**Tools:**
+- Address Sanitizer: `gcc -fsanitize=address`
+- Compile-time checks: `gcc -D_FORTIFY_SOURCE=2`
+- Use safe string functions (`_s` versions)
+
+---
+
+## Best Practices Checklist
+
+✅ **Always:**
+- Check `malloc` return values
+- Free allocated memory
+- Null-terminate strings
+- Close handles/files
+- Check API return values
+- Use `_s` safe functions
+- Initialize variables
+- Test with empty/NULL inputs
+
+❌ **Never:**
+- Use uninitialized variables
+- Return pointers to local variables
+- Free stack memory
+- Dereference NULL pointers
+- Use unsafe string functions
+- Ignore compiler warnings
+- Mix Unicode and ANSI
+
+---
+
+Most bugs are preventable with careful coding and thorough testing. When in doubt, check for NULL, validate inputs, and handle errors gracefully!
+
+---
+
+# Appendix C: Windows API Quick Reference
+
+Quick reference for the most common Windows API functions, types, and patterns used throughout this book.
+
+## Common Data Types
+
+### Handles and Pointers
+```c
+HWND        // Window handle
+HINSTANCE   // Instance handle  
+HDC         // Device context handle
+HICON       // Icon handle
+HBRUSH      // Brush handle
+HMENU       // Menu handle
+HANDLE      // Generic handle
+LPVOID      // Pointer to void (long pointer)
+LPSTR       // Pointer to string (char*)
+LPWSTR      // Pointer to wide string (wchar_t*)
+```
+
+### Integers
+```c
+BOOL        // Boolean (TRUE/FALSE, not true/false)
+BYTE        // 8-bit unsigned (0-255)
+WORD        // 16-bit unsigned
+DWORD       // 32-bit unsigned (double word)
+INT         // 32-bit signed integer
+UINT        // 32-bit unsigned integer
+LONG        // 32-bit signed long
+WPARAM      // Message parameter (unsigned)
+LPARAM      // Message parameter (long)
+LRESULT     // Message return value
+```
+
+### Strings
+```c
+CHAR        // 8-bit character
+WCHAR       // 16-bit wide character
+TCHAR       // Character (CHAR or WCHAR depending on UNICODE)
+```
+
+---
+
+## Window Management
+
+### Creating Windows
+
+```c
+// Register window class
+WNDCLASSEXW wc = {0};
+wc.cbSize = sizeof(WNDCLASSEXW);
+wc.lpfnWndProc = WndProc;
+wc.hInstance = hInstance;
+wc.lpszClassName = L"MyWindowClass";
+wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+RegisterClassExW(&wc);
+
+// Create window
+HWND hwnd = CreateWindowExW(
+    0,                          // Extended style
+    L"MyWindowClass",           // Class name
+    L"Window Title",            // Window title
+    WS_OVERLAPPEDWINDOW,        // Style
+    CW_USEDEFAULT, CW_USEDEFAULT,  // Position
+    640, 480,                   // Size
+    NULL,                       // Parent
+    NULL,                       // Menu
+    hInstance,                  // Instance
+    NULL                        // User data
+);
+
+ShowWindow(hwnd, nCmdShow);
+UpdateWindow(hwnd);
+```
+
+### Message Loop
+
+```c
+MSG msg;
+while (GetMessage(&msg, NULL, 0, 0)) {
+    TranslateMessage(&msg);
+    DispatchMessage(&msg);
+}
+return (int)msg.wParam;
+```
+
+### Window Procedure
+
+```c
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+        case WM_CREATE:
+            // Window created
+            return 0;
+            
+        case WM_DESTROY:
+            PostQuitMessage(0);
+            return 0;
+            
+        default:
+            return DefWindowProc(hwnd, msg, wParam, lParam);
+    }
+}
+```
+
+---
+
+## Common Window Messages
+
+```c
+WM_CREATE       // Window being created
+WM_DESTROY      // Window being destroyed
+WM_CLOSE        // User clicked close button
+WM_PAINT        // Window needs repainting
+WM_SIZE         // Window resized
+WM_MOVE         // Window moved
+WM_COMMAND      // Button clicked or menu selected
+WM_NOTIFY       // Control notification
+WM_TIMER        // Timer expired
+WM_KEYDOWN      // Key pressed
+WM_CHAR         // Character input
+WM_LBUTTONDOWN  // Left mouse button down
+WM_RBUTTONDOWN  // Right mouse button down
+WM_MOUSEMOVE    // Mouse moved
+```
+
+---
+
+## Dialog Boxes
+
+### Creating Dialogs
+
+```c
+// Modal dialog
+INT_PTR result = DialogBox(
+    hInstance,
+    MAKEINTRESOURCE(IDD_DIALOG),
+    hwndParent,
+    DialogProc
+);
+
+// Modeless dialog
+HWND hDlg = CreateDialog(
+    hInstance,
+    MAKEINTRESOURCE(IDD_DIALOG),
+    hwndParent,
+    DialogProc
+);
+ShowWindow(hDlg, SW_SHOW);
+```
+
+### Dialog Procedure
+
+```c
+INT_PTR CALLBACK DialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+        case WM_INITDIALOG:
+            return TRUE;  // TRUE = handled
+            
+        case WM_COMMAND:
+            if (LOWORD(wParam) == IDOK) {
+                EndDialog(hwnd, IDOK);
+                return TRUE;
+            }
+            break;
+    }
+    return FALSE;  // FALSE = not handled
+}
+```
+
+### Dialog Functions
+
+```c
+// Get/Set text
+GetDlgItemTextW(hwnd, IDC_EDIT, buffer, bufferSize);
+SetDlgItemTextW(hwnd, IDC_EDIT, L"Text");
+
+// Get/Set integer
+SetDlgItemInt(hwnd, IDC_EDIT, 42, FALSE);
+UINT value = GetDlgItemInt(hwnd, IDC_EDIT, NULL, FALSE);
+
+// Check boxes
+CheckDlgButton(hwnd, IDC_CHECK, BST_CHECKED);
+UINT state = IsDlgButtonChecked(hwnd, IDC_CHECK);
+
+// Get control handle
+HWND hControl = GetDlgItem(hwnd, IDC_BUTTON);
+```
+
+---
+
+## Common Controls
+
+### ListView
+
+```c
+// Create columns
+LVCOLUMN col = {0};
+col.mask = LVCF_TEXT | LVCF_WIDTH;
+col.pszText = L"Column";
+col.cx = 150;
+ListView_InsertColumn(hList, 0, &col);
+
+// Add items
+LVITEM item = {0};
+item.mask = LVIF_TEXT;
+item.iItem = 0;
+item.pszText = L"Item";
+ListView_InsertItem(hList, &item);
+
+// Set subitem
+ListView_SetItemText(hList, 0, 1, L"Subitem");
+
+// Get selected item
+int selected = ListView_GetNextItem(hList, -1, LVNI_SELECTED);
+```
+
+### Buttons
+
+```c
+// In WM_COMMAND:
+switch (LOWORD(wParam))
+{
+    case IDC_BUTTON:
+        if (HIWORD(wParam) == BN_CLICKED) {
+            // Button clicked
+        }
+        break;
+}
+```
+
+---
+
+## File Operations
+
+```c
+// Open file
+HANDLE hFile = CreateFileW(
+    L"file.txt",
+    GENERIC_READ | GENERIC_WRITE,
+    0,
+    NULL,
+    OPEN_EXISTING,
+    FILE_ATTRIBUTE_NORMAL,
+    NULL
+);
+
+if (hFile == INVALID_HANDLE_VALUE) {
+    // Error
+}
+
+// Read file
+DWORD bytesRead;
+char buffer[1024];
+ReadFile(hFile, buffer, sizeof(buffer), &bytesRead, NULL);
+
+// Write file
+DWORD bytesWritten;
+WriteFile(hFile, data, dataSize, &bytesWritten, NULL);
+
+// Close file
+CloseHandle(hFile);
+```
+
+---
+
+## Registry Operations
+
+```c
+// Open key
+HKEY hKey;
+RegOpenKeyExW(HKEY_CURRENT_USER, L"Software\\MyApp", 0, KEY_READ, &hKey);
+
+// Read string
+wchar_t value[256];
+DWORD size = sizeof(value);
+RegQueryValueExW(hKey, L"Setting", NULL, NULL, (LPBYTE)value, &size);
+
+// Write string
+RegSetValueExW(hKey, L"Setting", 0, REG_SZ, (BYTE*)value,
+               (wcslen(value) + 1) * sizeof(wchar_t));
+
+// Read DWORD
+DWORD dwValue;
+DWORD dwSize = sizeof(DWORD);
+RegQueryValueExW(hKey, L"Number", NULL, NULL, (LPBYTE)&dwValue, &dwSize);
+
+// Write DWORD
+RegSetValueExW(hKey, L"Number", 0, REG_DWORD, (BYTE*)&dwValue, sizeof(DWORD));
+
+// Close key
+RegCloseKey(hKey);
+```
+
+---
+
+## Memory Management
+
+```c
+// Allocate
+void* ptr = malloc(size);
+if (ptr == NULL) {
+    // Out of memory
+}
+
+// Reallocate
+void* newPtr = realloc(ptr, newSize);
+if (newPtr == NULL) {
+    // Error, original pointer still valid
+    free(ptr);
+} else {
+    ptr = newPtr;
+}
+
+// Free
+free(ptr);
+ptr = NULL;  // Good practice
+```
+
+---
+
+## String Functions
+
+### ANSI Strings
+```c
+strlen(str)                 // Length
+strcpy(dest, src)           // Copy
+strcat(dest, src)           // Concatenate
+strcmp(str1, str2)          // Compare (0 = equal)
+strstr(haystack, needle)    // Find substring
+```
+
+### Wide Strings
+```c
+wcslen(str)                 // Length
+wcscpy(dest, src)           // Copy
+wcscat(dest, src)           // Concatenate
+wcscmp(str1, str2)          // Compare
+wcsstr(haystack, needle)    // Find substring
+```
+
+### Safe Versions
+```c
+strcpy_s(dest, destSize, src)
+strcat_s(dest, destSize, src)
+wcscpy_s(dest, destSize, src)
+wcscat_s(dest, destSize, src)
+```
+
+---
+
+## Error Handling
+
+```c
+// Get last error
+DWORD error = GetLastError();
+
+// Format error message
+wchar_t errorMsg[256];
+FormatMessageW(
+    FORMAT_MESSAGE_FROM_SYSTEM,
+    NULL,
+    error,
+    0,
+    errorMsg,
+    256,
+    NULL
+);
+
+// Display error
+MessageBoxW(NULL, errorMsg, L"Error", MB_OK | MB_ICONERROR);
+```
+
+---
+
+## Common Window Styles
+
+```c
+// Window styles
+WS_OVERLAPPEDWINDOW    // Standard window
+WS_POPUP               // Popup window
+WS_CHILD               // Child window
+WS_VISIBLE             // Initially visible
+WS_DISABLED            // Initially disabled
+
+// Extended styles
+WS_EX_TOPMOST          // Always on top
+WS_EX_TOOLWINDOW       // Tool window
+WS_EX_CLIENTEDGE       // Sunken edge
+```
+
+---
+
+## MessageBox Flags
+
+```c
+// Buttons
+MB_OK                  // OK button
+MB_OKCANCEL            // OK and Cancel
+MB_YESNO               // Yes and No
+MB_YESNOCANCEL         // Yes, No, Cancel
+MB_RETRYCANCEL         // Retry and Cancel
+
+// Icons
+MB_ICONERROR           // Error icon
+MB_ICONWARNING         // Warning icon
+MB_ICONINFORMATION     // Info icon
+MB_ICONQUESTION        // Question icon
+
+// Default button
+MB_DEFBUTTON1          // First button default
+MB_DEFBUTTON2          // Second button default
+```
+
+---
+
+## Useful Macros
+
+```c
+// Extract values from messages
+LOWORD(value)          // Low 16 bits
+HIWORD(value)          // High 16 bits
+MAKEWORD(low, high)    // Combine into WORD
+MAKELONG(low, high)    // Combine into LONG
+
+// Resource handling
+MAKEINTRESOURCE(id)    // Convert ID to resource pointer
+
+// Color
+RGB(r, g, b)           // Create COLORREF
+GetRValue(color)       // Extract red
+GetGValue(color)       // Extract green
+GetBValue(color)       // Extract blue
+```
+
+---
+
+This quick reference covers the most frequently used Windows API elements. For complete documentation, refer to the Microsoft Docs: https://docs.microsoft.com/en-us/windows/win32/
+
+---
+
+# Appendix D: Further Learning Resources
+
+This appendix provides curated resources for continuing your C and Windows programming journey.
+
+## Books
+
+### C Programming
+
+**"The C Programming Language" by Kernighan & Ritchie**
+- ✅ THE definitive C book
+- ✅ Written by C's creator
+- ✅ Concise and precise
+- 📖 Often called "K&R"
+- 💡 Essential reference
+
+**"C Programming: A Modern Approach" by K.N. King**
+- ✅ Comprehensive and beginner-friendly
+- ✅ Covers C99 and C11
+- ✅ Excellent exercises
+- 📖 Great for self-study
+- 💡 More detailed than K&R
+
+**"Expert C Programming: Deep C Secrets" by Peter van der Linden**
+- ✅ Advanced topics
+- ✅ Fun and engaging writing
+- ✅ War stories from Sun Microsystems
+- 📖 For experienced programmers
+- 💡 Explains the "why" behind C
+
+### Windows Programming
+
+**"Programming Windows" by Charles Petzold**
+- ✅ THE classic Windows programming book
+- ✅ Comprehensive coverage
+- ✅ Clear explanations
+- 📖 Multiple editions available
+- 💡 Bible of Windows development
+
+**"Windows via C/C++" by Jeffrey Richter**
+- ✅ Deep dive into Windows internals
+- ✅ Process, threads, memory
+- ✅ Advanced topics
+- 📖 For serious Windows developers
+- 💡 Understand how Windows works
+
+**"Windows System Programming" by Johnson M. Hart**
+- ✅ Practical focus
+- ✅ Covers Win32 API extensively
+- ✅ Good examples
+- 📖 Modern approach
+- 💡 Real-world applications
+
+---
+
+## Online Resources
+
+### Official Microsoft Documentation
+
+**Microsoft Docs (docs.microsoft.com)**
+- https://docs.microsoft.com/en-us/windows/win32/
+- ✅ Official API reference
+- ✅ Always up-to-date
+- ✅ Code examples
+- ✅ Best practices
+- 💡 Bookmark this!
+
+**Windows API Index**
+- https://docs.microsoft.com/en-us/windows/win32/apiindex/windows-api-list
+- Complete alphabetical list of all functions
+
+### Tutorials and Learning Sites
+
+**theForger's Win32 API Tutorial**
+- http://www.winprog.org/tutorial/
+- ✅ Excellent beginner tutorial
+- ✅ Step-by-step approach
+- ✅ Complete and free
+- 💡 Great starting point
+
+**Learn C**
+- https://www.learn-c.org/
+- Interactive C tutorial
+- Practice in browser
+- Good for basics
+
+**C Programming Tutorial (Programiz)**
+- https://www.programiz.com/c-programming
+- Clear explanations
+- Code examples
+- Practice exercises
+
+---
+
+## Video Courses
+
+### YouTube Channels
+
+**The Cherno (C++ focus but great fundamentals)**
+- https://www.youtube.com/c/TheChernoProject
+- Deep dives into C/C++
+- Professional quality
+- Visual Studio tips
+
+**ChiliTomatoNoodle (DirectX and game dev)**
+- https://www.youtube.com/c/ChiliTomatoNoodle
+- Windows graphics programming
+- Fun and engaging
+- Game development
+
+**Jacob Sorber (C and systems programming)**
+- https://www.youtube.com/c/JacobSorber
+- Excellent C tutorials
+- Systems programming
+- Short, focused videos
+
+### Online Course Platforms
+
+**Udemy**
+- Search for "C Programming"
+- Look for high-rated courses
+- Wait for sales ($10-15)
+- Lifetime access
+
+**Pluralsight**
+- Professional courses
+- Subscription model
+- High quality
+- Free trial available
+
+---
+
+## Communities and Forums
+
+### Stack Overflow
+- https://stackoverflow.com/questions/tagged/c
+- https://stackoverflow.com/questions/tagged/winapi
+- ✅ Get help with specific problems
+- ✅ Search before asking
+- ✅ Millions of answered questions
+- 💡 Include minimal, complete examples
+
+### Reddit
+
+**r/C_Programming**
+- https://www.reddit.com/r/C_Programming/
+- Active community
+- Beginner-friendly
+- Code reviews
+
+**r/learnprogramming**
+- https://www.reddit.com/r/learnprogramming/
+- General programming help
+- Supportive community
+- Good for beginners
+
+### Discord Servers
+
+**The Programmer's Hangout**
+- https://discord.gg/programming
+- Active help channels
+- Friendly community
+- Real-time chat
+
+**C/C++ Discord**
+- Various servers available
+- Search "C programming discord"
+- Real-time help
+
+---
+
+## Development Tools
+
+### Compilers and IDEs
+
+**Visual Studio Community (Free)**
+- https://visualstudio.microsoft.com/vs/community/
+- Professional IDE
+- Excellent debugger
+- Windows development
+
+**VS Code (Free)**
+- https://code.visualstudio.com/
+- Lightweight editor
+- Great extensions
+- Cross-platform
+
+**Code::Blocks (Free)**
+- http://www.codeblocks.org/
+- Beginner-friendly IDE
+- Built for C/C++
+- Cross-platform
+
+### Debugging Tools
+
+**Visual Studio Debugger**
+- Built into VS
+- Best Windows debugger
+- Memory inspection
+- Call stacks
+
+**GDB (GNU Debugger)**
+- https://www.gnu.org/software/gdb/
+- Command-line debugger
+- Powerful and flexible
+- Works with GCC
+
+**DebugView (Sysinternals)**
+- https://docs.microsoft.com/en-us/sysinternals/
+- View OutputDebugString messages
+- System-wide debugging
+- Free from Microsoft
+
+**Dependency Walker**
+- https://www.dependencywalker.com/
+- See DLL dependencies
+- Find missing DLLs
+- Debug load failures
+
+---
+
+## Practice and Projects
+
+### Project Ideas
+
+**Beginner Projects:**
+1. Calculator
+2. Todo list manager
+3. File encryption tool
+4. Password generator
+5. Alarm clock
+
+**Intermediate Projects:**
+1. File manager
+2. Text editor
+3. Network chat client
+4. Registry editor
+5. Process monitor
+
+**Advanced Projects:**
+1. Custom shell
+2. Debugger
+3. Virtual machine
+4. Compiler
+5. Operating system kernel
+
+### Coding Challenge Sites
+
+**LeetCode**
+- https://leetcode.com/
+- Algorithm problems
+- Interview prep
+- Various difficulties
+
+**HackerRank**
+- https://www.hackerrank.com/
+- C programming track
+- Certificates available
+- Good for practice
+
+**Project Euler**
+- https://projecteuler.net/
+- Mathematical problems
+- Use C to solve
+- Great for algorithms
+
+---
+
+## Blogs and Articles
+
+**Raymond Chen's "The Old New Thing"**
+- https://devblogs.microsoft.com/oldnewthing/
+- ✅ Windows internals expert
+- ✅ Daily posts
+- ✅ Historical context
+- 💡 Fascinating insights
+
+**Joel on Software**
+- https://www.joelonsoftware.com/
+- Software development wisdom
+- Well-written
+- Industry perspectives
+
+**Code Project**
+- https://www.codeproject.com/
+- Tutorials and articles
+- Source code examples
+- Active community
+
+---
+
+## Windows API Specific
+
+### MSDN Resources
+
+**Windows API Reference**
+- https://docs.microsoft.com/en-us/windows/win32/api/
+
+**Windows Development Guide**
+- https://docs.microsoft.com/en-us/windows/apps/develop/
+
+**Code Samples**
+- https://github.com/microsoft/Windows-classic-samples
+
+### Tools
+
+**Resource Hacker**
+- http://www.angusj.com/resourcehacker/
+- Edit .rc files visually
+- Inspect resources
+- Free tool
+
+**PE Explorer**
+- https://www.heaventools.com/
+- Inspect EXE files
+- Resource editing
+- Disassembly
+
+---
+
+## Advanced Topics
+
+### When You're Ready
+
+**Operating Systems**
+- "Operating Systems: Three Easy Pieces" (free online)
+- Understand OS concepts
+- Virtual memory, processes, threads
+
+**Computer Architecture**
+- "Computer Systems: A Programmer's Perspective"
+- How computers work
+- Assembly language
+- Memory hierarchy
+
+**Algorithms**
+- "Introduction to Algorithms" (CLRS)
+- Algorithm analysis
+- Data structures
+- Essential for serious programming
+
+---
+
+## Open Source Projects to Study
+
+### Small to Medium Projects
+
+**SQLite**
+- https://www.sqlite.org/
+- Well-written C code
+- Database engine
+- Excellent documentation
+
+**Redis**
+- https://github.com/redis/redis
+- In-memory database
+- Clean C code
+- Great to study
+
+**NotepadNext**
+- https://github.com/dail8859/NotepadNext
+- Text editor
+- Windows API usage
+- Active project
+
+### Windows Projects
+
+**Process Hacker**
+- https://github.com/processhacker/processhacker
+- Advanced task manager
+- Deep Windows API usage
+- Well-structured
+
+**7-Zip**
+- https://www.7-zip.org/
+- File archiver
+- C and C++ mixed
+- High performance
+
+---
+
+## Staying Current
+
+### News and Updates
+
+**Hacker News**
+- https://news.ycombinator.com/
+- Tech news aggregator
+- Programming discussions
+- Industry trends
+
+**r/programming**
+- https://www.reddit.com/r/programming/
+- Programming news
+- Discussions
+- Various languages
+
+### Podcasts
+
+**Coding Blocks**
+- Software engineering topics
+- Clean code principles
+- Entertaining format
+
+**Programming Throwdown**
+- Different languages each episode
+- Interview prep
+- Industry topics
+
+---
+
+## Career Development
+
+### Portfolio Building
+
+**GitHub**
+- https://github.com/
+- Host your projects
+- Show your code
+- Contribute to open source
+
+**Personal Website**
+- Blog about your learning
+- Showcase projects
+- Document solutions
+- Build your brand
+
+### Interview Preparation
+
+**Cracking the Coding Interview**
+- Classic interview prep book
+- Algorithm problems
+- Practice questions
+
+**LeetCode**
+- Technical interview questions
+- Company-specific questions
+- Mock interviews
+
+---
+
+## Final Advice
+
+### Learning Path
+
+1. **Master the Basics** - Don't rush fundamentals
+2. **Build Projects** - Apply what you learn
+3. **Read Code** - Study well-written programs
+4. **Join Communities** - Learn from others
+5. **Keep Practicing** - Programming is a skill
+6. **Stay Curious** - Technology always evolves
+
+### Best Practices
+
+- ✅ Code every day
+- ✅ Read documentation
+- ✅ Write clean code
+- ✅ Comment your code
+- ✅ Test thoroughly
+- ✅ Learn from mistakes
+- ✅ Share knowledge
+- ✅ Never stop learning
+
+### Remember
+
+> "The only way to learn a new programming language is by writing programs in it."
+> — Dennis Ritchie, creator of C
+
+**You've completed this book - now go build amazing things!** 🚀
+
+---
+
+# End of Book
+
+**Congratulations!** You've completed "Building Real Windows Applications in C"!
+
+You now have:
+- ✅ Solid C programming foundation
+- ✅ Windows API expertise
+- ✅ Complete working application
+- ✅ Professional development skills
+- ✅ Portfolio-worthy project
+
+## What You've Achieved
+
+Throughout this book, you've learned:
+- **C Language:** Pointers, memory, structures, files, and more
+- **Windows API:** Messages, dialogs, controls, registry, credentials
+- **Real Application:** Built WinRDP from scratch with modern features
+- **Best Practices:** Error handling, Unicode, security, testing
+- **Distribution:** Build scripts, installers, professional deployment
+
+## Your Next Steps
+
+1. **Extend WinRDP** - Add your own features
+2. **Start New Projects** - Apply what you've learned
+3. **Contribute to Open Source** - Share your knowledge
+4. **Keep Learning** - Explore advanced topics from Appendix D
+5. **Help Others** - Teach someone else C programming
+
+## Thank You
+
+Thank you for working through this book. C programming and Windows API development are powerful skills that will serve you well throughout your programming career.
+
+The journey doesn't end here—it's just the beginning of what you can build with C and Windows!
+
+**Keep coding, keep learning, and keep building amazing things!** 🚀
+
+---
+
+**Book Complete:** November 4, 2025  
+**Total Chapters:** 34 (30 main chapters + 4 appendices)  
+**Completion:** 100% ✅  
+**Lines of Content:** ~21,800  
+**Your Achievement:** Complete!  
+
+**🎊 CONGRATULATIONS ON COMPLETING THE BOOK! 🎊**
 
