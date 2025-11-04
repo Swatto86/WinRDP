@@ -2,6 +2,26 @@
 
 All notable changes to WinRDP will be documented in this file.
 
+## [1.0.1] - December 2025 - Bug Fix Release
+
+### Fixed
+- **Critical Autostart Bug** - Fixed empty server list when application auto-starts with Windows
+  - Server list now loads correctly regardless of current working directory
+  - Changed from relative path (`hosts.csv`) to absolute path based on executable location
+  - Uses `GetModuleFileNameW()` to ensure file is always found in executable directory
+  - Fixes issue where autostart worked but server list appeared empty
+
+### Added
+- **Example hosts.csv** - Included sample server entries for first-time users
+  - File is automatically installed with example entries
+  - Users can modify or delete entries through the application UI
+
+### Changed
+- Updated file path handling to use absolute paths for hosts.csv
+- Improved reliability for autostart scenarios
+
+---
+
 ## [1.0.0] - December 2025 - Professional Release
 
 ### Added

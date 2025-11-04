@@ -9,7 +9,7 @@
 
 // Application information
 #define APP_NAME                L"WinRDP"
-#define APP_VERSION             L"1.0.0"
+#define APP_VERSION             L"1.0.1"
 #define APP_CLASS_NAME          L"WinRDPWindowClass"
 #define APP_WINDOW_TITLE        L"WinRDP Manager"
 

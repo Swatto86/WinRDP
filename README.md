@@ -101,7 +101,7 @@ The `build.bat` script will automatically detect whether you have GCC (MinGW) or
 .\build-installer.bat
 ```
 
-This creates `WinRDP-Setup-1.0.0.exe` - a professional installer ready for distribution.
+This creates `WinRDP-Setup-1.0.1.exe` - a professional installer ready for distribution.
 
 See [BUILD.md](BUILD.md) for detailed installation and build instructions.
 
@@ -308,7 +308,7 @@ This is a learning project released into the public domain. Feel free to use, mo
 ## 📦 Distribution
 
 WinRDP includes a professional NSIS installer for easy distribution:
-- Download `WinRDP-Setup-1.0.0.exe`
+- Download `WinRDP-Setup-1.0.1.exe`
 - Double-click to install
 - Access via system tray or Start Menu
 - View "About" from tray menu for author credit

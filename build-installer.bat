@@ -49,7 +49,7 @@ echo ================================================
 echo.
 echo Files created:
 echo   - build\WinRDP.exe (application)
-echo   - WinRDP-Setup-1.0.0.exe (installer)
+echo   - WinRDP-Setup-1.0.1.exe (installer)
 echo.
 pause
 
