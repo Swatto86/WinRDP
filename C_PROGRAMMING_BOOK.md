@@ -9881,3 +9881,2091 @@ You now have all the Windows programming knowledge needed to build real applicat
 Ready to build something real? Let's continue! 🚀
 
 ---
+
+# PART IV: BUILDING WINRDP CORE
+
+This is where everything comes together! In the next 8 chapters, you'll build WinRDP from the ground up, module by module. Each chapter adds a working feature to the application.
+
+**What You'll Build:**
+- Chapter 17: Project structure and architecture
+- Chapter 18: Configuration and utility functions
+- Chapter 19: CSV file management for host lists
+- Chapter 20: Secure credential storage
+- Chapter 21: Main application window with system tray
+- Chapter 22: ListView control to display hosts
+- Chapter 23: RDP connection functionality
+- Chapter 24: Complete system tray integration
+
+By the end of Part IV, you'll have a **fully functional RDP connection manager**!
+
+---
+
+# Chapter 17: Project Setup and Architecture
+
+## Introduction
+
+You've learned C fundamentals, advanced concepts, and Windows programming basics. Now it's time to apply all that knowledge to build WinRDP - a complete, professional Windows application.
+
+In this chapter, you'll:
+- Understand WinRDP's architecture and design decisions
+- Set up the project structure
+- Create header files for configuration
+- Learn how modules work together
+- Build your first version (a skeleton that compiles)
+
+**By the end of this chapter**, you'll have a compiling project ready to add features to!
+
+## Understanding WinRDP's Architecture
+
+### What Does WinRDP Do?
+
+WinRDP is a **Remote Desktop Connection Manager** that:
+1. Stores a list of RDP servers (hostnames and descriptions)
+2. Saves credentials securely using Windows Credential Manager
+3. Lives in the system tray for quick access
+4. Launches RDP connections with one click
+5. Supports features like dark mode, hotkeys, and network scanning
+
+### The Modular Design
+
+WinRDP is organized into **8 modules**, each with a specific responsibility:
+
+```
+WinRDP Architecture
+│
+├── main.c              - Application entry point, main window, dialogs
+├── config.h            - Configuration constants and macros
+├── utils.c             - Helper functions (CenterWindow, ShowError, etc.)
+├── hosts.c             - Host list management (Load, Save, Add, Remove)
+├── credentials.c       - Secure password storage (Windows Credential Manager)
+├── rdp.c               - RDP connection logic (create .rdp files, launch)
+├── registry.c          - Windows Registry operations (autostart feature)
+├── adscan.c            - Network computer discovery
+└── darkmode.c          - Dark mode theme support
+```
+
+**Why modular?**
+- **Easier to understand**: Each file has a clear purpose
+- **Easier to test**: Test one module at a time
+- **Easier to extend**: Add features without breaking existing code
+- **Professional**: Real applications are organized this way
+
+### Data Flow Example: Connecting to a Server
+
+Let's trace what happens when you double-click a server:
+
+```
+User double-clicks "Production Server" in ListView
+             ↓
+    main.c (WM_NOTIFY handler)
+             ↓
+    Gets selected hostname → "server1.example.com"
+             ↓
+    credentials.c: LoadCredentials("server1.example.com")
+             ↓
+    Returns username/password from Windows Credential Manager
+             ↓
+    rdp.c: LaunchRDPWithDefaults(hostname, username, password)
+             ↓
+    Creates temporary .rdp file with connection settings
+             ↓
+    Launches mstsc.exe (Windows RDP client)
+             ↓
+    You're connected!
+```
+
+Each module has a specific job, and they work together seamlessly.
+
+## Project Structure
+
+### Directory Layout
+
+```
+WinRDP/
+│
+├── src/                      - Source code directory
+│   ├── main.c                - Application entry point
+│   ├── config.h              - Configuration and constants
+│   ├── utils.c               - Utility functions
+│   ├── hosts.c               - Host management
+│   ├── hosts.h               - Host module interface
+│   ├── credentials.c         - Credential storage
+│   ├── credentials.h         - Credentials module interface
+│   ├── rdp.c                 - RDP connection logic
+│   ├── rdp.h                 - RDP module interface
+│   ├── registry.c            - Registry operations
+│   ├── registry.h            - Registry module interface
+│   ├── adscan.c              - Network scanning
+│   ├── adscan.h              - AD scan module interface
+│   ├── darkmode.c            - Dark mode support
+│   ├── darkmode.h            - Dark mode module interface
+│   ├── resource.h            - Resource IDs (dialogs, icons, menus)
+│   ├── resources.rc          - Resource definitions
+│   ├── app.manifest          - Application manifest (DPI awareness)
+│   └── app.ico               - Application icon
+│
+├── build.bat                 - Build script
+├── installer.nsi             - NSIS installer script
+└── README.md                 - Project documentation
+```
+
+### Header Files (.h) vs Implementation Files (.c)
+
+**Header files** (.h) declare:
+- Function prototypes
+- Structure definitions
+- Constants that other modules need
+
+**Implementation files** (.c) contain:
+- Actual function implementations
+- Internal (static) helper functions
+- The logic that does the work
+
+**Example:**
+
+```c
+// hosts.h - Interface (what other modules can use)
+#ifndef HOSTS_H
+#define HOSTS_H
+
+#include <windows.h>
+
+typedef struct {
+    wchar_t hostname[256];
+    wchar_t description[256];
+} Host;
+
+Host* LoadHosts(int* count);
+void SaveHosts(Host* hosts, int count);
+void FreeHosts(Host* hosts);
+
+#endif
+```
+
+```c
+// hosts.c - Implementation (how it actually works)
+#include "hosts.h"
+#include <stdio.h>
+#include <stdlib.h>
+
+// Internal helper function (static = only visible in this file)
+static void TrimWhitespace(wchar_t* str)
+{
+    // Implementation...
+}
+
+// Public function (declared in hosts.h)
+Host* LoadHosts(int* count)
+{
+    // Implementation that other modules can call
+}
+```
+
+**Why separate them?**
+- Other modules include the `.h` file to know what functions are available
+- The `.c` file can change internally without affecting other modules
+- Reduces compilation dependencies (faster builds)
+
+## Creating config.h: Application Configuration
+
+`config.h` is the first file we'll create. It contains:
+- Application name and version
+- Window dimensions and styles
+- Resource IDs
+- System tray configuration
+- File paths
+
+### config.h Implementation
+
+Create `src/config.h`:
+
+```c
+#ifndef CONFIG_H
+#define CONFIG_H
+
+#include <windows.h>
+
+// ============================================================================
+// APPLICATION INFORMATION
+// ============================================================================
+
+#define APP_NAME        L"WinRDP"
+#define APP_VERSION     L"1.0.0"
+#define APP_AUTHOR      L"Your Name"
+#define APP_COPYRIGHT   L"Copyright © 2024"
+
+// ============================================================================
+// WINDOW CONFIGURATION
+// ============================================================================
+
+// Main window dimensions
+#define MAIN_WINDOW_WIDTH   600
+#define MAIN_WINDOW_HEIGHT  400
+
+// Dialog dimensions
+#define LOGIN_DLG_WIDTH     350
+#define LOGIN_DLG_HEIGHT    200
+
+// Main window class name
+#define MAIN_WINDOW_CLASS   L"WinRDP_MainWindow"
+
+// ============================================================================
+// RESOURCE IDs
+// ============================================================================
+
+// Icons
+#define IDI_APP             100
+
+// Dialogs
+#define IDD_LOGIN           101
+#define IDD_MAIN            102
+
+// Menu IDs
+#define ID_TRAY_OPEN        200
+#define ID_TRAY_EXIT        201
+#define ID_TRAY_ABOUT       202
+#define ID_TRAY_AUTOSTART   203
+
+// Control IDs
+#define IDC_USERNAME        1001
+#define IDC_PASSWORD        1002
+#define IDC_REMEMBER        1003
+#define IDC_HOSTLIST        1004
+#define IDC_ADD_HOST        1005
+#define IDC_REMOVE_HOST     1006
+#define IDC_CONNECT         1007
+#define IDC_HOSTNAME        1008
+#define IDC_DESCRIPTION     1009
+#define IDC_SCAN_NETWORK    1010
+
+// ============================================================================
+// SYSTEM TRAY CONFIGURATION
+// ============================================================================
+
+// Custom message for system tray
+#define WM_TRAYICON         (WM_USER + 1)
+
+// System tray icon ID
+#define TRAY_ICON_ID        1
+
+// ============================================================================
+// HOTKEY CONFIGURATION
+// ============================================================================
+
+// Global hotkey ID
+#define HOTKEY_SHOW         1
+
+// Default: Ctrl+Shift+R
+#define HOTKEY_MODIFIERS    (MOD_CONTROL | MOD_SHIFT)
+#define HOTKEY_VK           'R'
+
+// ============================================================================
+// FILE PATHS
+// ============================================================================
+
+// Host list CSV file (in user's Documents folder)
+#define HOSTS_FILENAME      L"winrdp_hosts.csv"
+
+// Credential target prefix (for Windows Credential Manager)
+#define CRED_TARGET_PREFIX  L"WinRDP:"
+
+// ============================================================================
+// REGISTRY PATHS
+// ============================================================================
+
+// Autostart registry key
+#define AUTOSTART_KEY       L"Software\\Microsoft\\Windows\\CurrentVersion\\Run"
+#define AUTOSTART_VALUE     L"WinRDP"
+
+// ============================================================================
+// APPLICATION BEHAVIOR
+// ============================================================================
+
+// Maximum hosts in list
+#define MAX_HOSTS           1000
+
+// CSV line buffer size
+#define CSV_LINE_SIZE       1024
+
+// RDP file template path
+#define RDP_TEMP_FILE       L"%TEMP%\\winrdp_temp.rdp"
+
+// ============================================================================
+// UTILITY MACROS
+// ============================================================================
+
+// Safe string copy (prevents buffer overflow)
+#define SAFE_STRCPY(dest, src) \
+    wcsncpy_s(dest, _countof(dest), src, _TRUNCATE)
+
+// Safe string concatenate
+#define SAFE_STRCAT(dest, src) \
+    wcsncat_s(dest, _countof(dest), src, _TRUNCATE)
+
+// Get array element count
+#define ARRAYSIZE(arr)  (sizeof(arr) / sizeof(arr[0]))
+
+#endif // CONFIG_H
+```
+
+### Understanding config.h
+
+Let's break down the key sections:
+
+**1. Application Information**
+```c
+#define APP_NAME        L"WinRDP"
+#define APP_VERSION     L"1.0.0"
+```
+- Used in window titles, about dialogs, error messages
+- The `L` prefix means **wide string** (Unicode)
+
+**2. Resource IDs**
+```c
+#define IDI_APP             100
+#define IDD_LOGIN           101
+```
+- Numeric IDs for resources (icons, dialogs, menus)
+- Must be unique across the application
+- Grouped logically (icons 100-199, dialogs 101-199, etc.)
+
+**3. System Tray Configuration**
+```c
+#define WM_TRAYICON         (WM_USER + 1)
+```
+- Custom Windows message for system tray clicks
+- `WM_USER + 1` ensures it doesn't conflict with standard messages
+
+**4. Utility Macros**
+```c
+#define SAFE_STRCPY(dest, src) \
+    wcsncpy_s(dest, _countof(dest), src, _TRUNCATE)
+```
+- Helper macros used throughout the code
+- `SAFE_STRCPY` prevents buffer overflows
+- `_TRUNCATE` safely handles strings that are too long
+
+**Why use #define for constants?**
+- Easy to change in one place
+- Compiler replaces them at compile time (no runtime cost)
+- Makes code more readable: `MAIN_WINDOW_WIDTH` vs `600`
+
+## Resource Files: The GUI Definition
+
+Windows applications use **resource files** (.rc) to define:
+- Dialogs and their controls
+- Menus
+- Icons and bitmaps
+- Version information
+- Strings
+
+### resource.h: Resource IDs
+
+Create `src/resource.h`:
+
+```c
+#ifndef RESOURCE_H
+#define RESOURCE_H
+
+// This file is included by both C code and resource compiler (rc.exe)
+// Keep it simple - only #define statements
+
+// Icons
+#define IDI_APP             100
+
+// Dialogs
+#define IDD_LOGIN           101
+#define IDD_MAIN            102
+#define IDD_ADD_HOST        103
+
+// Menus
+#define IDM_TRAY_MENU       200
+
+// Menu items
+#define ID_TRAY_OPEN        201
+#define ID_TRAY_EXIT        202
+#define ID_TRAY_ABOUT       203
+#define ID_TRAY_AUTOSTART   204
+
+// Controls (must match config.h)
+#define IDC_USERNAME        1001
+#define IDC_PASSWORD        1002
+#define IDC_REMEMBER        1003
+#define IDC_HOSTLIST        1004
+#define IDC_ADD_HOST        1005
+#define IDC_REMOVE_HOST     1006
+#define IDC_CONNECT         1007
+#define IDC_HOSTNAME        1008
+#define IDC_DESCRIPTION     1009
+#define IDC_SCAN_NETWORK    1010
+
+#endif // RESOURCE_H
+```
+
+### resources.rc: Dialog Definitions
+
+Create `src/resources.rc`:
+
+```rc
+#include "resource.h"
+#include <windows.h>
+
+// ============================================================================
+// ICONS
+// ============================================================================
+
+IDI_APP ICON "app.ico"
+
+// ============================================================================
+// MENUS
+// ============================================================================
+
+IDM_TRAY_MENU MENU
+BEGIN
+    POPUP "TrayMenu"
+    BEGIN
+        MENUITEM "Open WinRDP",         ID_TRAY_OPEN
+        MENUITEM "Start with Windows",  ID_TRAY_AUTOSTART
+        MENUITEM SEPARATOR
+        MENUITEM "About",               ID_TRAY_ABOUT
+        MENUITEM "Exit",                ID_TRAY_EXIT
+    END
+END
+
+// ============================================================================
+// DIALOGS
+// ============================================================================
+
+// Login Dialog
+IDD_LOGIN DIALOGEX 0, 0, 250, 140
+STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "WinRDP - Login"
+FONT 9, "Segoe UI"
+BEGIN
+    LTEXT           "Username:",IDC_STATIC,20,20,80,12
+    EDITTEXT        IDC_USERNAME,20,35,210,14,ES_AUTOHSCROLL
+    
+    LTEXT           "Password:",IDC_STATIC,20,55,80,12
+    EDITTEXT        IDC_PASSWORD,20,70,210,14,ES_PASSWORD | ES_AUTOHSCROLL
+    
+    CONTROL         "Remember credentials",IDC_REMEMBER,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,20,95,150,12
+    
+    DEFPUSHBUTTON   "Login",IDOK,80,115,50,16
+    PUSHBUTTON      "Cancel",IDCANCEL,140,115,50,16
+END
+
+// Main Dialog (Host List)
+IDD_MAIN DIALOGEX 0, 0, 500, 350
+STYLE DS_SETFONT | WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | 
+      WS_MINIMIZEBOX | WS_MAXIMIZEBOX
+CAPTION "WinRDP - RDP Connection Manager"
+FONT 9, "Segoe UI"
+BEGIN
+    CONTROL         "",IDC_HOSTLIST,"SysListView32",
+                    LVS_REPORT | LVS_SINGLESEL | WS_BORDER | WS_TABSTOP,
+                    10,10,480,280
+    
+    PUSHBUTTON      "Connect",IDC_CONNECT,10,300,70,24
+    PUSHBUTTON      "Add Host",IDC_ADD_HOST,90,300,70,24
+    PUSHBUTTON      "Remove",IDC_REMOVE_HOST,170,300,70,24
+    PUSHBUTTON      "Scan Network",IDC_SCAN_NETWORK,250,300,90,24
+END
+
+// Add Host Dialog
+IDD_ADD_HOST DIALOGEX 0, 0, 300, 150
+STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Add RDP Host"
+FONT 9, "Segoe UI"
+BEGIN
+    LTEXT           "Hostname or IP:",IDC_STATIC,20,20,100,12
+    EDITTEXT        IDC_HOSTNAME,20,35,260,14,ES_AUTOHSCROLL
+    
+    LTEXT           "Description:",IDC_STATIC,20,60,100,12
+    EDITTEXT        IDC_DESCRIPTION,20,75,260,14,ES_AUTOHSCROLL
+    
+    DEFPUSHBUTTON   "Add",IDOK,100,115,50,16
+    PUSHBUTTON      "Cancel",IDCANCEL,160,115,50,16
+END
+```
+
+### Understanding Resource Files
+
+**DIALOGEX syntax:**
+```rc
+IDD_LOGIN DIALOGEX 0, 0, 250, 140
+        |        |  |   |    |
+        |        |  |   |    Height (dialog units)
+        |        |  |   Width (dialog units)
+        |        |  Y position
+        |        X position
+        Dialog ID
+```
+
+**Control syntax:**
+```rc
+EDITTEXT IDC_USERNAME, 20, 35, 210, 14, ES_AUTOHSCROLL
+      |         |       |   |    |    |       |
+      |         |       |   |    |    |       Styles
+      |         |       |   |    |    Height
+      |         |       |   |    Width
+      |         |       |   Y position
+      |         |       X position
+      |         Control ID
+      Control type
+```
+
+**Common control types:**
+- `LTEXT` - Static text label
+- `EDITTEXT` - Text input box
+- `PUSHBUTTON` - Standard button
+- `DEFPUSHBUTTON` - Default button (Enter key)
+- `CONTROL` - Generic control (ListView, CheckBox, etc.)
+
+**Common styles:**
+- `ES_PASSWORD` - Hide text with bullets (•••)
+- `ES_AUTOHSCROLL` - Allow horizontal scrolling
+- `LVS_REPORT` - ListView in report (details) mode
+- `WS_TABSTOP` - Control is part of tab order
+
+## Application Manifest: Modern Windows Features
+
+Windows applications should include a **manifest file** to:
+- Enable high DPI awareness (sharp text on high-res displays)
+- Declare Windows version compatibility
+- Request administrator privileges (if needed)
+- Enable visual styles
+
+Create `src/app.manifest`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <assemblyIdentity
+    version="1.0.0.0"
+    processorArchitecture="*"
+    name="WinRDP"
+    type="win32"
+  />
+  
+  <description>WinRDP - RDP Connection Manager</description>
+  
+  <!-- Windows version compatibility -->
+  <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
+    <application>
+      <!-- Windows 10 and 11 -->
+      <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}"/>
+      <!-- Windows 8.1 -->
+      <supportedOS Id="{1f676c76-80e1-4239-95bb-83d0f6d0da78}"/>
+      <!-- Windows 8 -->
+      <supportedOS Id="{4a2f28e3-53b9-4441-ba9c-d69d4a4a6e38}"/>
+      <!-- Windows 7 -->
+      <supportedOS Id="{35138b9a-5d96-4fbd-8e2d-a2440225f93a}"/>
+    </application>
+  </compatibility>
+  
+  <!-- DPI awareness (for sharp text on high-res displays) -->
+  <application xmlns="urn:schemas-microsoft-com:asm.v3">
+    <windowsSettings>
+      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">
+        true
+      </dpiAware>
+      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">
+        PerMonitorV2
+      </dpiAwareness>
+    </windowsSettings>
+  </application>
+  
+  <!-- Enable visual styles (modern look and feel) -->
+  <dependency>
+    <dependentAssembly>
+      <assemblyIdentity
+        type="win32"
+        name="Microsoft.Windows.Common-Controls"
+        version="6.0.0.0"
+        processorArchitecture="*"
+        publicKeyToken="6595b64144ccf1df"
+        language="*"
+      />
+    </dependentAssembly>
+  </dependency>
+</assembly>
+```
+
+**Why include a manifest?**
+- Without it, text looks blurry on high-DPI displays
+- Controls use old Windows XP style
+- Application may have compatibility issues
+- Professional applications always include one
+
+## Creating the Build Script
+
+Create `build.bat` in the project root:
+
+```batch
+@echo off
+REM ========================================
+REM WinRDP Build Script
+REM ========================================
+
+echo Building WinRDP...
+
+REM Compiler and options
+set CC=gcc
+set CFLAGS=-O2 -Wall -Wextra -municode -mwindows
+set LIBS=-lcomctl32 -lcomdlg32 -ladvapi32 -lcredui -lnetapi32 -ldwmapi -lshlwapi
+
+REM Resource compiler
+set RC=windres
+
+REM Output
+set OUTPUT=WinRDP.exe
+
+REM Compile resources
+echo Compiling resources...
+%RC% src\resources.rc -O coff -o resources.o
+if %errorlevel% neq 0 (
+    echo Resource compilation failed!
+    exit /b %errorlevel%
+)
+
+REM Compile and link
+echo Compiling and linking...
+%CC% %CFLAGS% ^
+    src\main.c ^
+    src\utils.c ^
+    src\hosts.c ^
+    src\credentials.c ^
+    src\rdp.c ^
+    src\registry.c ^
+    src\adscan.c ^
+    src\darkmode.c ^
+    resources.o ^
+    %LIBS% ^
+    -o %OUTPUT%
+
+if %errorlevel% neq 0 (
+    echo Build failed!
+    exit /b %errorlevel%
+)
+
+REM Clean up
+del resources.o
+
+echo.
+echo Build successful! Output: %OUTPUT%
+echo.
+```
+
+### Understanding the Build Script
+
+**Compiler flags:**
+- `-O2` - Optimize for speed
+- `-Wall -Wextra` - Show all warnings (helps catch bugs)
+- `-municode` - Use Unicode (wWinMain instead of WinMain)
+- `-mwindows` - Build GUI application (not console)
+
+**Libraries to link:**
+- `-lcomctl32` - Common controls (ListView, etc.)
+- `-lcomdlg32` - Common dialogs (Open File, Save File)
+- `-ladvapi32` - Advanced API (Registry)
+- `-lcredui` - Credential Manager
+- `-lnetapi32` - Network API (computer scanning)
+- `-ldwmapi` - Desktop Window Manager (dark mode)
+- `-lshlwapi` - Shell Light-weight API (string functions)
+
+**The `^` character:**
+In batch files, `^` continues a command on the next line (like `\` in C).
+
+## Creating a Minimal Skeleton
+
+Now let's create a minimal `main.c` that compiles successfully:
+
+Create `src/main.c`:
+
+```c
+#include <windows.h>
+#include <commctrl.h>
+#include "config.h"
+#include "resource.h"
+
+// ============================================================================
+// FORWARD DECLARATIONS
+// ============================================================================
+
+INT_PTR CALLBACK LoginDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
+INT_PTR CALLBACK MainDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+// ============================================================================
+// GLOBAL VARIABLES
+// ============================================================================
+
+HINSTANCE g_hInstance = NULL;
+HWND g_hMainDialog = NULL;
+
+// ============================================================================
+// LOGIN DIALOG PROCEDURE
+// ============================================================================
+
+INT_PTR CALLBACK LoginDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    switch (uMsg)
+    {
+        case WM_INITDIALOG:
+        {
+            // Center the dialog
+            RECT rc;
+            GetWindowRect(hDlg, &rc);
+            int x = (GetSystemMetrics(SM_CXSCREEN) - (rc.right - rc.left)) / 2;
+            int y = (GetSystemMetrics(SM_CYSCREEN) - (rc.bottom - rc.top)) / 2;
+            SetWindowPos(hDlg, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+            
+            // Set default username (you can load from Credential Manager later)
+            SetDlgItemTextW(hDlg, IDC_USERNAME, L"");
+            
+            return TRUE;
+        }
+        
+        case WM_COMMAND:
+        {
+            switch (LOWORD(wParam))
+            {
+                case IDOK:
+                {
+                    // TODO: Validate credentials
+                    // For now, just accept anything
+                    EndDialog(hDlg, IDOK);
+                    return TRUE;
+                }
+                
+                case IDCANCEL:
+                {
+                    EndDialog(hDlg, IDCANCEL);
+                    return TRUE;
+                }
+            }
+            break;
+        }
+    }
+    
+    return FALSE;
+}
+
+// ============================================================================
+// MAIN DIALOG PROCEDURE
+// ============================================================================
+
+INT_PTR CALLBACK MainDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    switch (uMsg)
+    {
+        case WM_INITDIALOG:
+        {
+            g_hMainDialog = hDlg;
+            
+            // TODO: Initialize ListView
+            // TODO: Load hosts
+            // TODO: Create system tray icon
+            
+            MessageBoxW(hDlg, L"Main dialog loaded! We'll add features here.",
+                       APP_NAME, MB_OK | MB_ICONINFORMATION);
+            
+            return TRUE;
+        }
+        
+        case WM_COMMAND:
+        {
+            switch (LOWORD(wParam))
+            {
+                case IDC_CONNECT:
+                {
+                    MessageBoxW(hDlg, L"Connect button clicked!\nWe'll implement this in Chapter 23.",
+                               APP_NAME, MB_OK | MB_ICONINFORMATION);
+                    return TRUE;
+                }
+                
+                case IDC_ADD_HOST:
+                {
+                    MessageBoxW(hDlg, L"Add Host button clicked!\nWe'll implement this in Chapter 19.",
+                               APP_NAME, MB_OK | MB_ICONINFORMATION);
+                    return TRUE;
+                }
+            }
+            break;
+        }
+        
+        case WM_CLOSE:
+        {
+            EndDialog(hDlg, 0);
+            return TRUE;
+        }
+    }
+    
+    return FALSE;
+}
+
+// ============================================================================
+// WINMAIN - APPLICATION ENTRY POINT
+// ============================================================================
+
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, 
+                    LPWSTR lpCmdLine, int nCmdShow)
+{
+    // Unused parameters
+    (void)hPrevInstance;
+    (void)lpCmdLine;
+    (void)nCmdShow;
+    
+    g_hInstance = hInstance;
+    
+    // Initialize common controls
+    INITCOMMONCONTROLSEX icc = {0};
+    icc.dwSize = sizeof(icc);
+    icc.dwICC = ICC_LISTVIEW_CLASSES | ICC_TREEVIEW_CLASSES | ICC_BAR_CLASSES;
+    InitCommonControlsEx(&icc);
+    
+    // Show login dialog
+    INT_PTR loginResult = DialogBoxW(hInstance, MAKEINTRESOURCEW(IDD_LOGIN),
+                                     NULL, LoginDialogProc);
+    
+    if (loginResult != IDOK)
+    {
+        // User canceled login
+        return 0;
+    }
+    
+    // Show main dialog
+    DialogBoxW(hInstance, MAKEINTRESOURCEW(IDD_MAIN), NULL, MainDialogProc);
+    
+    return 0;
+}
+```
+
+### Understanding the Skeleton
+
+**1. Header includes:**
+```c
+#include <windows.h>      // Windows API
+#include <commctrl.h>     // Common controls (ListView)
+#include "config.h"       // Our configuration
+#include "resource.h"     // Resource IDs
+```
+
+**2. Global variables:**
+```c
+HINSTANCE g_hInstance = NULL;   // Application instance handle
+HWND g_hMainDialog = NULL;      // Main dialog window handle
+```
+These are global because many Windows functions need them.
+
+**3. wWinMain vs WinMain:**
+```c
+int WINAPI wWinMain(...)  // Unicode version (preferred)
+```
+The `w` prefix means wide characters (Unicode). We use `-municode` flag to enable this.
+
+**4. Dialog flow:**
+```
+wWinMain starts
+    ↓
+DialogBoxW(IDD_LOGIN) - Show login dialog
+    ↓
+User clicks OK → loginResult = IDOK
+    ↓
+DialogBoxW(IDD_MAIN) - Show main dialog
+    ↓
+User closes main dialog
+    ↓
+Application exits
+```
+
+## Building the Skeleton
+
+### Prerequisites
+
+You need:
+- **MinGW-w64** (GCC compiler for Windows)
+- **windres** (Resource compiler, comes with MinGW)
+
+### Building
+
+1. Open Command Prompt
+2. Navigate to project directory:
+   ```
+   cd C:\path\to\WinRDP
+   ```
+3. Run the build script:
+   ```
+   build.bat
+   ```
+
+You should see:
+```
+Building WinRDP...
+Compiling resources...
+Compiling and linking...
+Build successful! Output: WinRDP.exe
+```
+
+### Testing
+
+Run `WinRDP.exe`:
+
+1. **Login dialog appears** - Click OK
+2. **Main dialog appears** - Click buttons to see message boxes
+3. **Close the dialog** - Application exits
+
+**Congratulations!** You have a compiling Windows application skeleton!
+
+## What's Next?
+
+In the next chapters, we'll add functionality:
+
+- **Chapter 18**: Utility functions (CenterWindow, ShowError, etc.)
+- **Chapter 19**: Host management (LoadHosts, SaveHosts)
+- **Chapter 20**: Credential storage (Windows Credential Manager)
+- **Chapter 21**: System tray integration
+- **Chapter 22**: ListView population and selection
+- **Chapter 23**: RDP connection logic
+- **Chapter 24**: Complete system tray with context menu
+
+Each chapter adds working features to this skeleton!
+
+## Exercise 17.1: Customize the Application
+
+Modify `config.h` to customize WinRDP:
+
+1. Change `APP_NAME` to your own name
+2. Change `APP_AUTHOR` to your name
+3. Change `APP_VERSION` to "1.0.0-beta"
+4. Rebuild and verify the changes appear in window titles
+
+**Hint:** You'll see the changes in the dialog captions.
+
+## Exercise 17.2: Add an About Dialog
+
+1. Add a new dialog ID to `resource.h`:
+   ```c
+   #define IDD_ABOUT  104
+   ```
+
+2. Add the dialog to `resources.rc`:
+   ```rc
+   IDD_ABOUT DIALOGEX 0, 0, 250, 150
+   STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+   CAPTION "About WinRDP"
+   FONT 9, "Segoe UI"
+   BEGIN
+       LTEXT "WinRDP v1.0.0", IDC_STATIC, 20, 20, 210, 20
+       LTEXT "RDP Connection Manager", IDC_STATIC, 20, 45, 210, 12
+       LTEXT "Built with C and Win32 API", IDC_STATIC, 20, 65, 210, 12
+       DEFPUSHBUTTON "OK", IDOK, 100, 115, 50, 16
+   END
+   ```
+
+3. Add an "About" button to the main dialog in `resources.rc`
+4. Handle the button click in `MainDialogProc`
+5. Show the About dialog using `DialogBoxW`
+
+**Solution:**
+
+In `MainDialogProc`, add:
+```c
+case IDC_ABOUT:  // Add IDC_ABOUT to resource.h
+{
+    DialogBoxW(g_hInstance, MAKEINTRESOURCEW(IDD_ABOUT), 
+               hDlg, AboutDialogProc);
+    return TRUE;
+}
+```
+
+And implement `AboutDialogProc`:
+```c
+INT_PTR CALLBACK AboutDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    if (uMsg == WM_COMMAND && LOWORD(wParam) == IDOK)
+    {
+        EndDialog(hDlg, IDOK);
+        return TRUE;
+    }
+    return FALSE;
+}
+```
+
+## Exercise 17.3: Add Debug Output
+
+Add a function to show debug messages during development:
+
+```c
+#ifdef _DEBUG
+void DebugLog(const wchar_t* format, ...)
+{
+    wchar_t buffer[1024];
+    va_list args;
+    va_start(args, format);
+    vswprintf_s(buffer, 1024, format, args);
+    va_end(args);
+    
+    OutputDebugStringW(buffer);
+    OutputDebugStringW(L"\n");
+}
+#else
+#define DebugLog(...)  // No-op in release builds
+#endif
+```
+
+Use it in your code:
+```c
+DebugLog(L"Login dialog initialized");
+DebugLog(L"Username: %s", username);
+```
+
+View output with **DebugView** (from Microsoft Sysinternals).
+
+## Common Mistakes
+
+### Mistake 1: Forgetting to Initialize Common Controls
+
+```c
+// WRONG - ListView won't work!
+int WINAPI wWinMain(...)
+{
+    DialogBoxW(...);  // ListView will be blank!
+}
+
+// CORRECT
+int WINAPI wWinMain(...)
+{
+    INITCOMMONCONTROLSEX icc = {0};
+    icc.dwSize = sizeof(icc);
+    icc.dwICC = ICC_LISTVIEW_CLASSES;
+    InitCommonControlsEx(&icc);
+    
+    DialogBoxW(...);
+}
+```
+
+### Mistake 2: Mismatched Resource IDs
+
+```c
+// resource.h
+#define IDC_USERNAME  1001
+
+// resources.rc
+EDITTEXT IDC_USRNAME, 20, 35, 210, 14  // Typo! Wrong ID used
+
+// Result: GetDlgItemText fails silently
+```
+
+**Fix:** Use the constants from `resource.h` in both C code and .rc file.
+
+### Mistake 3: Not Handling Dialog Closure
+
+```c
+// WRONG - Dialog can't be closed!
+INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    switch (uMsg)
+    {
+        case WM_COMMAND:
+            // Handle buttons...
+            break;
+        // Missing WM_CLOSE handler!
+    }
+    return FALSE;
+}
+
+// CORRECT
+case WM_CLOSE:
+{
+    EndDialog(hDlg, 0);
+    return TRUE;
+}
+```
+
+### Mistake 4: Wrong Dialog Procedure Return Values
+
+```c
+// WRONG
+INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    switch (uMsg)
+    {
+        case WM_INITDIALOG:
+            // Do initialization...
+            return FALSE;  // WRONG! Should return TRUE
+    }
+    return TRUE;  // WRONG! Should return FALSE for unhandled messages
+}
+
+// CORRECT
+case WM_INITDIALOG:
+    // Do initialization...
+    return TRUE;  // Processed
+
+// At the end
+return FALSE;  // Not processed, let dialog manager handle it
+```
+
+## Summary
+
+You've learned:
+- ✅ WinRDP's modular architecture (8 modules)
+- ✅ How modules work together
+- ✅ Project directory structure
+- ✅ Header files (.h) vs implementation files (.c)
+- ✅ Configuration with `config.h`
+- ✅ Resource files (dialogs, menus, icons)
+- ✅ Application manifest for modern Windows features
+- ✅ Build scripts to compile the project
+- ✅ Creating a compiling skeleton application
+
+**You now have:**
+- A project structure ready to grow
+- Dialogs defined in resources
+- A build script that works
+- A skeleton application that runs!
+
+**Next chapter:** We'll add utility functions to make development easier!
+
+---
+
+# Chapter 18: Configuration and Utilities
+
+## Introduction
+
+In Chapter 17, you set up the project structure and got a skeleton application running. Now we'll build the **foundation layer** - utility functions that every module will use.
+
+Think of utilities as your toolbox. Instead of writing the same code repeatedly, you create reusable functions once and call them everywhere.
+
+In this chapter, you'll create:
+- Window positioning functions (CenterWindow)
+- Error message helpers (ShowError, ShowWarning)
+- String manipulation utilities
+- File path helpers
+- Debug logging functions
+
+**By the end of this chapter**, you'll have a solid utility library that makes the rest of development much easier!
+
+## Why Utilities Matter
+
+### Without Utilities:
+
+```c
+// Centering a window - 8 lines of code
+RECT rc;
+GetWindowRect(hwnd, &rc);
+int width = rc.right - rc.left;
+int height = rc.bottom - rc.top;
+int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+int x = (screenWidth - width) / 2;
+int y = (screenHeight - height) / 2;
+SetWindowPos(hwnd, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+
+// You'd have to copy these 8 lines everywhere you want to center a window!
+```
+
+### With Utilities:
+
+```c
+CenterWindow(hwnd);  // One line!
+```
+
+**Benefits:**
+- **Less code** - One line instead of 8
+- **Less bugs** - Tested once, works everywhere
+- **Easier maintenance** - Fix bugs in one place
+- **More readable** - `CenterWindow(hwnd)` is self-documenting
+
+## Creating utils.c and utils.h
+
+### utils.h - Interface
+
+Create `src/utils.h`:
+
+```c
+#ifndef UTILS_H
+#define UTILS_H
+
+#include <windows.h>
+#include <stdbool.h>
+
+// ============================================================================
+// WINDOW UTILITIES
+// ============================================================================
+
+// Center a window on the screen
+void CenterWindow(HWND hwnd);
+
+// Center a window relative to its parent
+void CenterWindowOnParent(HWND hwnd, HWND hParent);
+
+// ============================================================================
+// MESSAGE BOX HELPERS
+// ============================================================================
+
+// Show error message
+void ShowError(HWND hwnd, const wchar_t* message);
+
+// Show warning message
+void ShowWarning(HWND hwnd, const wchar_t* message);
+
+// Show information message
+void ShowInfo(HWND hwnd, const wchar_t* message);
+
+// Show error with formatted message
+void ShowErrorF(HWND hwnd, const wchar_t* format, ...);
+
+// ============================================================================
+// STRING UTILITIES
+// ============================================================================
+
+// Trim whitespace from both ends of a string
+void TrimWhitespace(wchar_t* str);
+
+// Check if string is empty or only whitespace
+bool IsEmptyString(const wchar_t* str);
+
+// Safe string copy (prevents buffer overflow)
+void SafeStringCopy(wchar_t* dest, size_t destSize, const wchar_t* src);
+
+// Compare strings case-insensitively
+bool StringEqualsIgnoreCase(const wchar_t* str1, const wchar_t* str2);
+
+// ============================================================================
+// FILE PATH UTILITIES
+// ============================================================================
+
+// Get path to user's Documents folder
+bool GetDocumentsFolder(wchar_t* path, size_t pathSize);
+
+// Get path to TEMP folder
+bool GetTempFolder(wchar_t* path, size_t pathSize);
+
+// Combine two path components
+void PathCombine(wchar_t* dest, size_t destSize, 
+                 const wchar_t* path1, const wchar_t* path2);
+
+// Check if file exists
+bool FileExists(const wchar_t* path);
+
+// ============================================================================
+// SYSTEM UTILITIES
+// ============================================================================
+
+// Get Windows error message from error code
+void GetLastErrorMessage(wchar_t* buffer, size_t bufferSize);
+
+// Run executable (like ShellExecute, but simpler)
+bool RunExecutable(const wchar_t* exePath, const wchar_t* parameters);
+
+// ============================================================================
+// DEBUG UTILITIES
+// ============================================================================
+
+#ifdef _DEBUG
+// Debug log output (only in debug builds)
+void DebugLog(const wchar_t* format, ...);
+#else
+#define DebugLog(...)  // No-op in release builds
+#endif
+
+#endif // UTILS_H
+```
+
+### utils.c - Implementation
+
+Create `src/utils.c`:
+
+```c
+#include "utils.h"
+#include "config.h"
+#include <shlobj.h>  // For SHGetFolderPath
+#include <shlwapi.h> // For PathCombine
+#include <stdio.h>
+#include <ctype.h>
+
+// ============================================================================
+// WINDOW UTILITIES
+// ============================================================================
+
+void CenterWindow(HWND hwnd)
+{
+    RECT rc;
+    GetWindowRect(hwnd, &rc);
+    
+    int width = rc.right - rc.left;
+    int height = rc.bottom - rc.top;
+    
+    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+    
+    int x = (screenWidth - width) / 2;
+    int y = (screenHeight - height) / 2;
+    
+    SetWindowPos(hwnd, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+}
+
+void CenterWindowOnParent(HWND hwnd, HWND hParent)
+{
+    if (hParent == NULL)
+    {
+        CenterWindow(hwnd);
+        return;
+    }
+    
+    RECT rcChild, rcParent;
+    GetWindowRect(hwnd, &rcChild);
+    GetWindowRect(hParent, &rcParent);
+    
+    int childWidth = rcChild.right - rcChild.left;
+    int childHeight = rcChild.bottom - rcChild.top;
+    
+    int parentWidth = rcParent.right - rcParent.left;
+    int parentHeight = rcParent.bottom - rcParent.top;
+    
+    int x = rcParent.left + (parentWidth - childWidth) / 2;
+    int y = rcParent.top + (parentHeight - childHeight) / 2;
+    
+    SetWindowPos(hwnd, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+}
+
+// ============================================================================
+// MESSAGE BOX HELPERS
+// ============================================================================
+
+void ShowError(HWND hwnd, const wchar_t* message)
+{
+    MessageBoxW(hwnd, message, APP_NAME, MB_OK | MB_ICONERROR);
+}
+
+void ShowWarning(HWND hwnd, const wchar_t* message)
+{
+    MessageBoxW(hwnd, message, APP_NAME, MB_OK | MB_ICONWARNING);
+}
+
+void ShowInfo(HWND hwnd, const wchar_t* message)
+{
+    MessageBoxW(hwnd, message, APP_NAME, MB_OK | MB_ICONINFORMATION);
+}
+
+void ShowErrorF(HWND hwnd, const wchar_t* format, ...)
+{
+    wchar_t buffer[1024];
+    va_list args;
+    va_start(args, format);
+    vswprintf_s(buffer, 1024, format, args);
+    va_end(args);
+    
+    ShowError(hwnd, buffer);
+}
+
+// ============================================================================
+// STRING UTILITIES
+// ============================================================================
+
+void TrimWhitespace(wchar_t* str)
+{
+    if (str == NULL || *str == L'\0')
+        return;
+    
+    // Trim leading whitespace
+    wchar_t* start = str;
+    while (*start && iswspace(*start))
+        start++;
+    
+    // Trim trailing whitespace
+    wchar_t* end = start + wcslen(start) - 1;
+    while (end > start && iswspace(*end))
+        end--;
+    
+    // Move trimmed string to beginning
+    size_t len = end - start + 1;
+    if (start != str)
+        memmove(str, start, (len + 1) * sizeof(wchar_t));
+    else
+        str[len] = L'\0';
+}
+
+bool IsEmptyString(const wchar_t* str)
+{
+    if (str == NULL || *str == L'\0')
+        return true;
+    
+    while (*str)
+    {
+        if (!iswspace(*str))
+            return false;
+        str++;
+    }
+    
+    return true;
+}
+
+void SafeStringCopy(wchar_t* dest, size_t destSize, const wchar_t* src)
+{
+    if (dest == NULL || src == NULL || destSize == 0)
+        return;
+    
+    wcsncpy_s(dest, destSize, src, _TRUNCATE);
+}
+
+bool StringEqualsIgnoreCase(const wchar_t* str1, const wchar_t* str2)
+{
+    if (str1 == NULL || str2 == NULL)
+        return false;
+    
+    return _wcsicmp(str1, str2) == 0;
+}
+
+// ============================================================================
+// FILE PATH UTILITIES
+// ============================================================================
+
+bool GetDocumentsFolder(wchar_t* path, size_t pathSize)
+{
+    HRESULT hr = SHGetFolderPathW(NULL, CSIDL_PERSONAL, NULL, 
+                                   SHGFP_TYPE_CURRENT, path);
+    return SUCCEEDED(hr);
+}
+
+bool GetTempFolder(wchar_t* path, size_t pathSize)
+{
+    DWORD len = GetTempPathW((DWORD)pathSize, path);
+    return len > 0 && len < pathSize;
+}
+
+void PathCombine(wchar_t* dest, size_t destSize, 
+                 const wchar_t* path1, const wchar_t* path2)
+{
+    if (dest == NULL || path1 == NULL || path2 == NULL || destSize == 0)
+        return;
+    
+    // Use Windows PathCombine function
+    wchar_t temp[MAX_PATH];
+    PathCombineW(temp, path1, path2);
+    SafeStringCopy(dest, destSize, temp);
+}
+
+bool FileExists(const wchar_t* path)
+{
+    DWORD attrib = GetFileAttributesW(path);
+    return (attrib != INVALID_FILE_ATTRIBUTES && 
+            !(attrib & FILE_ATTRIBUTE_DIRECTORY));
+}
+
+// ============================================================================
+// SYSTEM UTILITIES
+// ============================================================================
+
+void GetLastErrorMessage(wchar_t* buffer, size_t bufferSize)
+{
+    DWORD error = GetLastError();
+    
+    FormatMessageW(
+        FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+        NULL,
+        error,
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        buffer,
+        (DWORD)bufferSize,
+        NULL
+    );
+    
+    // Remove trailing newline
+    size_t len = wcslen(buffer);
+    if (len > 0 && buffer[len - 1] == L'\n')
+        buffer[len - 1] = L'\0';
+    if (len > 1 && buffer[len - 2] == L'\r')
+        buffer[len - 2] = L'\0';
+}
+
+bool RunExecutable(const wchar_t* exePath, const wchar_t* parameters)
+{
+    SHELLEXECUTEINFOW sei = {0};
+    sei.cbSize = sizeof(sei);
+    sei.fMask = SEE_MASK_NOCLOSEPROCESS;
+    sei.lpVerb = L"open";
+    sei.lpFile = exePath;
+    sei.lpParameters = parameters;
+    sei.nShow = SW_SHOWNORMAL;
+    
+    return ShellExecuteExW(&sei);
+}
+
+// ============================================================================
+// DEBUG UTILITIES
+// ============================================================================
+
+#ifdef _DEBUG
+void DebugLog(const wchar_t* format, ...)
+{
+    wchar_t buffer[1024];
+    va_list args;
+    va_start(args, format);
+    vswprintf_s(buffer, 1024, format, args);
+    va_end(args);
+    
+    OutputDebugStringW(L"[WinRDP] ");
+    OutputDebugStringW(buffer);
+    OutputDebugStringW(L"\n");
+}
+#endif
+```
+
+## Understanding Key Utility Functions
+
+### 1. CenterWindow - Window Positioning
+
+```c
+void CenterWindow(HWND hwnd)
+{
+    // Get window dimensions
+    RECT rc;
+    GetWindowRect(hwnd, &rc);
+    int width = rc.right - rc.left;
+    int height = rc.bottom - rc.top;
+    
+    // Get screen dimensions
+    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+    
+    // Calculate centered position
+    int x = (screenWidth - width) / 2;
+    int y = (screenHeight - height) / 2;
+    
+    // Move window
+    SetWindowPos(hwnd, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+}
+```
+
+**How it works:**
+1. `GetWindowRect` gets the window's current position and size
+2. `GetSystemMetrics(SM_CXSCREEN)` gets screen width
+3. Calculate: `x = (screen_width - window_width) / 2`
+4. `SetWindowPos` moves the window
+   - `SWP_NOSIZE` = don't change size
+   - `SWP_NOZORDER` = don't change Z-order (layer)
+
+**Usage:**
+```c
+// In WM_INITDIALOG
+CenterWindow(hDlg);
+```
+
+### 2. ShowError - User-Friendly Error Messages
+
+```c
+void ShowError(HWND hwnd, const wchar_t* message)
+{
+    MessageBoxW(hwnd, message, APP_NAME, MB_OK | MB_ICONERROR);
+}
+```
+
+**Usage:**
+```c
+if (file == NULL)
+{
+    ShowError(hwnd, L"Failed to open file!");
+    return;
+}
+```
+
+**With formatted messages:**
+```c
+void ShowErrorF(HWND hwnd, const wchar_t* format, ...)
+{
+    wchar_t buffer[1024];
+    va_list args;
+    va_start(args, format);
+    vswprintf_s(buffer, 1024, format, args);
+    va_end(args);
+    
+    ShowError(hwnd, buffer);
+}
+```
+
+**Usage:**
+```c
+ShowErrorF(hwnd, L"Failed to load '%s': %d", filename, error);
+```
+
+**Variadic functions (`...`):**
+- Like `printf`, can accept any number of arguments
+- `va_list`, `va_start`, `va_end` macros handle variable arguments
+- `vswprintf_s` is like `swprintf_s` but takes `va_list`
+
+### 3. TrimWhitespace - String Cleanup
+
+```c
+void TrimWhitespace(wchar_t* str)
+{
+    // Find first non-whitespace character
+    wchar_t* start = str;
+    while (*start && iswspace(*start))
+        start++;
+    
+    // Find last non-whitespace character
+    wchar_t* end = start + wcslen(start) - 1;
+    while (end > start && iswspace(*end))
+        end--;
+    
+    // Calculate trimmed length
+    size_t len = end - start + 1;
+    
+    // Move trimmed string to beginning
+    if (start != str)
+        memmove(str, start, (len + 1) * sizeof(wchar_t));
+    else
+        str[len] = L'\0';
+}
+```
+
+**How it works:**
+1. Find first non-space character (trim leading)
+2. Find last non-space character (trim trailing)
+3. Move trimmed portion to beginning of string
+4. Add null terminator
+
+**Usage:**
+```c
+wchar_t input[256];
+GetDlgItemTextW(hDlg, IDC_HOSTNAME, input, 256);
+TrimWhitespace(input);  // Remove spaces before/after
+
+if (IsEmptyString(input))
+{
+    ShowError(hDlg, L"Hostname cannot be empty!");
+    return;
+}
+```
+
+### 4. GetDocumentsFolder - User Data Location
+
+```c
+bool GetDocumentsFolder(wchar_t* path, size_t pathSize)
+{
+    HRESULT hr = SHGetFolderPathW(NULL, CSIDL_PERSONAL, NULL, 
+                                   SHGFP_TYPE_CURRENT, path);
+    return SUCCEEDED(hr);
+}
+```
+
+**What is CSIDL_PERSONAL?**
+- `CSIDL_PERSONAL` = User's Documents folder
+- On Windows: `C:\Users\YourName\Documents`
+- Returns localized path (works in any language)
+
+**Usage:**
+```c
+wchar_t hostsPath[MAX_PATH];
+if (GetDocumentsFolder(hostsPath, MAX_PATH))
+{
+    PathCombine(hostsPath, MAX_PATH, hostsPath, L"winrdp_hosts.csv");
+    // hostsPath now contains: C:\Users\YourName\Documents\winrdp_hosts.csv
+}
+```
+
+**Why not hardcode the path?**
+```c
+// BAD - Breaks on non-English Windows
+wchar_t path[] = L"C:\\Users\\YourName\\Documents\\file.csv";
+
+// GOOD - Works everywhere
+GetDocumentsFolder(path, MAX_PATH);
+```
+
+### 5. GetLastErrorMessage - Decode Windows Errors
+
+```c
+void GetLastErrorMessage(wchar_t* buffer, size_t bufferSize)
+{
+    DWORD error = GetLastError();
+    
+    FormatMessageW(
+        FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+        NULL,
+        error,
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        buffer,
+        (DWORD)bufferSize,
+        NULL
+    );
+}
+```
+
+**How it works:**
+1. `GetLastError()` gets the last Windows API error code
+2. `FormatMessageW` converts error code to human-readable message
+3. Returns string like "The system cannot find the file specified."
+
+**Usage:**
+```c
+FILE* file = _wfopen(path, L"r");
+if (file == NULL)
+{
+    wchar_t errorMsg[256];
+    GetLastErrorMessage(errorMsg, 256);
+    ShowErrorF(hwnd, L"Failed to open file:\n%s", errorMsg);
+    return;
+}
+```
+
+### 6. DebugLog - Development Logging
+
+```c
+#ifdef _DEBUG
+void DebugLog(const wchar_t* format, ...)
+{
+    wchar_t buffer[1024];
+    va_list args;
+    va_start(args, format);
+    vswprintf_s(buffer, 1024, format, args);
+    va_end(args);
+    
+    OutputDebugStringW(L"[WinRDP] ");
+    OutputDebugStringW(buffer);
+    OutputDebugStringW(L"\n");
+}
+#endif
+```
+
+**What is `OutputDebugStringW`?**
+- Sends messages to the debugger output
+- View with Visual Studio debugger or DebugView tool
+- Only included in debug builds (`#ifdef _DEBUG`)
+
+**Usage:**
+```c
+DebugLog(L"Loading hosts from: %s", hostsPath);
+DebugLog(L"Found %d hosts", hostCount);
+DebugLog(L"Connecting to %s with user %s", hostname, username);
+```
+
+## Integrating Utilities into main.c
+
+Now update `src/main.c` to use the new utilities:
+
+```c
+#include <windows.h>
+#include <commctrl.h>
+#include "config.h"
+#include "resource.h"
+#include "utils.h"  // Add this!
+
+// ... (rest of includes and forward declarations)
+
+INT_PTR CALLBACK LoginDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    switch (uMsg)
+    {
+        case WM_INITDIALOG:
+        {
+            // Use utility function instead of manual centering!
+            CenterWindow(hDlg);
+            
+            SetDlgItemTextW(hDlg, IDC_USERNAME, L"");
+            
+            DebugLog(L"Login dialog initialized");
+            
+            return TRUE;
+        }
+        
+        case WM_COMMAND:
+        {
+            switch (LOWORD(wParam))
+            {
+                case IDOK:
+                {
+                    wchar_t username[256];
+                    wchar_t password[256];
+                    
+                    GetDlgItemTextW(hDlg, IDC_USERNAME, username, 256);
+                    GetDlgItemTextW(hDlg, IDC_PASSWORD, password, 256);
+                    
+                    // Use utility functions!
+                    TrimWhitespace(username);
+                    TrimWhitespace(password);
+                    
+                    if (IsEmptyString(username))
+                    {
+                        ShowWarning(hDlg, L"Username cannot be empty!");
+                        SetFocus(GetDlgItem(hDlg, IDC_USERNAME));
+                        return TRUE;
+                    }
+                    
+                    if (IsEmptyString(password))
+                    {
+                        ShowWarning(hDlg, L"Password cannot be empty!");
+                        SetFocus(GetDlgItem(hDlg, IDC_PASSWORD));
+                        return TRUE;
+                    }
+                    
+                    DebugLog(L"Login successful for user: %s", username);
+                    
+                    EndDialog(hDlg, IDOK);
+                    return TRUE;
+                }
+                
+                case IDCANCEL:
+                {
+                    EndDialog(hDlg, IDCANCEL);
+                    return TRUE;
+                }
+            }
+            break;
+        }
+    }
+    
+    return FALSE;
+}
+
+INT_PTR CALLBACK MainDialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    switch (uMsg)
+    {
+        case WM_INITDIALOG:
+        {
+            g_hMainDialog = hDlg;
+            
+            CenterWindow(hDlg);
+            
+            ShowInfo(hDlg, L"Main dialog initialized!\nWe'll add features soon.");
+            
+            DebugLog(L"Main dialog initialized");
+            
+            return TRUE;
+        }
+        
+        case WM_COMMAND:
+        {
+            switch (LOWORD(wParam))
+            {
+                case IDC_CONNECT:
+                {
+                    ShowInfo(hDlg, L"Connect feature coming in Chapter 23!");
+                    return TRUE;
+                }
+                
+                case IDC_ADD_HOST:
+                {
+                    ShowInfo(hDlg, L"Add Host feature coming in Chapter 19!");
+                    return TRUE;
+                }
+                
+                case IDC_REMOVE_HOST:
+                {
+                    ShowInfo(hDlg, L"Remove Host feature coming in Chapter 19!");
+                    return TRUE;
+                }
+            }
+            break;
+        }
+        
+        case WM_CLOSE:
+        {
+            EndDialog(hDlg, 0);
+            return TRUE;
+        }
+    }
+    
+    return FALSE;
+}
+```
+
+## Building with Utilities
+
+Your `build.bat` should already include `utils.c`:
+
+```batch
+%CC% %CFLAGS% ^
+    src\main.c ^
+    src\utils.c ^
+    ...
+```
+
+Build and test:
+```
+build.bat
+WinRDP.exe
+```
+
+Now dialogs center themselves automatically, error messages are cleaner, and debug logging helps during development!
+
+## Exercise 18.1: Add a Confirmation Dialog
+
+Create a utility function for confirmation dialogs:
+
+```c
+// In utils.h
+bool ShowConfirmation(HWND hwnd, const wchar_t* message);
+
+// In utils.c
+bool ShowConfirmation(HWND hwnd, const wchar_t* message)
+{
+    int result = MessageBoxW(hwnd, message, APP_NAME, 
+                            MB_YESNO | MB_ICONQUESTION);
+    return (result == IDYES);
+}
+```
+
+**Usage:**
+```c
+if (ShowConfirmation(hDlg, L"Delete this host?"))
+{
+    // User clicked Yes
+    DeleteHost();
+}
+```
+
+## Exercise 18.2: Get Application Path
+
+Add a function to get the directory where WinRDP.exe is located:
+
+```c
+// In utils.h
+bool GetApplicationFolder(wchar_t* path, size_t pathSize);
+
+// In utils.c
+bool GetApplicationFolder(wchar_t* path, size_t pathSize)
+{
+    DWORD len = GetModuleFileNameW(NULL, path, (DWORD)pathSize);
+    if (len == 0 || len >= pathSize)
+        return false;
+    
+    // Remove filename, keep directory
+    wchar_t* lastSlash = wcsrchr(path, L'\\');
+    if (lastSlash != NULL)
+        *lastSlash = L'\0';
+    
+    return true;
+}
+```
+
+**Usage:**
+```c
+wchar_t appDir[MAX_PATH];
+if (GetApplicationFolder(appDir, MAX_PATH))
+{
+    DebugLog(L"Application directory: %s", appDir);
+}
+```
+
+## Exercise 18.3: File Size Utility
+
+Add a function to get file size:
+
+```c
+// In utils.h
+bool GetFileSize(const wchar_t* path, DWORD* sizeOut);
+
+// In utils.c
+bool GetFileSize(const wchar_t* path, DWORD* sizeOut)
+{
+    WIN32_FILE_ATTRIBUTE_DATA fileInfo;
+    if (!GetFileAttributesExW(path, GetFileExInfoStandard, &fileInfo))
+        return false;
+    
+    // Assuming file is less than 4GB (DWORD max)
+    *sizeOut = fileInfo.nFileSizeLow;
+    return true;
+}
+```
+
+**Usage:**
+```c
+DWORD size;
+if (GetFileSize(L"hosts.csv", &size))
+{
+    DebugLog(L"hosts.csv size: %lu bytes", size);
+}
+```
+
+## Common Mistakes
+
+### Mistake 1: Not Checking Return Values
+
+```c
+// WRONG - What if GetDocumentsFolder fails?
+wchar_t path[MAX_PATH];
+GetDocumentsFolder(path, MAX_PATH);
+PathCombine(path, MAX_PATH, path, L"file.csv");  // path might be garbage!
+
+// CORRECT
+wchar_t path[MAX_PATH];
+if (!GetDocumentsFolder(path, MAX_PATH))
+{
+    ShowError(hwnd, L"Failed to get Documents folder!");
+    return;
+}
+PathCombine(path, MAX_PATH, path, L"file.csv");
+```
+
+### Mistake 2: Buffer Overflow in String Functions
+
+```c
+// DANGEROUS - wcscpy doesn't check buffer size
+wchar_t buffer[10];
+wcscpy(buffer, veryLongString);  // BUFFER OVERFLOW!
+
+// SAFE - Use SafeStringCopy or wcsncpy_s
+wchar_t buffer[10];
+SafeStringCopy(buffer, 10, veryLongString);  // Truncates safely
+```
+
+### Mistake 3: Forgetting to Trim User Input
+
+```c
+// WRONG - User enters "  server1  " (with spaces)
+GetDlgItemTextW(hDlg, IDC_HOSTNAME, hostname, 256);
+if (wcscmp(hostname, L"server1") == 0)  // Doesn't match!
+{
+    // This code never runs because of extra spaces
+}
+
+// CORRECT
+GetDlgItemTextW(hDlg, IDC_HOSTNAME, hostname, 256);
+TrimWhitespace(hostname);  // Now it's "server1"
+if (wcscmp(hostname, L"server1") == 0)
+{
+    // Works!
+}
+```
+
+### Mistake 4: Using OutputDebugString in Release Builds
+
+```c
+// WRONG - Debug code in release builds (slows down application)
+OutputDebugStringW(L"Debug message");
+
+// CORRECT - Only in debug builds
+#ifdef _DEBUG
+OutputDebugStringW(L"Debug message");
+#endif
+
+// EVEN BETTER - Use DebugLog utility
+DebugLog(L"Debug message");  // Automatically excluded in release builds
+```
+
+## Summary
+
+You've learned:
+- ✅ Why utilities reduce code duplication and bugs
+- ✅ Window positioning (`CenterWindow`, `CenterWindowOnParent`)
+- ✅ User-friendly error messages (`ShowError`, `ShowWarning`, `ShowErrorF`)
+- ✅ String manipulation (`TrimWhitespace`, `IsEmptyString`, `SafeStringCopy`)
+- ✅ File paths (`GetDocumentsFolder`, `PathCombine`, `FileExists`)
+- ✅ System utilities (`GetLastErrorMessage`, `RunExecutable`)
+- ✅ Debug logging (`DebugLog`, `OutputDebugStringW`)
+- ✅ Variadic functions (functions with variable arguments)
+
+**You now have:**
+- A complete utility library (`utils.h` and `utils.c`)
+- Reusable functions used throughout WinRDP
+- Better error handling and user messages
+- Debug logging for development
+
+**Next chapter:** We'll implement host management (loading and saving the server list)!
+
+---

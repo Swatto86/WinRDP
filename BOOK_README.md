@@ -165,11 +165,24 @@ The repository's existing documentation becomes supplementary material:
 ## Current Status
 
 ### ✅ Complete (Ready to Learn From)
-- **Chapters 1-6**: Fully written with examples and exercises
+**Part I: C Fundamentals (Chapters 1-6)**
 - Covers: Basics → Variables → Control Flow → Functions → Arrays → Pointers
 - ~15,000 words of instructional content
 - 20+ code examples
 - 15+ exercises with solutions
+
+**Part III: Windows Programming Basics (Chapters 13-16)**
+- Covers: Win32 API → First Windows App → Message System → Dialogs & Controls
+- ~18,000 words of instructional content
+- 25+ code examples
+- Windows-specific concepts and best practices
+
+**Part IV: Building WinRDP Core (Chapters 17-18)**
+- Chapter 17: Project Setup and Architecture
+- Chapter 18: Configuration and Utilities
+- ~12,000 words of instructional content
+- Complete project structure and utility library
+- Ready to start building features!
 
 ### 📝 To Be Written
 The structure and content are planned. Each chapter will follow the same format:
@@ -178,6 +191,12 @@ The structure and content are planned. Each chapter will follow the same format:
 - Hands-on exercises
 - Common mistakes section
 - Direct connection to WinRDP features
+
+**Remaining:**
+- Chapters 7-8: Strings and Structures (Part I completion)
+- Chapters 9-12: Advanced C Concepts (Part II)
+- Chapters 19-24: Building WinRDP Core (Part IV completion)
+- Chapters 25-29: Advanced Features (Part V)
 
 ## Why This Approach Works
 
