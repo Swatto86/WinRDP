@@ -20,6 +20,7 @@
 // Internal helper functions
 static wchar_t* trim_whitespace(wchar_t* str);
 static BOOL parse_csv_line(wchar_t* line, Host* host);
+static BOOL get_hosts_file_path(wchar_t* path, size_t pathLen);
 
 /*
  * LoadHosts - Load all hosts from the CSV file
@@ -67,14 +68,21 @@ BOOL LoadHosts(Host** hosts, int* count)
 {
     FILE* file = NULL;
     errno_t err;
+    wchar_t hostsFilePath[MAX_PATH];
     
     // Initialize output parameters
     // Always set output pointers to known state
     *hosts = NULL;
     *count = 0;
     
+    // Get the full path to hosts.csv (critical for autostart scenarios)
+    if (!get_hosts_file_path(hostsFilePath, MAX_PATH))
+    {
+        return FALSE;
+    }
+    
     // Try to open the hosts file in binary mode
-    err = _wfopen_s(&file, HOSTS_FILE_NAME, L"rb");
+    err = _wfopen_s(&file, hostsFilePath, L"rb");
     if (err != 0 || file == NULL)
     {
         // File doesn't exist yet - that's okay, just return empty list
@@ -193,9 +201,16 @@ BOOL SaveHosts(const Host* hosts, int count)
 {
     FILE* file = NULL;
     errno_t err;
+    wchar_t hostsFilePath[MAX_PATH];
+    
+    // Get the full path to hosts.csv (critical for autostart scenarios)
+    if (!get_hosts_file_path(hostsFilePath, MAX_PATH))
+    {
+        return FALSE;
+    }
     
     // Open file for writing (overwrites existing file) in binary mode
-    err = _wfopen_s(&file, HOSTS_FILE_NAME, L"wb");
+    err = _wfopen_s(&file, hostsFilePath, L"wb");
     if (err != 0 || file == NULL)
     {
         return FALSE;
@@ -473,9 +488,16 @@ BOOL DeleteAllHosts(void)
 {
     FILE* file = NULL;
     errno_t err;
+    wchar_t hostsFilePath[MAX_PATH];
+    
+    // Get the full path to hosts.csv (critical for autostart scenarios)
+    if (!get_hosts_file_path(hostsFilePath, MAX_PATH))
+    {
+        return FALSE;
+    }
     
     // Open file for writing (overwrites existing file) in binary mode
-    err = _wfopen_s(&file, HOSTS_FILE_NAME, L"wb");
+    err = _wfopen_s(&file, hostsFilePath, L"wb");
     if (err != 0 || file == NULL)
     {
         return FALSE;
@@ -563,6 +585,56 @@ static BOOL parse_csv_line(wchar_t* line, Host* host)
     // Copy to host structure
     wcsncpy_s(host->hostname, MAX_HOSTNAME_LEN, hostname, _TRUNCATE);
     wcsncpy_s(host->description, MAX_DESCRIPTION_LEN, description, _TRUNCATE);
+    
+    return TRUE;
+}
+
+/*
+ * get_hosts_file_path - Get the full path to the hosts.csv file
+ * 
+ * This function constructs an absolute path to hosts.csv based on the
+ * executable's location. This is critical for handling autostart scenarios
+ * where the working directory may be different from the executable location.
+ * 
+ * Parameters:
+ *   path    - Buffer to receive the full path
+ *   pathLen - Size of the buffer in characters
+ * 
+ * Returns:
+ *   TRUE on success, FALSE on failure
+ * 
+ * Bug Fix Note:
+ * When applications auto-start with Windows, the working directory is often
+ * C:\Windows\System32 rather than the executable's directory. Using relative
+ * paths like "hosts.csv" will fail in this scenario. By constructing an
+ * absolute path based on GetModuleFileNameW, we ensure the file is always
+ * found regardless of the current working directory.
+ */
+static BOOL get_hosts_file_path(wchar_t* path, size_t pathLen)
+{
+    wchar_t exePath[MAX_PATH];
+    
+    // Get the full path to the executable
+    if (GetModuleFileNameW(NULL, exePath, MAX_PATH) == 0)
+    {
+        return FALSE;
+    }
+    
+    // Find the last backslash to get the directory
+    wchar_t* lastSlash = wcsrchr(exePath, L'\\');
+    if (lastSlash == NULL)
+    {
+        return FALSE;
+    }
+    
+    // Terminate the string at the last backslash to get directory path
+    *(lastSlash + 1) = L'\0';
+    
+    // Build the full path: executable_directory + hosts.csv
+    if (swprintf_s(path, pathLen, L"%s%s", exePath, HOSTS_FILE_NAME) < 0)
+    {
+        return FALSE;
+    }
     
     return TRUE;
 }
