@@ -53,12 +53,12 @@ The app will:
 **Read these in order:**
 
 1. **BUILD.md** ← Installation and build instructions
-2. **C_LANGUAGE_PRIMER.md** ← C language concepts (START HERE if new to C)
-3. **README.md** ← Overview and features
-4. **GETTING_STARTED.md** ← Learning path and exercises
-5. **PROJECT_SUMMARY.md** ← Architecture and technical details
-6. **CODE_COMMENTARY.md** ← Windows API deep-dive
-7. **MEMORY_MANAGEMENT.md** ← C memory guide
+2. **C_PROGRAMMING_BOOK.md** ← Complete C programming book (START HERE if new to C)
+3. **BOOK_GUIDE.md** ← Book guide and learning paths
+4. **README.md** ← Overview and features
+5. **GETTING_STARTED.md** ← Learning path and exercises
+6. **PROJECT_SUMMARY.md** ← Architecture and technical details
+7. **CODE_COMMENTARY.md** ← Windows API deep-dive
 8. **APPLICATION_FLOW_DIAGRAM.md** ← Architecture visualization
 9. **CHANGELOG.md** ← Version history
 
@@ -87,33 +87,35 @@ The app will:
 
 ```
 WinRDP/
-├── 00_START_HERE.md        ← YOU ARE HERE
-├── C_LANGUAGE_PRIMER.md    ← ⭐ C concepts explained (read first!)
-├── README.md               ← Main documentation
-├── GETTING_STARTED.md      ← Learning guide
-├── BUILD_INSTRUCTIONS.md   ← Build help
-├── PROJECT_SUMMARY.md      ← Technical overview
+├── 00_START_HERE.md         ← YOU ARE HERE
+├── C_PROGRAMMING_BOOK.md    ← ⭐ Complete C book (read first!)
+├── BOOK_GUIDE.md            ← Book guide and learning paths
+├── README.md                ← Main documentation
+├── GETTING_STARTED.md       ← Learning guide
+├── BUILD.md                 ← Build help
+├── PROJECT_SUMMARY.md       ← Technical overview
 │
-├── build.bat               ← Build script (auto-detects GCC/MSVC)
+├── build.bat                ← Build script (auto-detects GCC/MSVC)
 │
-└── src/                    ← Source code
-    ├── main.c              ← Entry point, UI, dialogs
-    ├── credentials.c       ← Credential Manager API
-    ├── hosts.c             ← CSV file management (GREAT for learning pointers!)
-    ├── rdp.c               ← RDP launching
-    ├── registry.c          ← Registry operations
-    ├── utils.c             ← Helper functions
-    ├── darkmode.c          ← Dark mode theming
-    ├── adscan.c            ← Network computer scanning
-    ├── *.h                 ← Header files
-    └── resources.rc        ← Dialog definitions
+└── src/                     ← Source code
+    ├── main.c               ← Entry point, UI, dialogs
+    ├── credentials.c        ← Credential Manager API
+    ├── hosts.c              ← CSV file management (GREAT for learning pointers!)
+    ├── rdp.c                ← RDP launching
+    ├── registry.c           ← Registry operations
+    ├── utils.c              ← Helper functions
+    ├── darkmode.c           ← Dark mode theming
+    ├── adscan.c             ← Network computer scanning
+    ├── *.h                  ← Header files
+    └── resources.rc         ← Dialog definitions
 ```
 
 ## 🔧 First Steps for Learning
 
 ### Step 0: Understand C (if needed)
-- **New to C?** Read `C_LANGUAGE_PRIMER.md` first!
-- Focus on sections 1-3 (Pointers, Structs, Arrays)
+- **New to C?** Read `C_PROGRAMMING_BOOK.md` first!
+- Start with Chapters 1-8 (C Fundamentals)
+- Focus especially on Chapter 6 (Pointers)
 - Then come back here
 
 ### Step 1: Build and Run
@@ -130,7 +132,7 @@ Creates `WinRDP-Setup-1.0.0.exe` ready for distribution!
 
 ### Step 3: Read the Code
 Start with these files in order:
-1. `C_LANGUAGE_PRIMER.md` - Understand C concepts (if you haven't already)
+1. `C_PROGRAMMING_BOOK.md` - Understand C concepts (Chapters 1-23 if you haven't already)
 2. `src/hosts.c` - **Best file for learning pointers!** Read LoadHosts() thoroughly
 3. `src/main.c` - Read `wWinMain()` and a dialog procedure
 4. `src/resources.rc` - See how UI is defined
@@ -154,7 +156,8 @@ Try these exercises:
 
 | File | Lines | Learn About |
 |------|-------|-------------|
-| `C_LANGUAGE_PRIMER.md` | ~900 | ⭐ Pointers, structs, memory, C concepts |
+| `C_PROGRAMMING_BOOK.md` | ~16,400 | ⭐ Complete C book with 23 chapters |
+| `BOOK_GUIDE.md` | ~540 | Book structure and learning paths |
 | `hosts.c` | ~550 | **Best for learning!** malloc/realloc/pointers |
 | `main.c` | ~1400 | Message loop, dialogs, ListView, search |
 | `adscan.c` | ~200 | NetAPI, filtering, dynamic memory |

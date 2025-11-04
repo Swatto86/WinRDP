@@ -32,27 +32,27 @@
 16. [Dialog Boxes and Controls](#chapter-16-dialog-boxes-and-controls)
 
 ## Part IV: Building WinRDP Core
-17. [Project Setup: WinRDP Architecture](#chapter-17-project-setup-winrdp-architecture)
-18. [Configuration and Utilities](#chapter-18-configuration-and-utilities)
-19. [CSV File Management](#chapter-19-csv-file-management)
-20. [Windows Credential Manager](#chapter-20-windows-credential-manager)
-21. [Main Application Window](#chapter-21-main-application-window)
-22. [ListView Control for Host Display](#chapter-22-listview-control-for-host-display)
-23. [RDP Connection Logic](#chapter-23-rdp-connection-logic)
-24. [System Tray Integration](#chapter-24-system-tray-integration)
+17. [Project Setup: WinRDP Architecture](#chapter-17-project-setup-winrdp-architecture) ✅
+18. [Configuration and Utilities](#chapter-18-configuration-and-utilities) ✅
+19. [CSV File Management](#chapter-19-csv-file-management) ✅
+20. [Windows Credential Manager](#chapter-20-windows-credential-manager) ✅
+21. [Main Application Window](#chapter-21-main-application-window) ✅
+22. [ListView Control for Host Display](#chapter-22-listview-control-for-host-display) ✅
+23. [RDP Connection Logic](#chapter-23-rdp-connection-logic) ✅
+24. [System Tray Integration](#chapter-24-system-tray-integration) 📝 *To Be Written*
 
 ## Part V: Advanced Features
-25. [Registry Operations and Autostart](#chapter-25-registry-operations-and-autostart)
-26. [Global Hotkeys](#chapter-26-global-hotkeys)
-27. [Dark Mode Support](#chapter-27-dark-mode-support)
-28. [Network Computer Discovery](#chapter-28-network-computer-discovery)
-29. [Building and Distribution](#chapter-29-building-and-distribution)
+25. [Registry Operations and Autostart](#chapter-25-registry-operations-and-autostart) 📝 *To Be Written*
+26. [Global Hotkeys](#chapter-26-global-hotkeys) 📝 *To Be Written*
+27. [Dark Mode Support](#chapter-27-dark-mode-support) 📝 *To Be Written*
+28. [Network Computer Discovery](#chapter-28-network-computer-discovery) 📝 *To Be Written*
+29. [Building and Distribution](#chapter-29-building-and-distribution) 📝 *To Be Written*
 
 ## Appendices
-- [A: Setting Up Your Development Environment](#appendix-a-setting-up-your-development-environment)
-- [B: Common Mistakes and How to Avoid Them](#appendix-b-common-mistakes-and-how-to-avoid-them)
-- [C: Windows API Quick Reference](#appendix-c-windows-api-quick-reference)
-- [D: Further Learning Resources](#appendix-d-further-learning-resources)
+- [A: Setting Up Your Development Environment](#appendix-a-setting-up-your-development-environment) 📝 *To Be Written*
+- [B: Common Mistakes and How to Avoid Them](#appendix-b-common-mistakes-and-how-to-avoid-them) 📝 *To Be Written*
+- [C: Windows API Quick Reference](#appendix-c-windows-api-quick-reference) 📝 *To Be Written*
+- [D: Further Learning Resources](#appendix-d-further-learning-resources) 📝 *To Be Written*
 
 ---
 
@@ -16063,4 +16063,401 @@ Your application can:
 - ✅ Respond to global hotkeys
 
 **Next chapter:** We'll add system tray integration and polish the application with advanced features!
+
+---
+
+# What's Left to Implement in This Book
+
+## Current Status: Chapters 1-23 Complete! ✅
+
+### ✅ Completed Content
+
+**Part I: C Fundamentals (Chapters 1-8) - 100% Complete**
+- Chapter 1: Introduction to C Programming
+- Chapter 2: Variables, Data Types, and Operators
+- Chapter 3: Control Flow: Making Decisions
+- Chapter 4: Functions: Building Blocks of Programs
+- Chapter 5: Arrays: Working with Multiple Values
+- Chapter 6: Pointers: The Heart of C
+- Chapter 7: Strings: Text Processing in C
+- Chapter 8: Structures: Organizing Related Data
+
+**Part II: Advanced C Concepts (Chapters 9-12) - 100% Complete**
+- Chapter 9: Dynamic Memory Management
+- Chapter 10: File Input/Output
+- Chapter 11: Function Pointers and Callbacks
+- Chapter 12: Preprocessor and Multi-File Programs
+
+**Part III: Windows Programming Basics (Chapters 13-16) - 100% Complete**
+- Chapter 13: Introduction to Windows Programming
+- Chapter 14: Your First Windows Application
+- Chapter 15: Windows Message System
+- Chapter 16: Dialog Boxes and Controls
+
+**Part IV: Building WinRDP Core (Chapters 17-23) - 87.5% Complete**
+- Chapter 17: Project Setup and Architecture ✅
+- Chapter 18: Configuration and Utilities ✅
+- Chapter 19: CSV File Management ✅
+- Chapter 20: Windows Credential Manager ✅
+- Chapter 21: Main Application Window ✅
+- Chapter 22: ListView Control for Host Display ✅
+- Chapter 23: RDP Connection Logic ✅
+
+### 📝 To Be Written
+
+**Part IV: Building WinRDP Core (Chapter 24)**
+
+**Chapter 24: System Tray Integration**
+- **What it will cover:**
+  - Understanding the NOTIFYICONDATA structure
+  - Adding icons to the system tray
+  - Handling tray icon messages (WM_USER + custom messages)
+  - Creating context menus for tray icons
+  - Showing/hiding the main window
+  - Implementing balloon notifications
+  - Tray icon animation
+  
+- **Skills you'll learn:**
+  - Shell_NotifyIcon API
+  - Custom window messages
+  - Context menu creation with CreatePopupMenu
+  - Message handling for tray icons
+  - Window visibility management
+
+- **WinRDP files covered:**
+  - Integration in `main.c` (existing code shows implementation)
+  - System tray icon resource usage
+  - Menu handling for Show/Hide/Exit options
+
+---
+
+**Part V: Advanced Features (Chapters 25-29)**
+
+**Chapter 25: Registry Operations and Autostart**
+- **What it will cover:**
+  - Windows Registry basics and structure
+  - RegCreateKeyEx and RegOpenKeyEx APIs
+  - Reading registry values with RegQueryValueEx
+  - Writing registry values with RegSetValueEx
+  - Implementing "Start with Windows" functionality
+  - Registry key: HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run
+  - Checking if application is in autostart
+  - Error handling for registry operations
+  
+- **Skills you'll learn:**
+  - Windows Registry API
+  - Application autostart implementation
+  - Security considerations (HKCU vs HKLM)
+  - Proper error handling for registry operations
+  
+- **WinRDP files covered:**
+  - `registry.h` and `registry.c` implementation
+  - CheckAutoStart and SetAutoStart functions
+  - Integration with main window checkbox
+
+**Chapter 26: Global Hotkeys**
+- **What it will cover:**
+  - RegisterHotKey and UnregisterHotKey APIs
+  - Virtual key codes (VK_* constants)
+  - Modifier keys (MOD_CONTROL, MOD_SHIFT, etc.)
+  - Handling WM_HOTKEY messages
+  - Implementing Ctrl+Shift+R hotkey
+  - Bringing window to foreground with SetForegroundWindow
+  - Hotkey conflicts and error handling
+  
+- **Skills you'll learn:**
+  - System-wide keyboard shortcuts
+  - Virtual key code usage
+  - Window activation and focus management
+  - Handling hotkey conflicts gracefully
+  
+- **WinRDP implementation:**
+  - Hotkey registration in WM_INITDIALOG
+  - WM_HOTKEY handler to show main window
+  - Cleanup in WM_DESTROY
+
+**Chapter 27: Dark Mode Support**
+- **What it will cover:**
+  - Detecting Windows dark mode from registry
+  - DwmSetWindowAttribute for title bar theming
+  - Custom control painting with WM_CTLCOLOR* messages
+  - Creating custom brushes for dark backgrounds
+  - Undocumented APIs (SetPreferredAppMode, AllowDarkModeForWindow)
+  - Dynamic function loading with GetProcAddress
+  - Theme-aware color schemes
+  
+- **Skills you'll learn:**
+  - Registry-based theme detection
+  - DWM (Desktop Window Manager) API
+  - Custom control painting
+  - Working with undocumented Windows APIs
+  - Dynamic DLL function loading
+  - Resource management (brushes, pens)
+  
+- **WinRDP files covered:**
+  - `darkmode.h` and `darkmode.c` complete implementation
+  - InitDarkMode and ApplyDarkModeToWindow functions
+  - Custom message handlers for control painting
+  - Color scheme management
+
+**Chapter 28: Network Computer Discovery**
+- **What it will cover:**
+  - NetServerEnum API for network enumeration
+  - Filtering by server type (workstations, servers, domain controllers)
+  - SV_TYPE_* constants and their meanings
+  - Progress dialogs with CreateDialogParam
+  - Multi-threading considerations for network operations
+  - Handling network timeouts
+  - Unicode string handling in network APIs
+  - Memory management with NetApiBufferFree
+  
+- **Skills you'll learn:**
+  - Windows Network API (netapi32.dll)
+  - Enumerating network resources
+  - Threading and UI responsiveness
+  - Progress indication for long operations
+  - Working with network data structures (SERVER_INFO_101)
+  
+- **WinRDP files covered:**
+  - `adscan.h` and `adscan.c` implementation
+  - ScanNetworkComputers function
+  - Dialog integration for scan results
+  - Automatic host addition from scan
+
+**Chapter 29: Building and Distribution**
+- **What it will cover:**
+  - Creating professional build scripts (build.bat)
+  - Compiler flags and optimization
+  - Resource compilation (windres)
+  - Application manifests for UAC and DPI awareness
+  - Icon resource creation
+  - NSIS (Nullsoft Scriptable Install System) basics
+  - Creating installer scripts (installer.nsi)
+  - Install/uninstall functionality
+  - Registry entries for uninstaller
+  - Start menu shortcuts
+  - Version information in executables
+  - Code signing considerations (overview)
+  
+- **Skills you'll learn:**
+  - Professional build automation
+  - Windows resource management
+  - Application manifest creation
+  - Installer creation with NSIS
+  - Distribution best practices
+  - Version control in binaries
+  
+- **WinRDP files covered:**
+  - `build.bat` script explanation
+  - `build-installer.bat` usage
+  - `installer.nsi` detailed walkthrough
+  - `app.manifest` explanation
+  - Resource file (resources.rc) compilation
+
+---
+
+**Appendices**
+
+**Appendix A: Setting Up Your Development Environment**
+- **What it will cover:**
+  - Installing MinGW-w64 (GCC for Windows)
+  - Installing Visual Studio Community Edition
+  - Configuring PATH environment variable
+  - Installing NSIS for installer creation
+  - Recommended text editors (VS Code, Notepad++, Visual Studio)
+  - Configuring syntax highlighting and IntelliSense
+  - Installing Git for version control
+  - Windows SDK considerations
+  - Debugging tools (DebugView, Process Monitor)
+  - Troubleshooting common setup issues
+
+**Appendix B: Common Mistakes and How to Avoid Them**
+- **What it will cover:**
+  - Memory leaks and detection strategies
+  - Pointer errors (null dereference, dangling pointers)
+  - Buffer overflows and bounds checking
+  - Forgetting to free allocated memory
+  - Incorrect string handling (missing null terminators)
+  - Resource leaks (handles, file descriptors)
+  - Race conditions in message handling
+  - Incorrect type casting
+  - Integer overflow issues
+  - Wide vs. narrow string mixing
+  - Common Windows API pitfalls
+  - Debugging strategies and tools
+  - Best practices checklist
+
+**Appendix C: Windows API Quick Reference**
+- **What it will cover:**
+  - Common Windows data types (HWND, LPARAM, WPARAM, etc.)
+  - Frequently used Windows messages
+  - Common control styles and flags
+  - String functions (wide character versions)
+  - File I/O functions
+  - Memory allocation functions
+  - Registry functions
+  - Error handling macros and functions
+  - Useful utility functions
+  - Quick reference tables
+
+**Appendix D: Further Learning Resources**
+- **What it will cover:**
+  - Recommended books:
+    - "The C Programming Language" by Kernighan & Ritchie
+    - "Expert C Programming" by Peter van der Linden
+    - "Programming Windows" by Charles Petzold
+    - "Windows System Programming" by Johnson M. Hart
+  - Online resources:
+    - Microsoft Docs (MSDN)
+    - cppreference.com
+    - Stack Overflow
+    - theForger's Win32 Tutorial
+  - Community forums and help:
+    - r/C_Programming (Reddit)
+    - Windows programming forums
+    - Stack Overflow tags (c, winapi)
+  - Video tutorials and courses
+  - Practice project ideas
+  - Open source projects to study
+  - Next steps in your programming journey
+
+---
+
+## Summary of What You've Accomplished So Far
+
+By completing Chapters 1-23, you have:
+
+### **Mastered C Programming Fundamentals**
+- ✅ Variables, data types, and operators
+- ✅ Control flow and decision making
+- ✅ Functions and modular programming
+- ✅ Arrays and multi-dimensional data
+- ✅ Pointers and memory addressing
+- ✅ String manipulation in C
+- ✅ Structures and data organization
+- ✅ Dynamic memory management
+- ✅ File input/output operations
+- ✅ Function pointers and callbacks
+- ✅ Preprocessor and multi-file programs
+
+### **Learned Windows Programming**
+- ✅ Win32 API architecture
+- ✅ Message-driven programming model
+- ✅ Creating windows and dialogs
+- ✅ Using standard controls
+- ✅ Resource files and compilation
+
+### **Built a Complete Application**
+- ✅ Professional project structure
+- ✅ Configuration management
+- ✅ Utility functions and helpers
+- ✅ CSV file parsing and management
+- ✅ Secure credential storage with Windows Credential Manager
+- ✅ Main application window with dialogs
+- ✅ ListView control for data display
+- ✅ RDP connection functionality
+- ✅ Searchable host list
+- ✅ Double-click to connect
+- ✅ Add/Edit/Delete host management
+
+### **Your WinRDP Application Currently Has:**
+- ✅ ~3,000 lines of production-quality C code
+- ✅ 7 out of 8 modules fully implemented
+- ✅ Complete core functionality (working RDP manager!)
+- ✅ Professional error handling
+- ✅ Unicode support throughout
+- ✅ Secure credential storage
+- ✅ User-friendly interface
+
+---
+
+## What Remains to Complete WinRDP
+
+### **Chapter 24: System Tray Integration** (1 chapter)
+Add the system tray icon so WinRDP can run minimized in the background with quick access.
+
+### **Part V: Advanced Features** (5 chapters)
+Polish the application with professional features:
+- Autostart with Windows
+- Global hotkey access
+- Dark mode support
+- Network computer scanning
+- Professional installer
+
+### **Appendices** (4 sections)
+Reference material and additional resources for continued learning.
+
+---
+
+## Estimated Time to Complete
+
+Based on the pattern established in the existing chapters:
+
+- **Chapter 24**: ~2 hours to read and implement
+- **Chapters 25-29**: ~8-10 hours total (2 hours per chapter)
+- **Appendices**: Reference material, read as needed
+
+**Total remaining**: ~12-14 hours of learning and implementation
+
+---
+
+## What You Can Do Now
+
+Even without the remaining chapters, you have a **fully functional RDP connection manager**! You can:
+
+1. **Use it daily**: Manage your RDP connections
+2. **Study the source code**: All features are implemented in `/src`
+3. **Extend it yourself**: Try implementing the remaining features by studying the code
+4. **Build it**: Use the existing build scripts
+5. **Customize it**: Add your own features
+
+The remaining chapters will guide you through the already-implemented advanced features in the codebase, but you have enough knowledge to explore them yourself!
+
+---
+
+## How to Continue Learning
+
+### **Option 1: Wait for Remaining Chapters**
+The remaining chapters will be written following the same detailed, example-driven format.
+
+### **Option 2: Study the Source Code**
+All features (including those not yet covered in chapters) are fully implemented and well-commented in `/src`:
+- Study `main.c` for system tray implementation
+- Review `registry.c` for autostart functionality  
+- Examine `darkmode.c` for theme support
+- Explore `adscan.c` for network scanning
+
+### **Option 3: Build Your Own Features**
+Now that you understand the architecture, try adding:
+- Custom RDP settings per host
+- Connection history logging
+- Favorite hosts list
+- Import/export functionality
+- Multiple credential profiles
+- Connection groups/folders
+
+### **Option 4: Build a New Application**
+Use what you've learned to create your own Windows application:
+- File manager
+- Text editor
+- System monitor
+- Backup utility
+- Database viewer
+- Custom tool for your workflow
+
+---
+
+## Congratulations! 🎉
+
+You've completed **23 chapters** and built a **real, working application**. That's a significant achievement! You now have:
+
+- **Strong C fundamentals**
+- **Windows programming skills**
+- **A portfolio project**
+- **Foundation for any C/Windows project**
+- **The ability to read and understand professional C code**
+
+The journey doesn't end here—it's just the beginning of what you can build with C and Windows!
+
+**Keep coding, keep learning, and keep building amazing things!** 🚀
 
