@@ -180,8 +180,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     // ShowWindow(g_hwndMain, SW_HIDE);
     // UpdateWindow(g_hwndMain);
 
-    // Show the login dialog
-    INT_PTR loginResult = DialogBox(hInstance, MAKEINTRESOURCE(IDD_LOGIN), g_hwndMain, LoginDialogProc);
+    // Show the login dialog at startup (pass 0 for normal behavior with countdown)
+    INT_PTR loginResult = DialogBoxParam(hInstance, MAKEINTRESOURCE(IDD_LOGIN), g_hwndMain, LoginDialogProc, 0);
     
     // If credentials were saved, show the main server list dialog
     if (loginResult == IDOK)
@@ -304,7 +304,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             return 0;
 
         case WM_HOTKEY:
-            // Handle global hotkey for opening connect dialog
+            // Handle global hotkey for toggling connect dialog
             if (wParam == IDM_GLOBAL_HOTKEY)
             {
                 // Check if we have global credentials saved
@@ -313,30 +313,53 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 
                 if (LoadCredentials(NULL, username, password))
                 {
-                    // We have global credentials - show connect dialog
+                    // We have global credentials - toggle main dialog
                     if (g_hwndMainDialog == NULL)
                     {
+                        // Dialog not shown - show it
                         DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_MAIN), 
                                  hwnd, MainDialogProc);
                     }
                     else
                     {
-                        // Bring existing dialog to front
-                        SetForegroundWindow(g_hwndMainDialog);
+                        // Dialog is shown - check if it's visible or minimized
+                        if (IsWindowVisible(g_hwndMainDialog) && !IsIconic(g_hwndMainDialog))
+                        {
+                            // Window is visible and not minimized - close it
+                            PostMessage(g_hwndMainDialog, WM_CLOSE, 0, 0);
+                        }
+                        else
+                        {
+                            // Window exists but is hidden or minimized - bring it to front
+                            ShowWindow(g_hwndMainDialog, SW_RESTORE);
+                            SetForegroundWindow(g_hwndMainDialog);
+                        }
                     }
                 }
                 else
                 {
-                    // No global credentials - show credentials dialog
+                    // No global credentials - toggle login dialog
                     if (g_hwndLoginDialog == NULL)
                     {
-                        DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_LOGIN), 
-                                 hwnd, LoginDialogProc);
+                        // Dialog not shown - show it
+                        // Pass 0 to allow normal startup behavior with countdown
+                        DialogBoxParam(g_hInstance, MAKEINTRESOURCE(IDD_LOGIN), 
+                                      hwnd, LoginDialogProc, 0);
                     }
                     else
                     {
-                        // Bring existing dialog to front
-                        SetForegroundWindow(g_hwndLoginDialog);
+                        // Dialog is shown - check if it's visible or minimized
+                        if (IsWindowVisible(g_hwndLoginDialog) && !IsIconic(g_hwndLoginDialog))
+                        {
+                            // Window is visible and not minimized - close it
+                            PostMessage(g_hwndLoginDialog, WM_CLOSE, 0, 0);
+                        }
+                        else
+                        {
+                            // Window exists but is hidden or minimized - bring it to front
+                            ShowWindow(g_hwndLoginDialog, SW_RESTORE);
+                            SetForegroundWindow(g_hwndLoginDialog);
+                        }
                     }
                 }
             }
@@ -433,8 +456,8 @@ INT_PTR CALLBACK LoginDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
 {
     // Static variable to track countdown seconds (persists across messages)
     static int s_countdownSeconds = 0;
-    
-    UNREFERENCED_PARAMETER(lParam);
+    // Static flag to track if we're in edit mode (no auto-close)
+    static BOOL s_isEditMode = FALSE;
 
     switch (msg)
     {
@@ -445,6 +468,9 @@ INT_PTR CALLBACK LoginDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
             
             // Reset countdown
             s_countdownSeconds = 0;
+            
+            // Check if we're opening in edit mode (lParam = 1 means editing)
+            s_isEditMode = (lParam == 1);
             
             // Dialog is being initialized
             CenterWindow(hwnd);
@@ -467,15 +493,26 @@ INT_PTR CALLBACK LoginDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
                 SetDlgItemTextW(hwnd, IDC_EDIT_USERNAME, username);
                 SetDlgItemTextW(hwnd, IDC_EDIT_PASSWORD, password);
                 
-                // Show compact status message and start countdown
-                s_countdownSeconds = 5;
-                wchar_t statusMsg[128];
-                swprintf_s(statusMsg, 128, L"✓ Credentials saved - Auto-closing in %d seconds...", s_countdownSeconds);
-                SetDlgItemTextW(hwnd, IDC_STATIC_STATUS, statusMsg);
+                // Show delete button
                 ShowWindow(GetDlgItem(hwnd, IDC_BTN_DELETE_CREDS), SW_SHOW);
                 
-                // Start timer - fires every 1 second (1000 milliseconds)
-                SetTimer(hwnd, TIMER_AUTO_CLOSE_LOGIN, 1000, NULL);
+                // Only show countdown and start timer if NOT in edit mode
+                if (!s_isEditMode)
+                {
+                    // Show compact status message and start countdown
+                    s_countdownSeconds = 5;
+                    wchar_t statusMsg[128];
+                    swprintf_s(statusMsg, 128, L"✓ Credentials saved - Auto-closing in %d seconds...", s_countdownSeconds);
+                    SetDlgItemTextW(hwnd, IDC_STATIC_STATUS, statusMsg);
+                    
+                    // Start timer - fires every 1 second (1000 milliseconds)
+                    SetTimer(hwnd, TIMER_AUTO_CLOSE_LOGIN, 1000, NULL);
+                }
+                else
+                {
+                    // Edit mode - show simple status without countdown
+                    SetDlgItemTextW(hwnd, IDC_STATIC_STATUS, L"✓ Credentials saved");
+                }
             }
             else
             {
@@ -858,6 +895,31 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                         
                         RefreshHostListView(hList, hosts, hostCount, searchText);
                     }
+                    return TRUE;
+                }
+
+                case IDC_BTN_EDIT_CREDS:
+                {
+                    // Hide main window before showing login dialog
+                    ShowWindow(hwnd, SW_HIDE);
+                    
+                    // Show login dialog to edit global credentials
+                    // Pass 1 as lParam to indicate edit mode (no auto-close countdown)
+                    if (g_hwndLoginDialog == NULL)
+                    {
+                        DialogBoxParam(g_hInstance, MAKEINTRESOURCE(IDD_LOGIN), 
+                                      hwnd, LoginDialogProc, 1);
+                    }
+                    else
+                    {
+                        // Bring existing dialog to front
+                        SetForegroundWindow(g_hwndLoginDialog);
+                    }
+                    
+                    // Restore main window after login dialog closes
+                    ShowWindow(hwnd, SW_SHOW);
+                    SetForegroundWindow(hwnd);
+                    
                     return TRUE;
                 }
 

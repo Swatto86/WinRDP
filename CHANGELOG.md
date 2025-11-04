@@ -2,6 +2,35 @@
 
 All notable changes to WinRDP will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- **Edit Global Credentials Button** - New button on main window to change global credentials
+  - Allows users to update their default RDP credentials without restarting
+  - Opens the credentials dialog directly from the server list
+  - Convenient access for switching between different user accounts
+
+### Changed
+- **Hotkey Toggle Behavior** - Global hotkey (Ctrl+Shift+R) now toggles the server list window
+  - Pressing the hotkey shows the window if it's not visible
+  - Pressing the hotkey closes the window if it's currently visible
+  - Provides quick access and dismissal with the same keyboard shortcut
+
+### Improved
+- **Consistent Textbox Heights** - All single-line textboxes now use uniform height (13 pixels)
+  - Applied across all dialogs: Login, Main, Manage Hosts, Add/Edit Host, Scan Domain
+  - Creates a more cohesive, professional appearance
+  - Improved visual consistency throughout the application
+- **Consistent Button Widths** - All main window buttons now have uniform width (100 pixels)
+  - Professional appearance with evenly-sized buttons
+  - Consistent 5-pixel spacing between buttons
+- **Smart Countdown Timer** - Login dialog countdown only appears on application startup
+  - When editing credentials via button, no countdown timer appears
+  - Prevents rushed editing experience
+  - Shows simple "✓ Credentials saved" message in edit mode
+
+---
+
 ## [1.0.1] - December 2025 - Bug Fix Release
 
 ### Fixed

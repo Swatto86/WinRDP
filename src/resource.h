@@ -37,6 +37,7 @@
 #define IDC_EDIT_SEARCH         211
 #define IDC_BTN_CONNECT         212
 #define IDC_BTN_MANAGE          213
+#define IDC_BTN_EDIT_CREDS      214
 
 // Control IDs - Host Management Dialog
 #define IDC_LIST_HOSTS          220

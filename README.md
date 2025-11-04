@@ -28,21 +28,43 @@ This project demonstrates:
 ## 📋 Features
 
 ### Core Features
-- Store and manage RDP server connections
+- **RDP Connection Management** - Store and organize all your RDP servers
 - **Global Credentials** - Set once, use for all hosts
-- **Per-Host Credentials** - Individual credentials per server
-- Secure credential storage using Windows Credential Manager
-- Quick connect to saved servers
-- Search functionality to filter servers
-- System tray icon for background operation
-- Autostart with Windows (optional)
-- **About Dialog** - Professional information and author credit
+  - Edit global credentials anytime via dedicated button on main window
+  - Switch between different user accounts without restarting application
+  - Smart auto-close timer on startup (skipped when editing)
+- **Per-Host Credentials** - Override global credentials for specific servers
+  - Optional individual username/password per host
+  - Automatic fallback to global credentials if not set
+- **Secure Storage** - Windows Credential Manager integration
+  - All passwords encrypted by Windows
+  - Per-host and global credentials stored separately
+- **Quick Connect** - Double-click or single-click connect to servers
+- **Search & Filter** - Real-time filtering of server list
+- **System Tray** - Minimize to tray, quick access from notification area
+- **Autostart** - Optional auto-launch with Windows
+- **Professional UI** - Modern, dark mode-aware interface
+  - Consistent button and textbox sizing throughout
+  - Clean, professional appearance
 
 ### Advanced Features
-- **Global Hotkey (Ctrl+Shift+R)** - Instantly open WinRDP from anywhere in Windows
-- **Bulk Delete (Ctrl+Shift+Alt+D)** - Secret hotkey to delete all data at once
-- **Network Computer Scanning** - Automatically discover computers on your network
-- **Dark Mode Support** - Automatically follows Windows theme
+- **Toggle Hotkey (Ctrl+Shift+R)** - Show/hide WinRDP from anywhere
+  - System-wide hotkey that works even when other apps have focus
+  - Press once to show main window, press again to close
+  - Intelligently restores or hides window based on current state
+- **Active Directory Scanning** - Network computer discovery
+  - Automatically scan current domain or specify custom domain/workgroup
+  - Filter by computer type: Workstations, Servers, Domain Controllers
+  - Discovered computers auto-added with their AD descriptions
+  - Uses NetServerEnum API for enterprise network integration
+- **Bulk Delete (Ctrl+Shift+Alt+D)** - Complete data cleanup
+  - Secret hotkey for removing all hosts and credentials at once
+  - Double confirmation prevents accidental deletion
+  - Only available in Host Management dialog for safety
+- **Dark Mode Support** - Automatic Windows theme detection
+  - Follows Windows system theme preferences
+  - Dark title bars, backgrounds, and controls
+  - ListView and dialog support for consistent experience
 
 ### Technical
 - Pure C with no external dependencies (except Windows SDK)
@@ -223,7 +245,33 @@ RegCloseKey(hKey);
 
 **Files**: `registry.c`
 
-### 6. **Launching Applications**
+### 6. **Network Computer Discovery**
+```c
+// Scan network for computers using NetServerEnum
+NET_API_STATUS status = NetServerEnum(
+    NULL,                    // Local computer
+    101,                     // Information level
+    (LPBYTE*)&pBuf,         // Buffer for results
+    MAX_PREFERRED_LENGTH,    // Maximum data
+    &entriesRead,           // Entries read
+    &totalEntries,          // Total entries
+    SV_TYPE_ALL,            // Server types
+    NULL,                   // Domain (NULL = current)
+    NULL);                  // Resume handle
+
+// Access computer information
+for (i = 0; i < entriesRead; i++) {
+    wchar_t* name = pBuf[i].sv101_name;
+    wchar_t* comment = pBuf[i].sv101_comment;
+    DWORD type = pBuf[i].sv101_type;
+    // Filter by type: workstation, server, domain controller
+}
+NetApiBufferFree(pBuf);
+```
+
+**Files**: `adscan.c`, `adscan.h`
+
+### 7. **Launching Applications**
 ```c
 // Launch an application
 ShellExecuteW(
@@ -237,7 +285,7 @@ ShellExecuteW(
 
 **Files**: `rdp.c` (LaunchRDP)
 
-### 7. **ListView Controls**
+### 8. **ListView Controls**
 ```c
 // Create columns
 LVCOLUMN col = {0};
@@ -256,7 +304,7 @@ ListView_InsertItem(hListView, &item);
 
 **Files**: `main.c` (MainDialogProc, HostDialogProc)
 
-### 8. **Dark Mode Support**
+### 9. **Dark Mode Support**
 ```c
 // Detect Windows dark mode
 BOOL IsDarkModeEnabled(void);

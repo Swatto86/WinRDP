@@ -58,11 +58,11 @@ FONT 9, "Segoe UI"
 BEGIN
     /* Username field with clean layout */
     LTEXT           "Username:", IDC_STATIC, 15, 18, 60, 10
-    EDITTEXT        IDC_EDIT_USERNAME, 85, 15, 220, 18, ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
+    EDITTEXT        IDC_EDIT_USERNAME, 85, 15, 220, 13, ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
     
     /* Password field */
     LTEXT           "Password:", IDC_STATIC, 15, 45, 60, 10
-    EDITTEXT        IDC_EDIT_PASSWORD, 85, 42, 220, 18, ES_PASSWORD | ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
+    EDITTEXT        IDC_EDIT_PASSWORD, 85, 42, 220, 13, ES_PASSWORD | ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
     
     /* Compact status line - only shown when credentials exist */
     LTEXT           "", IDC_STATIC_STATUS, 15, 72, 200, 10
@@ -91,17 +91,18 @@ FONT 9, "Segoe UI"
 BEGIN
     /* Search box */
     LTEXT           "Search:", IDC_STATIC, 15, 15, 40, 10
-    EDITTEXT        IDC_EDIT_SEARCH, 60, 12, 420, 18, ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
+    EDITTEXT        IDC_EDIT_SEARCH, 60, 12, 420, 13, ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
     
     /* Server list with modern appearance */
     CONTROL         "", IDC_LIST_SERVERS, "SysListView32", 
                     LVS_REPORT | LVS_SINGLESEL | WS_BORDER | WS_TABSTOP,
                     15, 42, 470, 301
     
-    /* Action buttons with modern spacing and sizing */
-    DEFPUSHBUTTON   "Connect", IDC_BTN_CONNECT, 15, 353, 90, 20
-    PUSHBUTTON      "Manage Hosts", IDC_BTN_MANAGE, 110, 353, 95, 20
-    PUSHBUTTON      "Close", IDCANCEL, 395, 353, 90, 20
+    /* Action buttons with modern spacing and consistent sizing */
+    DEFPUSHBUTTON   "Connect", IDC_BTN_CONNECT, 15, 353, 100, 20
+    PUSHBUTTON      "Manage Hosts", IDC_BTN_MANAGE, 120, 353, 100, 20
+    PUSHBUTTON      "Edit Credentials", IDC_BTN_EDIT_CREDS, 225, 353, 100, 20
+    PUSHBUTTON      "Close", IDCANCEL, 330, 353, 100, 20
 END
 
 /*
@@ -117,7 +118,7 @@ FONT 9, "Segoe UI"
 BEGIN
     /* Search box for filtering */
     LTEXT           "Search:", IDC_STATIC, 15, 15, 30, 10
-    EDITTEXT        IDC_EDIT_SEARCH_HOSTS, 50, 12, 485, 18, ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
+    EDITTEXT        IDC_EDIT_SEARCH_HOSTS, 50, 12, 485, 13, ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
     
     /* Host list with modern appearance and better sizing */
     CONTROL         "", IDC_LIST_HOSTS, "SysListView32",
@@ -144,9 +145,9 @@ STYLE DS_MODALFRAME | DS_CENTER | DS_SHELLFONT | WS_POPUP | WS_CAPTION | WS_SYSM
 CAPTION "WinRDP - Add/Edit Host"
 FONT 9, "Segoe UI"
 BEGIN
-    /* Hostname field - taller for better text centering */
+    /* Hostname field */
     LTEXT           "Hostname:", IDC_STATIC, 15, 20, 65, 10
-    EDITTEXT        IDC_EDIT_HOSTNAME, 90, 17, 275, 22, ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
+    EDITTEXT        IDC_EDIT_HOSTNAME, 90, 17, 275, 13, ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
     
     /* Description field - multiline with modern appearance */
     LTEXT           "Description:", IDC_STATIC, 15, 50, 65, 10
@@ -159,11 +160,11 @@ BEGIN
     
     /* Per-host username field - shown when checkbox is checked */
     LTEXT           "Username:", IDC_STATIC_HOST_USERNAME, 25, 135, 60, 10
-    EDITTEXT        IDC_EDIT_HOST_USERNAME, 90, 132, 270, 22, ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
+    EDITTEXT        IDC_EDIT_HOST_USERNAME, 90, 132, 270, 13, ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
     
     /* Per-host password field - shown when checkbox is checked */
     LTEXT           "Password:", IDC_STATIC_HOST_PASSWORD, 25, 165, 60, 10
-    EDITTEXT        IDC_EDIT_HOST_PASSWORD, 90, 162, 270, 22, ES_PASSWORD | ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
+    EDITTEXT        IDC_EDIT_HOST_PASSWORD, 90, 162, 270, 13, ES_PASSWORD | ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
     
     /* Help text */
     LTEXT           "Leave unchecked to use global credentials", IDC_STATIC, 90, 190, 270, 10
@@ -185,7 +186,7 @@ FONT 9, "Segoe UI"
 BEGIN
     /* Domain field */
     LTEXT           "Domain / Workgroup:", IDC_STATIC, 20, 18, 85, 10
-    EDITTEXT        IDC_EDIT_DOMAIN, 110, 15, 290, 18, ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
+    EDITTEXT        IDC_EDIT_DOMAIN, 110, 15, 290, 13, ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
     LTEXT           "(Leave empty to scan current domain/workgroup)", IDC_STATIC, 110, 36, 290, 10
     
     /* Computer type filters */
