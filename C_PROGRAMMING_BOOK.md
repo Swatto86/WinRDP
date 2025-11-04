@@ -14237,3 +14237,1830 @@ You've learned:
 
 **Next chapter:** We'll implement the main application window with system tray icon and login dialog!
 
+
+# Chapter 21: Main Application Window
+
+**What You'll Learn:**
+- Creating the WinMain entry point for Windows GUI applications
+- Registering and creating the main window
+- Implementing system tray icons
+- Creating and managing dialogs
+- Setting up the Windows message loop
+- Handling global hotkeys
+- Single instance application pattern
+
+**Why It Matters:**
+This chapter brings together everything we've learned to create the main application structure. You'll see how WinRDP initializes, displays a login dialog, creates a system tray icon, and processes Windows messages. This is where the application truly comes to life!
+
+## Introduction
+
+We've built several important modules:
+- **hosts.c**: CSV file management for storing RDP hosts
+- **credentials.c**: Secure credential storage via Windows Credential Manager
+- **utils.c**: Helper functions for windows and dialogs
+
+Now it's time to create the main application that ties everything together. In this chapter, we'll implement `main.c`, the heart of WinRDP.
+
+## The Windows Application Entry Point: WinMain
+
+Unlike console programs that use `main()`, Windows GUI applications use `WinMain()`:
+
+```c
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, 
+                    LPWSTR lpCmdLine, int nCmdShow)
+{
+    // Application initialization and setup
+    g_hInstance = hInstance;
+    
+    // Initialize common controls
+    INITCOMMONCONTROLSEX icex;
+    icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
+    icex.dwICC = ICC_LISTVIEW_CLASSES | ICC_STANDARD_CLASSES;
+    InitCommonControlsEx(&icex);
+    
+    // Register window class
+    WNDCLASSEXW wc = {0};
+    wc.cbSize = sizeof(WNDCLASSEXW);
+    wc.lpfnWndProc = WndProc;
+    wc.hInstance = hInstance;
+    wc.lpszClassName = L"WinRDP_MainWindow";
+    RegisterClassExW(&wc);
+    
+    // Create window
+    HWND hwnd = CreateWindowExW(0, L"WinRDP_MainWindow", L"WinRDP",
+                                WS_OVERLAPPEDWINDOW, 0, 0, 0, 0,
+                                NULL, NULL, hInstance, NULL);
+    
+    // Message loop
+    MSG msg;
+    while (GetMessage(&msg, NULL, 0, 0) > 0)
+    {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    
+    return (int)msg.wParam;
+}
+```
+
+### WinMain Parameters
+
+Let's understand each parameter:
+
+**HINSTANCE hInstance**
+- Handle to the current application instance
+- Used to identify your application to Windows
+- Pass this to window creation, resource loading, etc.
+
+**HINSTANCE hPrevInstance**
+- Always NULL in modern Windows
+- Legacy parameter from 16-bit Windows
+- Can be ignored with `UNREFERENCED_PARAMETER(hPrevInstance);`
+
+**LPWSTR lpCmdLine**
+- Command line arguments as a wide string
+- Example: if user runs `WinRDP.exe --autostart`, lpCmdLine is `L"--autostart"`
+- Use `GetCommandLineW()` for more flexibility
+
+**int nCmdShow**
+- How the window should be displayed initially
+- `SW_SHOWNORMAL`, `SW_HIDE`, `SW_MINIMIZE`, `SW_MAXIMIZE`, etc.
+- Windows passes this based on how the user launched the app
+
+## Message Flow in a Windows Application
+
+Understanding the message flow is crucial:
+
+```
+Program Start
+    ↓
+WinMain() called
+    ↓
+Initialize (load DLLs, register classes, etc.)
+    ↓
+Create Window
+    ↓
+Show Window (optional)
+    ↓
+Enter Message Loop ←───────────┐
+    ↓                          │
+GetMessage() blocks until      │
+a message arrives              │
+    ↓                          │
+TranslateMessage()             │
+(converts keyboard input)      │
+    ↓                          │
+DispatchMessage()              │
+(calls WndProc)                │
+    ↓                          │
+WndProc processes message      │
+    ↓                          │
+Return to loop ────────────────┘
+    ↓
+GetMessage() returns 0
+(WM_QUIT received)
+    ↓
+Exit WinMain
+    ↓
+Program Ends
+```
+
+## System Tray Implementation
+
+System tray icons allow applications to run in the background:
+
+```c
+BOOL InitSystemTray(HWND hwnd)
+{
+    NOTIFYICONDATAW nid = {0};
+    nid.cbSize = sizeof(NOTIFYICONDATAW);
+    nid.hWnd = hwnd;
+    nid.uID = 1;
+    nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
+    nid.uCallbackMessage = WM_TRAYICON;
+    nid.hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_MAINICON));
+    wcscpy_s(nid.szTip, 128, L"WinRDP Manager");
+    
+    return Shell_NotifyIconW(NIM_ADD, &nid);
+}
+```
+
+### Handling Tray Icon Events
+
+```c
+case WM_TRAYICON:
+    switch (LOWORD(lParam))
+    {
+        case WM_LBUTTONUP:
+            // Left click - show main dialog
+            DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_MAIN), 
+                     hwnd, MainDialogProc);
+            break;
+            
+        case WM_RBUTTONUP:
+            // Right click - show context menu
+            ShowContextMenu(hwnd);
+            break;
+    }
+    return 0;
+```
+
+## Global Hotkeys
+
+Register system-wide keyboard shortcuts:
+
+```c
+// Register Ctrl+Shift+R
+RegisterHotKey(hwnd, 1, MOD_CONTROL | MOD_SHIFT, 'R');
+
+// Handle in WndProc
+case WM_HOTKEY:
+    if (wParam == 1)
+    {
+        // Hotkey pressed - show dialog
+        DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_MAIN), 
+                 hwnd, MainDialogProc);
+    }
+    return 0;
+```
+
+## Summary
+
+You've learned:
+- ✅ WinMain entry point and parameters
+- ✅ Windows message loop architecture
+- ✅ System tray icon implementation  
+- ✅ Global hotkey registration
+- ✅ Dialog creation and management
+
+**Next chapter:** ListView controls for displaying host lists!
+
+
+# Chapter 22: ListView Control for Host Display
+
+**What You'll Learn:**
+- Creating and configuring ListView controls
+- Adding columns to ListViews
+- Populating ListViews with data
+- Handling ListView selection and double-click events
+- Implementing search/filter functionality
+- Working with extended ListView styles
+
+**Why It Matters:**
+The ListView control is essential for displaying tabular data in Windows applications. In this chapter, you'll learn how to create a professional-looking host list that users can browse, search, and select from. This is a critical UI component that appears in countless Windows applications.
+
+## Introduction
+
+Now that we have the main application structure from Chapter 21, it's time to display our RDP hosts in a user-friendly way. We'll use the **ListView control** - Windows' built-in control for displaying data in rows and columns (like Excel or File Explorer).
+
+## What is a ListView Control?
+
+A ListView displays items in various views:
+- **Report view** (what we'll use): Rows and columns like a spreadsheet
+- **Icon view**: Large icons with labels
+- **List view**: Single-column list
+- **Small icon view**: Small icons in columns
+
+```c
+// WinRDP uses Report View:
+// ┌────────────────────────────────────────┐
+// │ Hostname        │ Description          │
+// ├────────────────────────────────────────┤
+// │ server01        │ Production Server    │
+// │ dev-machine     │ Development Box      │
+// │ backup-srv      │ Backup Server        │
+// └────────────────────────────────────────┘
+```
+
+## Creating a ListView Control
+
+ListViews are typically created in dialog resources, but we configure them in code:
+
+```c
+INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    static Host* hosts = NULL;
+    static int hostCount = 0;
+    
+    switch (msg)
+    {
+        case WM_INITDIALOG:
+        {
+            // Get handle to ListView control (defined in dialog resource)
+            HWND hList = GetDlgItem(hwnd, IDC_LIST_SERVERS);
+            
+            // Set extended styles
+            ListView_SetExtendedListViewStyle(hList, 
+                LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES | LVS_EX_DOUBLEBUFFER);
+            
+            // Add columns
+            AddListViewColumns(hList);
+            
+            // Load and display data
+            if (LoadHosts(&hosts, &hostCount))
+            {
+                RefreshHostListView(hList, hosts, hostCount, NULL);
+            }
+            
+            return TRUE;
+        }
+    }
+    
+    return FALSE;
+}
+```
+
+## Extended ListView Styles
+
+Extended styles enhance ListView appearance and behavior:
+
+```c
+ListView_SetExtendedListViewStyle(hList,
+    LVS_EX_FULLROWSELECT |   // Select entire row, not just first column
+    LVS_EX_GRIDLINES |        // Show grid lines between cells
+    LVS_EX_DOUBLEBUFFER       // Reduce flicker when redrawing
+);
+
+// Other useful styles:
+LVS_EX_CHECKBOXES         // Add checkboxes to first column
+LVS_EX_HEADERDRAGDROP     // Allow column reordering
+LVS_EX_SUBITEMIMAGES      // Show images in subitems
+LVS_EX_INFOTIP            // Show tooltips
+```
+
+## Adding Columns to ListView
+
+Columns define the structure of the ListView:
+
+```c
+void AddListViewColumns(HWND hList)
+{
+    // Get ListView width for calculating column sizes
+    RECT rcList;
+    GetClientRect(hList, &rcList);
+    int listWidth = rcList.right - rcList.left;
+    
+    LVCOLUMNW col = {0};
+    
+    // Important: Column 0 cannot be centered in Report view!
+    // Workaround: Add an invisible dummy column at position 0
+    col.mask = LVCF_TEXT | LVCF_WIDTH;
+    col.pszText = L"";
+    col.cx = 1;  // Nearly invisible
+    ListView_InsertColumn(hList, 0, &col);
+    
+    // Now add real columns that CAN be centered
+    col.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_FMT;
+    col.fmt = LVCFMT_CENTER;  // Center text in column
+    
+    // Hostname column
+    col.pszText = L"Hostname";
+    col.cx = 180;
+    ListView_InsertColumn(hList, 1, &col);
+    
+    // Description column
+    col.pszText = L"Description";
+    col.cx = listWidth - 180 - 5;  // Fill remaining space
+    ListView_InsertColumn(hList, 2, &col);
+}
+```
+
+### The Column 0 Centering Problem
+
+**Why the dummy column?**
+
+Windows has a quirk: Column 0 in Report view cannot be centered. It's always left-aligned. The workaround:
+
+```c
+// Add a 1-pixel wide dummy column at position 0
+col.cx = 1;
+ListView_InsertColumn(hList, 0, &col);
+
+// Then add your real columns at positions 1, 2, 3...
+// These CAN be centered!
+col.fmt = LVCFMT_CENTER;
+ListView_InsertColumn(hList, 1, &col);  // Now we can center!
+```
+
+### LVCOLUMN Structure
+
+```c
+typedef struct {
+    UINT mask;        // Which fields are valid (LVCF_TEXT, LVCF_WIDTH, etc.)
+    int fmt;          // Alignment (LVCFMT_LEFT, LVCFMT_CENTER, LVCFMT_RIGHT)
+    int cx;           // Column width in pixels
+    LPWSTR pszText;   // Column header text
+    // ... other fields for images, sorting, etc.
+} LVCOLUMNW;
+
+// mask values:
+LVCF_FMT      // fmt field is valid
+LVCF_WIDTH    // cx field is valid
+LVCF_TEXT     // pszText field is valid
+LVCF_SUBITEM  // iSubItem field is valid
+```
+
+## Populating the ListView
+
+Add items and subitems to display data:
+
+```c
+void RefreshHostListView(HWND hList, Host* hosts, int hostCount, const wchar_t* searchText)
+{
+    // Clear existing items
+    ListView_DeleteAllItems(hList);
+    
+    if (hosts == NULL || hostCount == 0)
+        return;
+    
+    // Filtering logic (optional)
+    BOOL hasFilter = (searchText != NULL && wcslen(searchText) > 0);
+    wchar_t searchLower[256] = {0};
+    if (hasFilter)
+    {
+        wcsncpy_s(searchLower, 256, searchText, _TRUNCATE);
+        _wcslwr_s(searchLower, 256);  // Convert to lowercase
+    }
+    
+    // Add each host to the ListView
+    int displayIndex = 0;
+    for (int i = 0; i < hostCount; i++)
+    {
+        // Apply filter if specified
+        if (hasFilter)
+        {
+            wchar_t hostnameLower[256], descLower[256];
+            wcsncpy_s(hostnameLower, 256, hosts[i].hostname, _TRUNCATE);
+            _wcslwr_s(hostnameLower, 256);
+            wcsncpy_s(descLower, 256, hosts[i].description, _TRUNCATE);
+            _wcslwr_s(descLower, 256);
+            
+            // Skip if no match
+            if (wcsstr(hostnameLower, searchLower) == NULL &&
+                wcsstr(descLower, searchLower) == NULL)
+            {
+                continue;
+            }
+        }
+        
+        // Insert item
+        LVITEMW item = {0};
+        item.mask = LVIF_TEXT | LVIF_PARAM;
+        item.iItem = displayIndex;
+        item.iSubItem = 0;
+        item.pszText = L"";  // Dummy column
+        item.lParam = (LPARAM)i;  // Store original index
+        ListView_InsertItem(hList, &item);
+        
+        // Set text for columns
+        ListView_SetItemText(hList, displayIndex, 1, hosts[i].hostname);
+        ListView_SetItemText(hList, displayIndex, 2, hosts[i].description);
+        
+        displayIndex++;
+    }
+}
+```
+
+### LVITEM Structure
+
+```c
+typedef struct {
+    UINT mask;         // Which fields are valid
+    int iItem;         // Row index
+    int iSubItem;      // Column index (0 = first column)
+    UINT state;        // Item state (selected, focused, etc.)
+    UINT stateMask;    // Which state bits are valid
+    LPWSTR pszText;    // Item text
+    int cchTextMax;    // Size of pszText buffer
+    int iImage;        // Image index
+    LPARAM lParam;     // User-defined data
+    // ... more fields
+} LVITEMW;
+
+// mask values:
+LVIF_TEXT      // pszText is valid
+LVIF_IMAGE     // iImage is valid
+LVIF_PARAM     // lParam is valid
+LVIF_STATE     // state and stateMask are valid
+```
+
+### Adding Items Step-by-Step
+
+```c
+// 1. Create and insert the base item
+LVITEMW item = {0};
+item.mask = LVIF_TEXT | LVIF_PARAM;
+item.iItem = 0;          // Row 0
+item.iSubItem = 0;       // Column 0
+item.pszText = L"";      // Empty text for dummy column
+item.lParam = 123;       // Store custom data (e.g., original index)
+int index = ListView_InsertItem(hList, &item);
+
+// 2. Set text for other columns (subitems)
+ListView_SetItemText(hList, index, 1, L"server01");       // Column 1
+ListView_SetItemText(hList, index, 2, L"Production Server"); // Column 2
+```
+
+## Handling ListView Events
+
+Respond to user interactions with the ListView:
+
+```c
+case WM_NOTIFY:
+{
+    LPNMHDR pnmhdr = (LPNMHDR)lParam;
+    
+    // Check if notification is from our ListView
+    if (pnmhdr->idFrom == IDC_LIST_SERVERS)
+    {
+        switch (pnmhdr->code)
+        {
+            case NM_DBLCLK:
+            {
+                // Double-click - connect to selected host
+                HWND hList = GetDlgItem(hwnd, IDC_LIST_SERVERS);
+                int selected = ListView_GetNextItem(hList, -1, LVNI_SELECTED);
+                
+                if (selected >= 0)
+                {
+                    // Get the original host index from lParam
+                    LVITEMW item = {0};
+                    item.mask = LVIF_PARAM;
+                    item.iItem = selected;
+                    ListView_GetItem(hList, &item);
+                    int hostIndex = (int)item.lParam;
+                    
+                    // Connect to the host
+                    if (hostIndex >= 0 && hostIndex < hostCount)
+                    {
+                        LaunchRDPWithDefaults(hosts[hostIndex].hostname);
+                    }
+                }
+                return TRUE;
+            }
+            
+            case LVN_ITEMCHANGED:
+            {
+                // Selection changed
+                // Update UI based on selection
+                return TRUE;
+            }
+        }
+    }
+    break;
+}
+```
+
+### Common ListView Notifications
+
+```c
+NM_CLICK        // Single click
+NM_DBLCLK       // Double-click
+NM_RCLICK       // Right-click
+LVN_ITEMCHANGED // Item changed (selected, focused, etc.)
+LVN_COLUMNCLICK // Column header clicked
+LVN_KEYDOWN     // Key pressed
+LVN_BEGINLABELEDIT // User started editing item text
+LVN_ENDLABELEDIT   // User finished editing item text
+```
+
+## Getting ListView Selection
+
+Multiple ways to get the selected item:
+
+```c
+// Method 1: Get first selected item
+int selected = ListView_GetNextItem(hList, -1, LVNI_SELECTED);
+if (selected >= 0)
+{
+    // Item 'selected' is selected
+}
+
+// Method 2: Iterate all selected items (for multi-select)
+int index = -1;
+while ((index = ListView_GetNextItem(hList, index, LVNI_SELECTED)) != -1)
+{
+    // Process item 'index'
+}
+
+// Method 3: Get focused item
+int focused = ListView_GetNextItem(hList, -1, LVNI_FOCUSED);
+```
+
+### ListView_GetNextItem Function
+
+```c
+int ListView_GetNextItem(
+    HWND hList,      // ListView handle
+    int iStart,      // Start searching from this index (-1 = start from beginning)
+    UINT flags       // What to search for
+);
+
+// flags:
+LVNI_ALL        // All items
+LVNI_FOCUSED    // Item with focus
+LVNI_SELECTED   // Selected items
+LVNI_CUT        // Items marked for cut
+LVNI_DROPHILITED // Drop highlighted items
+
+// Returns: Index of next item, or -1 if none found
+```
+
+## Implementing Search/Filter
+
+Real-time search as user types:
+
+```c
+case WM_COMMAND:
+{
+    if (LOWORD(wParam) == IDC_EDIT_SEARCH && HIWORD(wParam) == EN_CHANGE)
+    {
+        // Search text changed - refresh list with filter
+        HWND hList = GetDlgItem(hwnd, IDC_LIST_SERVERS);
+        HWND hSearch = GetDlgItem(hwnd, IDC_EDIT_SEARCH);
+        
+        // Get search text
+        wchar_t searchText[256] = {0};
+        GetWindowTextW(hSearch, searchText, 256);
+        
+        // Refresh ListView with filter
+        RefreshHostListView(hList, hosts, hostCount, searchText);
+        
+        return TRUE;
+    }
+    break;
+}
+```
+
+### Case-Insensitive Searching
+
+```c
+// Convert both search term and data to lowercase
+wchar_t searchLower[256], hostnameLower[256];
+
+wcsncpy_s(searchLower, 256, searchText, _TRUNCATE);
+_wcslwr_s(searchLower, 256);
+
+wcsncpy_s(hostnameLower, 256, hostname, _TRUNCATE);
+_wcslwr_s(hostnameLower, 256);
+
+// Check if hostname contains search text
+if (wcsstr(hostnameLower, searchLower) != NULL)
+{
+    // Match found!
+}
+```
+
+## Practical Example: Complete ListView Dialog
+
+```c
+INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    static Host* hosts = NULL;
+    static int hostCount = 0;
+    
+    switch (msg)
+    {
+        case WM_INITDIALOG:
+        {
+            CenterWindow(hwnd);
+            
+            // Get ListView handle
+            HWND hList = GetDlgItem(hwnd, IDC_LIST_SERVERS);
+            
+            // Set extended styles
+            ListView_SetExtendedListViewStyle(hList,
+                LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES | LVS_EX_DOUBLEBUFFER);
+            
+            // Get ListView dimensions
+            RECT rcList;
+            GetClientRect(hList, &rcList);
+            int listWidth = rcList.right - rcList.left;
+            
+            // Add columns
+            LVCOLUMNW col = {0};
+            
+            // Dummy column
+            col.mask = LVCF_TEXT | LVCF_WIDTH;
+            col.pszText = L"";
+            col.cx = 1;
+            ListView_InsertColumn(hList, 0, &col);
+            
+            // Real columns
+            col.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_FMT;
+            col.fmt = LVCFMT_CENTER;
+            
+            col.pszText = L"Hostname";
+            col.cx = 180;
+            ListView_InsertColumn(hList, 1, &col);
+            
+            col.pszText = L"Description";
+            col.cx = listWidth - 180 - 5;
+            ListView_InsertColumn(hList, 2, &col);
+            
+            // Load hosts
+            if (LoadHosts(&hosts, &hostCount))
+            {
+                RefreshHostListView(hList, hosts, hostCount, NULL);
+            }
+            
+            return TRUE;
+        }
+        
+        case WM_NOTIFY:
+        {
+            LPNMHDR pnmhdr = (LPNMHDR)lParam;
+            if (pnmhdr->idFrom == IDC_LIST_SERVERS && pnmhdr->code == NM_DBLCLK)
+            {
+                // Double-click - connect
+                HWND hList = GetDlgItem(hwnd, IDC_LIST_SERVERS);
+                int selected = ListView_GetNextItem(hList, -1, LVNI_SELECTED);
+                
+                if (selected >= 0)
+                {
+                    LVITEMW item = {0};
+                    item.mask = LVIF_PARAM;
+                    item.iItem = selected;
+                    ListView_GetItem(hList, &item);
+                    int hostIndex = (int)item.lParam;
+                    
+                    if (hostIndex >= 0 && hostIndex < hostCount)
+                    {
+                        LaunchRDPWithDefaults(hosts[hostIndex].hostname);
+                        EndDialog(hwnd, IDOK);
+                    }
+                }
+            }
+            return TRUE;
+        }
+        
+        case WM_COMMAND:
+        {
+            switch (LOWORD(wParam))
+            {
+                case IDC_EDIT_SEARCH:
+                    if (HIWORD(wParam) == EN_CHANGE)
+                    {
+                        // Update filter
+                        HWND hList = GetDlgItem(hwnd, IDC_LIST_SERVERS);
+                        HWND hSearch = GetDlgItem(hwnd, IDC_EDIT_SEARCH);
+                        
+                        wchar_t searchText[256];
+                        GetWindowTextW(hSearch, searchText, 256);
+                        
+                        RefreshHostListView(hList, hosts, hostCount, searchText);
+                    }
+                    return TRUE;
+                
+                case IDCANCEL:
+                    if (hosts)
+                    {
+                        FreeHosts(hosts, hostCount);
+                        hosts = NULL;
+                    }
+                    EndDialog(hwnd, IDCANCEL);
+                    return TRUE;
+            }
+            break;
+        }
+        
+        case WM_CLOSE:
+            if (hosts)
+            {
+                FreeHosts(hosts, hostCount);
+                hosts = NULL;
+            }
+            EndDialog(hwnd, IDCANCEL);
+            return TRUE;
+    }
+    
+    return FALSE;
+}
+```
+
+## ListView Best Practices
+
+### 1. Use lParam to Store Data
+
+```c
+// Store original array index in lParam
+item.lParam = (LPARAM)i;
+
+// Later, retrieve it reliably
+LVITEMW item = {0};
+item.mask = LVIF_PARAM;
+item.iItem = selectedRow;
+ListView_GetItem(hList, &item);
+int originalIndex = (int)item.lParam;
+```
+
+**Why?** After filtering, ListView row numbers don't match array indices. lParam preserves the mapping.
+
+### 2. Delete All Items Before Refreshing
+
+```c
+// Always clear before repopulating
+ListView_DeleteAllItems(hList);
+
+// Then add new items
+for (int i = 0; i < count; i++)
+{
+    // Add item...
+}
+```
+
+### 3. Use Virtual ListViews for Large Datasets
+
+```c
+// For 10,000+ items, use LVS_OWNERDATA style
+// ListView asks you for data on-demand (only visible rows)
+// Significantly faster and more memory-efficient
+```
+
+### 4. Disable Redraw During Bulk Operations
+
+```c
+// Temporarily disable redrawing
+SendMessage(hList, WM_SETREDRAW, FALSE, 0);
+
+// Add many items
+for (int i = 0; i < 1000; i++)
+{
+    ListView_InsertItem(...);
+}
+
+// Re-enable redrawing and force refresh
+SendMessage(hList, WM_SETREDRAW, TRUE, 0);
+InvalidateRect(hList, NULL, TRUE);
+```
+
+## Common ListView Issues and Solutions
+
+### Issue 1: Column 0 Won't Center
+
+**Problem:**
+```c
+col.fmt = LVCFMT_CENTER;
+ListView_InsertColumn(hList, 0, &col);  // Still left-aligned!
+```
+
+**Solution:**
+```c
+// Add dummy column at 0, real columns at 1, 2, ...
+ListView_InsertColumn(hList, 0, &dummyCol);
+ListView_InsertColumn(hList, 1, &realCol);  // This can be centered
+```
+
+### Issue 2: Selection Lost After Refresh
+
+**Problem:**
+```c
+ListView_DeleteAllItems(hList);
+// Repopulate...
+// Previously selected item is no longer selected
+```
+
+**Solution:**
+```c
+// Save selection before refresh
+int saved = ListView_GetNextItem(hList, -1, LVNI_SELECTED);
+
+// Refresh
+ListView_DeleteAllItems(hList);
+// Repopulate...
+
+// Restore selection
+if (saved >= 0 && saved < newCount)
+{
+    ListView_SetItemState(hList, saved, LVIS_SELECTED, LVIS_SELECTED);
+    ListView_EnsureVisible(hList, saved, FALSE);
+}
+```
+
+### Issue 3: Flickering During Updates
+
+**Solution:**
+```c
+// Use LVS_EX_DOUBLEBUFFER
+ListView_SetExtendedListViewStyle(hList, LVS_EX_DOUBLEBUFFER);
+
+// Or disable redraw during updates
+SendMessage(hList, WM_SETREDRAW, FALSE, 0);
+// Update...
+SendMessage(hList, WM_SETREDRAW, TRUE, 0);
+```
+
+## Exercises
+
+### Exercise 1: Add Row Numbers
+
+Add a column showing row numbers:
+
+```c
+// TODO: Add a "No." column
+col.pszText = L"No.";
+col.cx = 40;
+ListView_InsertColumn(hList, 1, &col);
+
+// When adding items, set row number
+wchar_t rowNum[16];
+swprintf_s(rowNum, 16, L"%d", displayIndex + 1);
+ListView_SetItemText(hList, displayIndex, 1, rowNum);
+```
+
+### Exercise 2: Implement Column Sorting
+
+Sort by column when header clicked:
+
+```c
+// TODO: Handle LVN_COLUMNCLICK
+case LVN_COLUMNCLICK:
+{
+    LPNMLISTVIEW pnmv = (LPNMLISTVIEW)lParam;
+    int column = pnmv->iSubItem;
+    
+    // Sort by column
+    // (Hint: Use ListView_SortItems)
+    break;
+}
+```
+
+### Exercise 3: Highlight Search Terms
+
+Highlight matching text in a different color:
+
+```c
+// TODO: Use custom drawing (NM_CUSTOMDRAW)
+// Detect if item text contains search term
+// Draw with highlighted background
+```
+
+### Exercise 4: Export to CSV
+
+Add an "Export" button that saves the current filtered view to CSV:
+
+```c
+// TODO:
+// 1. Get count: ListView_GetItemCount(hList)
+// 2. For each item, get text: ListView_GetItemText(...)
+// 3. Write to CSV file
+```
+
+### Exercise 5: Alternate Row Colors
+
+Display alternating row colors (like Excel):
+
+```c
+// TODO: Handle NM_CUSTOMDRAW
+case NM_CUSTOMDRAW:
+{
+    LPNMLVCUSTOMDRAW pcd = (LPNMLVCUSTOMDRAW)lParam;
+    
+    if (pcd->nmcd.dwDrawStage == CDDS_PREPAINT)
+        return CDRF_NOTIFYITEMDRAW;
+    
+    if (pcd->nmcd.dwDrawStage == CDDS_ITEMPREPAINT)
+    {
+        // Set background color based on row index
+        if (pcd->nmcd.dwItemSpec % 2 == 0)
+            pcd->clrTextBk = RGB(240, 240, 240);
+        
+        return CDRF_NEWFONT;
+    }
+    
+    return CDRF_DODEFAULT;
+}
+```
+
+## Summary
+
+You've learned:
+- ✅ Creating and configuring ListView controls
+- ✅ Adding columns (with the dummy column trick for centering)
+- ✅ Populating ListViews with data
+- ✅ Handling double-click to connect
+- ✅ Implementing real-time search/filtering
+- ✅ Using lParam to preserve data relationships
+- ✅ Common ListView pitfalls and solutions
+
+**You now have:**
+- A fully functional host list display
+- Search/filter capability
+- Double-click to connect
+- Professional-looking data presentation
+
+**Next chapter:** Implementing RDP connection logic to actually connect to servers!
+
+
+
+# Chapter 23: RDP Connection Logic
+
+**What You'll Learn:**
+- Creating RDP configuration files programmatically
+- Understanding the RDP file format
+- Launching external applications with ShellExecuteW
+- Implementing credential strategies (per-host vs. global)
+- Working with temporary files
+- Process management and cleanup
+
+**Why It Matters:**
+This is the moment everything comes together! You've built the UI, stored credentials securely, and managed host lists. Now you'll implement the core functionality: launching RDP connections to servers. This chapter shows how to integrate with external applications (mstsc.exe) and work with file-based configuration.
+
+## Introduction
+
+Windows Remote Desktop Protocol (RDP) uses `.rdp` files to configure connections. These are simple text files with key-value pairs that tell `mstsc.exe` (Microsoft Terminal Services Client) how to connect to a server.
+
+In this chapter, we'll:
+1. Generate RDP configuration files
+2. Implement a two-tier credential strategy (per-host, then global)
+3. Launch mstsc.exe with our configuration
+4. Clean up temporary files
+
+## The RDP File Format
+
+RDP files are plain text files with a simple format:
+
+```
+setting_name:type:value
+
+Types:
+  i: = integer
+  s: = string
+  b: = binary (base64 encoded)
+```
+
+### Example RDP File
+
+```rdp
+screen mode id:i:2
+full address:s:server01.company.com
+username:s:administrator
+authentication level:i:0
+redirectclipboard:i:1
+redirectprinters:i:1
+session bpp:i:32
+```
+
+### Common RDP Settings
+
+```c
+// Display Settings
+screen mode id:i:2              // 2 = full screen, 1 = windowed
+desktopwidth:i:1920             // Screen width
+desktopheight:i:1080            // Screen height
+session bpp:i:32                // Color depth (bits per pixel)
+
+// Connection Settings
+full address:s:hostname         // Server to connect to
+username:s:username             // Username (optional)
+
+// Authentication
+authentication level:i:0        // 0 = Don't require server auth
+prompt for credentials:i:0      // 0 = Use saved credentials
+
+// Redirection (Sharing with remote PC)
+redirectclipboard:i:1           // 1 = Share clipboard
+redirectprinters:i:1            // 1 = Share printers
+redirectsmartcards:i:1          // 1 = Share smart cards
+redirectcomports:i:0            // 0 = Don't share COM ports
+
+// Performance
+compression:i:1                 // Enable compression
+connection type:i:7             // 7 = Auto-detect
+networkautodetect:i:1           // Enable network auto-detection
+
+// Experience
+disable wallpaper:i:0           // 0 = Show wallpaper
+allow font smoothing:i:1        // 1 = Enable font smoothing
+allow desktop composition:i:1   // 1 = Enable Aero effects
+```
+
+## Creating RDP Files
+
+Let's implement the function that creates RDP configuration files:
+
+```c
+BOOL CreateRDPFile(const wchar_t* hostname, const wchar_t* username,
+                   wchar_t* outputPath, size_t outputLen)
+{
+    FILE* file = NULL;
+    errno_t err;
+    wchar_t tempPath[MAX_PATH];
+    wchar_t rdpPath[MAX_PATH];
+    
+    // Get Windows temp directory
+    if (GetTempPathW(MAX_PATH, tempPath) == 0)
+    {
+        return FALSE;
+    }
+    
+    // Create unique filename with timestamp
+    time_t now = time(NULL);
+    swprintf_s(rdpPath, MAX_PATH, L"%sWinRDP_%lld.rdp", tempPath, (long long)now);
+    
+    // Open file for writing (UTF-8 encoding)
+    err = _wfopen_s(&file, rdpPath, L"w, ccs=UTF-8");
+    if (err != 0 || file == NULL)
+    {
+        return FALSE;
+    }
+    
+    // Write RDP configuration
+    fwprintf(file, L"screen mode id:i:2\n");
+    fwprintf(file, L"desktopwidth:i:1920\n");
+    fwprintf(file, L"desktopheight:i:1080\n");
+    fwprintf(file, L"session bpp:i:32\n");
+    fwprintf(file, L"full address:s:%ls\n", hostname);
+    fwprintf(file, L"authentication level:i:0\n");
+    fwprintf(file, L"prompt for credentials:i:0\n");
+    fwprintf(file, L"redirectclipboard:i:1\n");
+    fwprintf(file, L"redirectprinters:i:1\n");
+    
+    // Add username if provided
+    if (username != NULL && wcslen(username) > 0)
+    {
+        fwprintf(file, L"username:s:%ls\n", username);
+    }
+    
+    fclose(file);
+    
+    // Return path to caller
+    wcsncpy_s(outputPath, outputLen, rdpPath, _TRUNCATE);
+    
+    return TRUE;
+}
+```
+
+### GetTempPathW Function
+
+```c
+DWORD GetTempPathW(
+    DWORD nBufferLength,   // Size of buffer
+    LPWSTR lpBuffer        // Buffer to receive path
+);
+
+// Returns: Number of characters copied (excluding null terminator)
+//          0 on failure
+
+// Typical temp path: C:\Users\[Username]\AppData\Local\Temp\
+
+wchar_t tempPath[MAX_PATH];
+DWORD result = GetTempPathW(MAX_PATH, tempPath);
+if (result > 0 && result < MAX_PATH)
+{
+    // Success - tempPath contains the temp directory
+    // Example: L"C:\Users\John\AppData\Local\Temp\"
+}
+```
+
+### Creating Unique Filenames
+
+```c
+// Use timestamp to avoid conflicts
+time_t now = time(NULL);
+swprintf_s(rdpPath, MAX_PATH, L"%sWinRDP_%lld.rdp", tempPath, (long long)now);
+
+// Result: C:\Users\John\AppData\Local\Temp\WinRDP_1699564823.rdp
+
+// Alternatively, use GetTempFileNameW for guaranteed unique names:
+wchar_t uniquePath[MAX_PATH];
+GetTempFileNameW(tempPath, L"RDP", 0, uniquePath);
+// Creates: C:\Users\John\AppData\Local\Temp\RDP1234.tmp
+```
+
+### Writing UTF-8 Text Files
+
+```c
+// Open file with UTF-8 encoding
+FILE* file;
+_wfopen_s(&file, path, L"w, ccs=UTF-8");
+
+// Write wide strings (automatically converted to UTF-8)
+fwprintf(file, L"full address:s:%ls\n", hostname);
+
+// Close
+fclose(file);
+
+// UTF-8 encoding ensures international characters work correctly
+```
+
+## The Two-Tier Credential Strategy
+
+WinRDP uses a flexible credential system:
+
+```
+Connection Request
+    ↓
+Check for per-host credentials (hostname-specific)
+    ↓
+Found? → Use per-host credentials
+    ↓
+Not found? → Check for global credentials
+    ↓
+Found? → Use global credentials
+    ↓
+Not found? → Show error
+```
+
+### Implementation
+
+```c
+BOOL LaunchRDP(const wchar_t* hostname, const wchar_t* username, 
+               const wchar_t* password)
+{
+    wchar_t rdpPath[MAX_PATH];
+    wchar_t actualUsername[MAX_USERNAME_LEN];
+    wchar_t actualPassword[MAX_PASSWORD_LEN];
+    
+    // Determine which credentials to use
+    if (username == NULL || password == NULL)
+    {
+        // Step 1: Try per-host credentials
+        if (LoadRDPCredentials(hostname, actualUsername, actualPassword))
+        {
+            // Per-host credentials found - use them
+            // These are stored as "WinRDP:TERMSRV/hostname"
+        }
+        // Step 2: Fall back to global credentials
+        else if (LoadCredentials(NULL, actualUsername, actualPassword))
+        {
+            // Global credentials found - use them
+            // These are stored as "WinRDP:DefaultCredentials"
+        }
+        else
+        {
+            // No credentials available
+            MessageBoxW(NULL, 
+                       L"No credentials found. Please log in first.",
+                       L"Error", MB_OK | MB_ICONERROR);
+            return FALSE;
+        }
+    }
+    else
+    {
+        // Explicit credentials provided - use them
+        wcsncpy_s(actualUsername, MAX_USERNAME_LEN, username, _TRUNCATE);
+        wcsncpy_s(actualPassword, MAX_PASSWORD_LEN, password, _TRUNCATE);
+    }
+    
+    // Save credentials for RDP session
+    // Windows RDP expects credentials in format: TERMSRV/hostname
+    if (!SaveRDPCredentials(hostname, actualUsername, actualPassword))
+    {
+        MessageBoxW(NULL, L"Failed to save RDP credentials.", 
+                   L"Error", MB_OK | MB_ICONERROR);
+        return FALSE;
+    }
+    
+    // Create RDP file
+    if (!CreateRDPFile(hostname, actualUsername, rdpPath, MAX_PATH))
+    {
+        MessageBoxW(NULL, L"Failed to create RDP file.", 
+                   L"Error", MB_OK | MB_ICONERROR);
+        return FALSE;
+    }
+    
+    // Launch mstsc.exe
+    HINSTANCE result = ShellExecuteW(
+        NULL,                   // No parent window
+        L"open",                // Action: open
+        L"mstsc.exe",           // Program: RDP client
+        rdpPath,                // Parameter: path to RDP file
+        NULL,                   // Working directory: default
+        SW_SHOWNORMAL           // Show window normally
+    );
+    
+    // Check for errors
+    if ((INT_PTR)result <= 32)
+    {
+        wchar_t errorMsg[256];
+        swprintf_s(errorMsg, 256, 
+                  L"Failed to launch RDP client.\nError code: %d", 
+                  (int)(INT_PTR)result);
+        MessageBoxW(NULL, errorMsg, L"Error", MB_OK | MB_ICONERROR);
+        
+        // Clean up RDP file
+        DeleteFileW(rdpPath);
+        return FALSE;
+    }
+    
+    // Give mstsc.exe time to read the file
+    Sleep(1000);
+    
+    // Clean up temporary RDP file
+    DeleteFileW(rdpPath);
+    
+    return TRUE;
+}
+```
+
+### Why Save Credentials Again?
+
+```c
+// We already have credentials in Credential Manager as:
+// "WinRDP:DefaultCredentials" or "WinRDP:TERMSRV/hostname"
+
+// But we need to save them AGAIN as:
+// "TERMSRV/hostname" (without "WinRDP:" prefix)
+
+SaveRDPCredentials(hostname, username, password);
+
+// Why? Because mstsc.exe expects credentials in a specific format:
+// Target: TERMSRV/hostname
+// This is how Windows RDP client looks up credentials
+```
+
+## Launching External Applications with ShellExecuteW
+
+`ShellExecuteW` is a powerful function for launching programs and opening files:
+
+```c
+HINSTANCE ShellExecuteW(
+    HWND hwnd,               // Parent window (NULL = none)
+    LPCWSTR lpOperation,     // Action: "open", "edit", "print", etc.
+    LPCWSTR lpFile,          // File or program to execute
+    LPCWSTR lpParameters,    // Command-line parameters
+    LPCWSTR lpDirectory,     // Working directory (NULL = current)
+    INT nShowCmd             // How to show the window
+);
+
+// Returns: Value > 32 on success, <= 32 on error
+```
+
+### ShellExecuteW Examples
+
+```c
+// 1. Launch a program
+ShellExecuteW(NULL, L"open", L"notepad.exe", L"readme.txt", NULL, SW_SHOWNORMAL);
+
+// 2. Open a file with default program
+ShellExecuteW(NULL, L"open", L"document.pdf", NULL, NULL, SW_SHOWNORMAL);
+
+// 3. Open a URL in browser
+ShellExecuteW(NULL, L"open", L"https://www.example.com", NULL, NULL, SW_SHOWNORMAL);
+
+// 4. Open Windows Explorer to a folder
+ShellExecuteW(NULL, L"explore", L"C:\\Users", NULL, NULL, SW_SHOWNORMAL);
+
+// 5. Print a file
+ShellExecuteW(NULL, L"print", L"document.docx", NULL, NULL, SW_HIDE);
+```
+
+### Common lpOperation Values
+
+```c
+"open"     // Open file or program
+"edit"     // Open file in editor
+"explore"  // Open folder in Explorer
+"find"     // Open search dialog
+"print"    // Print file
+NULL       // Use default action (usually "open")
+```
+
+### nShowCmd Values
+
+```c
+SW_HIDE            // Hidden
+SW_SHOWNORMAL      // Normal window
+SW_SHOWMINIMIZED   // Minimized
+SW_SHOWMAXIMIZED   // Maximized
+SW_SHOWNOACTIVATE  // Show without activating
+```
+
+### Error Codes
+
+```c
+// ShellExecuteW returns <= 32 on error
+if ((INT_PTR)result <= 32)
+{
+    switch ((INT_PTR)result)
+    {
+        case 0:  // Out of memory
+        case SE_ERR_FNF:  // File not found (2)
+        case SE_ERR_PNF:  // Path not found (3)
+        case SE_ERR_ACCESSDENIED:  // Access denied (5)
+        case SE_ERR_OOM:  // Out of memory (8)
+        case SE_ERR_NOASSOC:  // No association (31)
+            // Handle error
+            break;
+    }
+}
+```
+
+## Temporary File Management
+
+When creating temporary files, always clean them up:
+
+```c
+wchar_t tempFile[MAX_PATH];
+
+// 1. Create temp file
+if (CreateRDPFile(hostname, username, tempFile, MAX_PATH))
+{
+    // 2. Use the file
+    ShellExecuteW(NULL, L"open", L"mstsc.exe", tempFile, NULL, SW_SHOWNORMAL);
+    
+    // 3. Wait for application to read it
+    Sleep(1000);  // 1 second should be enough
+    
+    // 4. Delete temp file
+    DeleteFileW(tempFile);
+}
+```
+
+### DeleteFileW Function
+
+```c
+BOOL DeleteFileW(
+    LPCWSTR lpFileName  // File to delete
+);
+
+// Returns: TRUE on success, FALSE on failure
+
+// Example:
+if (!DeleteFileW(L"C:\\temp\\file.txt"))
+{
+    DWORD error = GetLastError();
+    // File might be in use, locked, or doesn't exist
+}
+```
+
+### Why Sleep Before Deleting?
+
+```c
+// Launch mstsc.exe
+ShellExecuteW(NULL, L"open", L"mstsc.exe", rdpPath, NULL, SW_SHOWNORMAL);
+
+// Wait 1 second
+Sleep(1000);
+
+// Now safe to delete
+DeleteFileW(rdpPath);
+
+// Why wait?
+// ShellExecuteW returns BEFORE mstsc.exe finishes reading the RDP file
+// If we delete immediately, mstsc.exe might not have opened the file yet
+// 1 second is more than enough time for mstsc.exe to open and read the file
+```
+
+## Convenience Functions
+
+Provide simple wrapper functions for common operations:
+
+```c
+// Connect using default credentials (two-tier strategy)
+BOOL LaunchRDPWithDefaults(const wchar_t* hostname)
+{
+    return LaunchRDP(hostname, NULL, NULL);
+}
+
+// Connect with specific credentials
+BOOL LaunchRDPWithCredentials(const wchar_t* hostname,
+                              const wchar_t* username,
+                              const wchar_t* password)
+{
+    return LaunchRDP(hostname, username, password);
+}
+
+// Quick connect (prompt for credentials if needed)
+BOOL QuickConnect(const wchar_t* hostname)
+{
+    wchar_t user[256], pass[256];
+    
+    // Try to load credentials
+    if (!LoadRDPCredentials(hostname, user, pass) &&
+        !LoadCredentials(NULL, user, pass))
+    {
+        // No saved credentials - show dialog to get them
+        if (!PromptForCredentials(user, 256, pass, 256))
+        {
+            return FALSE;  // User cancelled
+        }
+    }
+    
+    return LaunchRDP(hostname, user, pass);
+}
+```
+
+## Complete rdp.h Header
+
+```c
+#ifndef RDP_H
+#define RDP_H
+
+#include <windows.h>
+
+// Create RDP configuration file
+BOOL CreateRDPFile(const wchar_t* hostname, const wchar_t* username,
+                   wchar_t* outputPath, size_t outputLen);
+
+// Launch RDP connection
+BOOL LaunchRDP(const wchar_t* hostname, const wchar_t* username, 
+               const wchar_t* password);
+
+// Convenience function: connect with default credentials
+BOOL LaunchRDPWithDefaults(const wchar_t* hostname);
+
+#endif // RDP_H
+```
+
+## Testing the RDP Module
+
+Create a simple test program:
+
+```c
+#include <windows.h>
+#include <stdio.h>
+#include "rdp.h"
+#include "credentials.h"
+
+int main(void)
+{
+    // Initialize
+    wprintf(L"RDP Module Test\n\n");
+    
+    // Test 1: Create RDP file
+    wprintf(L"Test 1: Creating RDP file...\n");
+    wchar_t rdpPath[MAX_PATH];
+    if (CreateRDPFile(L"server01", L"admin", rdpPath, MAX_PATH))
+    {
+        wprintf(L"  Success! File created: %ls\n", rdpPath);
+        DeleteFileW(rdpPath);
+    }
+    else
+    {
+        wprintf(L"  FAILED\n");
+    }
+    
+    // Test 2: Save test credentials
+    wprintf(L"\nTest 2: Saving test credentials...\n");
+    if (SaveCredentials(NULL, L"testuser", L"testpass"))
+    {
+        wprintf(L"  Success!\n");
+    }
+    
+    // Test 3: Launch RDP (will fail if server doesn't exist)
+    wprintf(L"\nTest 3: Launching RDP connection...\n");
+    wprintf(L"  (This will fail if 'server01' doesn't exist)\n");
+    if (LaunchRDPWithDefaults(L"server01"))
+    {
+        wprintf(L"  RDP launched successfully!\n");
+    }
+    else
+    {
+        wprintf(L"  Launch failed (expected if server doesn't exist)\n");
+    }
+    
+    // Cleanup
+    DeleteCredentials(NULL);
+    
+    wprintf(L"\nTests complete. Press Enter to exit...\n");
+    getchar();
+    
+    return 0;
+}
+```
+
+## Practical Example: Quick Connect Dialog
+
+A simple dialog for quick RDP connections:
+
+```c
+INT_PTR CALLBACK QuickConnectDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+        case WM_INITDIALOG:
+            CenterWindow(hwnd);
+            SetFocus(GetDlgItem(hwnd, IDC_EDIT_HOSTNAME));
+            return FALSE;  // We set focus manually
+        
+        case WM_COMMAND:
+            switch (LOWORD(wParam))
+            {
+                case IDOK:
+                {
+                    // Get hostname
+                    wchar_t hostname[256];
+                    GetDlgItemTextW(hwnd, IDC_EDIT_HOSTNAME, hostname, 256);
+                    
+                    if (wcslen(hostname) == 0)
+                    {
+                        MessageBoxW(hwnd, L"Please enter a hostname.", 
+                                   L"Error", MB_OK | MB_ICONERROR);
+                        return TRUE;
+                    }
+                    
+                    // Connect
+                    if (LaunchRDPWithDefaults(hostname))
+                    {
+                        EndDialog(hwnd, IDOK);
+                    }
+                    else
+                    {
+                        MessageBoxW(hwnd, L"Failed to connect.", 
+                                   L"Error", MB_OK | MB_ICONERROR);
+                    }
+                    
+                    return TRUE;
+                }
+                
+                case IDCANCEL:
+                    EndDialog(hwnd, IDCANCEL);
+                    return TRUE;
+            }
+            break;
+    }
+    
+    return FALSE;
+}
+
+// Usage:
+DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_QUICK_CONNECT), 
+         hwnd, QuickConnectDialogProc);
+```
+
+## Security Considerations
+
+### 1. Clean Up Sensitive Data
+
+```c
+// Zero out password from memory after use
+SecureZeroMemory(password, sizeof(password));
+
+// SecureZeroMemory guarantees the compiler won't optimize away the zeroing
+// (Unlike memset, which might be optimized away)
+```
+
+### 2. Temporary File Permissions
+
+```c
+// RDP files may contain sensitive information
+// Windows temp directory is usually secure (user-only access)
+// But for extra security, you could:
+
+SECURITY_ATTRIBUTES sa = {0};
+sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+sa.lpSecurityDescriptor = NULL;  // Use default (user-only)
+sa.bInheritHandle = FALSE;
+
+// Then use CreateFile with security attributes
+// (More complex than _wfopen_s)
+```
+
+### 3. Validate Input
+
+```c
+// Always validate hostname
+BOOL IsValidHostname(const wchar_t* hostname)
+{
+    if (hostname == NULL || wcslen(hostname) == 0)
+        return FALSE;
+    
+    // Check for invalid characters
+    if (wcspbrk(hostname, L"<>:\"/\\|?*") != NULL)
+        return FALSE;
+    
+    // Check length
+    if (wcslen(hostname) > 255)
+        return FALSE;
+    
+    return TRUE;
+}
+
+// Use before launching RDP
+if (!IsValidHostname(hostname))
+{
+    MessageBoxW(NULL, L"Invalid hostname.", L"Error", MB_OK);
+    return FALSE;
+}
+```
+
+## Common Issues and Solutions
+
+### Issue 1: mstsc.exe Not Found
+
+**Problem:**
+```c
+ShellExecuteW(NULL, L"open", L"mstsc.exe", ...);
+// Error: File not found
+```
+
+**Solution:**
+```c
+// mstsc.exe should be in %SystemRoot%\System32
+// Usually in PATH, but to be safe:
+
+wchar_t mstscPath[MAX_PATH];
+GetSystemDirectoryW(mstscPath, MAX_PATH);
+wcscat_s(mstscPath, MAX_PATH, L"\\mstsc.exe");
+
+// Now use full path
+ShellExecuteW(NULL, L"open", mstscPath, ...);
+```
+
+### Issue 2: Credentials Not Working
+
+**Problem:**
+```c
+// RDP prompts for credentials even though we saved them
+```
+
+**Solution:**
+```c
+// Ensure credentials are saved with correct target name:
+// "TERMSRV/hostname" (not "WinRDP:TERMSRV/hostname")
+
+SaveRDPCredentials(hostname, username, password);
+
+// And ensure "prompt for credentials:i:0" in RDP file
+fwprintf(file, L"prompt for credentials:i:0\n");
+```
+
+### Issue 3: Temp File Still Exists
+
+**Problem:**
+```c
+// Temp RDP files accumulating in temp directory
+```
+
+**Solution:**
+```c
+// Ensure Sleep() is long enough
+Sleep(1000);  // 1 second
+
+// And always delete in all code paths
+if (!DeleteFileW(rdpPath))
+{
+    // File might still be open - try again after a delay
+    Sleep(500);
+    DeleteFileW(rdpPath);
+}
+```
+
+## Exercises
+
+### Exercise 1: Custom Screen Resolution
+
+Allow user to specify screen resolution:
+
+```c
+// TODO: Add parameters
+BOOL CreateRDPFile(const wchar_t* hostname, const wchar_t* username,
+                   int width, int height,  // Add these
+                   wchar_t* outputPath, size_t outputLen)
+{
+    // ...
+    fwprintf(file, L"desktopwidth:i:%d\n", width);
+    fwprintf(file, L"desktopheight:i:%d\n", height);
+    // ...
+}
+```
+
+### Exercise 2: RDP File Presets
+
+Create preset configurations (low bandwidth, high quality, etc.):
+
+```c
+// TODO: Implement
+typedef enum {
+    RDP_PRESET_LOW_BANDWIDTH,
+    RDP_PRESET_HIGH_QUALITY,
+    RDP_PRESET_BALANCED
+} RDPPreset;
+
+BOOL CreateRDPFileWithPreset(const wchar_t* hostname, 
+                             const wchar_t* username,
+                             RDPPreset preset,
+                             wchar_t* outputPath, size_t outputLen);
+```
+
+### Exercise 3: Connection History
+
+Log all RDP connections:
+
+```c
+// TODO: Implement
+typedef struct {
+    wchar_t hostname[256];
+    wchar_t username[256];
+    SYSTEMTIME timestamp;
+} ConnectionLog;
+
+void LogConnection(const wchar_t* hostname, const wchar_t* username);
+BOOL GetConnectionHistory(ConnectionLog** logs, int* count);
+```
+
+### Exercise 4: Batch Connect
+
+Connect to multiple servers sequentially:
+
+```c
+// TODO: Implement
+BOOL BatchConnect(const wchar_t** hostnames, int count)
+{
+    for (int i = 0; i < count; i++)
+    {
+        if (!LaunchRDPWithDefaults(hostnames[i]))
+        {
+            // Log error and continue
+        }
+        
+        Sleep(2000);  // Wait between launches
+    }
+    
+    return TRUE;
+}
+```
+
+### Exercise 5: mstsc.exe Options
+
+Add support for mstsc.exe command-line options:
+
+```c
+// mstsc.exe supports various command-line options:
+// /v:hostname     - Connect to hostname
+// /admin          - Connect to console session
+// /f              - Full screen mode
+// /w:width /h:height - Set resolution
+
+// TODO: Modify LaunchRDP to accept flags:
+typedef enum {
+    RDP_FLAG_NONE = 0,
+    RDP_FLAG_ADMIN = 1,
+    RDP_FLAG_FULLSCREEN = 2,
+    RDP_FLAG_CONSOLE = 4
+} RDPFlags;
+
+BOOL LaunchRDPWithFlags(const wchar_t* hostname, RDPFlags flags);
+```
+
+## Summary
+
+You've learned:
+- ✅ Creating RDP configuration files programmatically
+- ✅ Understanding the RDP file format and common settings
+- ✅ Implementing two-tier credential strategy (per-host, then global)
+- ✅ Launching external applications with ShellExecuteW
+- ✅ Managing temporary files safely
+- ✅ Process launching and cleanup
+- ✅ Security considerations for credential handling
+
+**You now have:**
+- Complete RDP connection functionality
+- Flexible credential management
+- Robust file handling
+- Foundation for advanced features
+
+**🎉 Congratulations! WinRDP is now fully functional! 🎉**
+
+Your application can:
+- ✅ Store credentials securely
+- ✅ Manage a list of RDP hosts
+- ✅ Display hosts in a searchable list
+- ✅ Connect to servers with one double-click
+- ✅ Run in the system tray
+- ✅ Respond to global hotkeys
+
+**Next chapter:** We'll add system tray integration and polish the application with advanced features!
+
