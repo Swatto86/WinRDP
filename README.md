@@ -91,9 +91,11 @@ pacman -S mingw-w64-x86_64-gcc
 **Getting Started:**
 - **README.md** - This file - Overview, features, and quick start
 - **BUILD.md** - Installation and build instructions
+- **GETTING_STARTED_GUIDE.md** - How to start programming projects from scratch 🆕
 
 **Learning Resources:**
 - **C_PROGRAMMING_BOOK.md** - Complete C programming book (34 chapters, 100% COMPLETE! 🎉)
+- **GETTING_STARTED_GUIDE.md** - From idea to reality: How programmers actually think and build projects
 - Source code files are heavily commented for educational purposes
 
 **Reference:**
