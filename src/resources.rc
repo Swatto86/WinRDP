@@ -96,7 +96,10 @@ BEGIN
     /* Server list with modern appearance */
     CONTROL         "", IDC_LIST_SERVERS, "SysListView32", 
                     LVS_REPORT | LVS_SINGLESEL | WS_BORDER | WS_TABSTOP,
-                    15, 42, 470, 301
+                    15, 42, 470, 286
+    
+    /* Host count status label */
+    LTEXT           "", IDC_STATIC_HOST_COUNT, 15, 333, 470, 10
     
     /* Action buttons with modern spacing and consistent sizing */
     DEFPUSHBUTTON   "Connect", IDC_BTN_CONNECT, 15, 353, 100, 20
@@ -123,7 +126,10 @@ BEGIN
     /* Host list with modern appearance and better sizing */
     CONTROL         "", IDC_LIST_HOSTS, "SysListView32",
                     LVS_REPORT | LVS_SINGLESEL | WS_BORDER | WS_TABSTOP,
-                    15, 35, 520, 350
+                    15, 35, 520, 335
+    
+    /* Host count status label */
+    LTEXT           "", IDC_STATIC_HOSTS_COUNT, 15, 375, 520, 10
     
     /* Action buttons with modern spacing */
     PUSHBUTTON      "Add Host", IDC_BTN_ADD_HOST, 15, 395, 90, 22

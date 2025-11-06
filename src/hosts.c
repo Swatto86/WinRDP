@@ -3,7 +3,7 @@
  * 
  * This module manages the list of RDP servers/hosts.
  * Hosts are stored in a simple CSV file format:
- *   hostname,description
+ *   hostname,description,lastConnected
  * 
  * We use standard C file I/O functions for reading and writing.
  * In a real production app, you might use a database or JSON,
@@ -221,7 +221,7 @@ BOOL SaveHosts(const Host* hosts, int count)
     fwrite(bom, 1, 3, file);
     
     // Write CSV header
-    const char* header = "hostname,description\r\n";
+    const char* header = "hostname,description,lastConnected\r\n";
     fwrite(header, 1, strlen(header), file);
     
     // Write each host
@@ -229,10 +229,12 @@ BOOL SaveHosts(const Host* hosts, int count)
     {
         char utf8_hostname[MAX_HOSTNAME_LEN * 3];
         char utf8_description[MAX_DESCRIPTION_LEN * 3];
+        char utf8_lastConnected[200];
         
         // Convert wide strings to UTF-8
         WideCharToMultiByte(CP_UTF8, 0, hosts[i].hostname, -1, utf8_hostname, sizeof(utf8_hostname), NULL, NULL);
         WideCharToMultiByte(CP_UTF8, 0, hosts[i].description, -1, utf8_description, sizeof(utf8_description), NULL, NULL);
+        WideCharToMultiByte(CP_UTF8, 0, hosts[i].lastConnected, -1, utf8_lastConnected, sizeof(utf8_lastConnected), NULL, NULL);
         
         // Write hostname
         BOOL hostnameNeedsQuotes = (strchr(utf8_hostname, ',') != NULL);
@@ -262,6 +264,12 @@ BOOL SaveHosts(const Host* hosts, int count)
         {
             fwrite(utf8_description, 1, strlen(utf8_description), file);
         }
+        
+        // Write comma
+        fwrite(",", 1, 1, file);
+        
+        // Write lastConnected
+        fwrite(utf8_lastConnected, 1, strlen(utf8_lastConnected), file);
         
         // Write newline
         fwrite("\r\n", 1, 2, file);
@@ -354,6 +362,7 @@ BOOL AddHost(const wchar_t* hostname, const wchar_t* description)
      */
     wcsncpy_s(hosts[count].hostname, MAX_HOSTNAME_LEN, hostname, _TRUNCATE);
     wcsncpy_s(hosts[count].description, MAX_DESCRIPTION_LEN, description, _TRUNCATE);
+    wcscpy_s(hosts[count].lastConnected, 64, L"Never");  // New hosts haven't been connected to
     count++;
     
     // Save and cleanup
@@ -541,7 +550,7 @@ static wchar_t* trim_whitespace(wchar_t* str)
 /*
  * Helper function: Parse a CSV line into a Host structure
  * 
- * Improved CSV parser that properly handles the description field
+ * Improved CSV parser that properly handles the description and lastConnected fields
  */
 static BOOL parse_csv_line(wchar_t* line, Host* host)
 {
@@ -549,20 +558,40 @@ static BOOL parse_csv_line(wchar_t* line, Host* host)
     line[wcscspn(line, L"\r\n")] = L'\0';
     
     // Find the first comma
-    wchar_t* comma = wcschr(line, L',');
+    wchar_t* comma1 = wcschr(line, L',');
     
-    if (comma == NULL)
+    if (comma1 == NULL)
     {
-        // No comma found - just hostname, no description
+        // No comma found - just hostname, no description or lastConnected
         wcsncpy_s(host->hostname, MAX_HOSTNAME_LEN, trim_whitespace(line), _TRUNCATE);
         host->description[0] = L'\0';
+        wcscpy_s(host->lastConnected, 64, L"Never");
         return TRUE;
     }
     
     // Split at the first comma
-    *comma = L'\0';  // Terminate hostname string at comma
+    *comma1 = L'\0';  // Terminate hostname string at comma
     wchar_t* hostname = trim_whitespace(line);
-    wchar_t* description = trim_whitespace(comma + 1);
+    wchar_t* remainder = comma1 + 1;
+    
+    // Find the second comma for lastConnected field
+    wchar_t* comma2 = wcschr(remainder, L',');
+    wchar_t* description;
+    wchar_t* lastConnected;
+    
+    if (comma2 == NULL)
+    {
+        // No second comma - we have hostname,description (old format)
+        description = trim_whitespace(remainder);
+        lastConnected = L"Never";
+    }
+    else
+    {
+        // We have hostname,description,lastConnected (new format)
+        *comma2 = L'\0';
+        description = trim_whitespace(remainder);
+        lastConnected = trim_whitespace(comma2 + 1);
+    }
     
     // Remove quotes from hostname if present
     if (hostname[0] == L'"')
@@ -585,6 +614,7 @@ static BOOL parse_csv_line(wchar_t* line, Host* host)
     // Copy to host structure
     wcsncpy_s(host->hostname, MAX_HOSTNAME_LEN, hostname, _TRUNCATE);
     wcsncpy_s(host->description, MAX_DESCRIPTION_LEN, description, _TRUNCATE);
+    wcsncpy_s(host->lastConnected, 64, lastConnected, _TRUNCATE);
     
     return TRUE;
 }
@@ -638,4 +668,170 @@ static BOOL get_hosts_file_path(wchar_t* path, size_t pathLen)
     
     return TRUE;
 }
+
+/*
+ * UpdateLastConnected - Update the last connected timestamp for a host
+ * 
+ * Parameters:
+ *   hostname - The hostname to update
+ * 
+ * Returns:
+ *   TRUE on success, FALSE on failure
+ */
+BOOL UpdateLastConnected(const wchar_t* hostname)
+{
+    Host* hosts = NULL;
+    int count = 0;
+    
+    if (!LoadHosts(&hosts, &count))
+        return FALSE;
+    
+    // Find the host
+    int foundIndex = -1;
+    for (int i = 0; i < count; i++)
+    {
+        if (_wcsicmp(hosts[i].hostname, hostname) == 0)
+        {
+            foundIndex = i;
+            break;
+        }
+    }
+    
+    if (foundIndex == -1)
+    {
+        FreeHosts(hosts, count);
+        return FALSE;  // Host not found
+    }
+    
+    // Get current time
+    SYSTEMTIME st;
+    GetLocalTime(&st);
+    
+    // Format as ISO 8601-like: YYYY-MM-DD HH:MM:SS
+    swprintf_s(hosts[foundIndex].lastConnected, 64, 
+               L"%04d-%02d-%02d %02d:%02d:%02d",
+               st.wYear, st.wMonth, st.wDay,
+               st.wHour, st.wMinute, st.wSecond);
+    
+    // Save and cleanup
+    BOOL result = SaveHosts(hosts, count);
+    FreeHosts(hosts, count);
+    return result;
+}
+
+/*
+ * GetRecentHosts - Get a list of recently connected hosts
+ * 
+ * This function retrieves hosts sorted by their last connection time,
+ * with the most recently connected hosts first. Hosts that have never
+ * been connected to are excluded.
+ * 
+ * Parameters:
+ *   hosts     - Pointer to array of Host structures (will be allocated)
+ *   count     - Pointer to receive the number of hosts returned
+ *   maxCount  - Maximum number of recent hosts to return (typically 3-5)
+ * 
+ * Returns:
+ *   TRUE on success, FALSE on failure
+ *   The caller must call FreeHosts() when done with the array
+ * 
+ * Usage example:
+ *   Host* recentHosts = NULL;
+ *   int recentCount = 0;
+ *   if (GetRecentHosts(&recentHosts, &recentCount, 5)) {
+ *       // Use the hosts...
+ *       FreeHosts(recentHosts, recentCount);
+ *   }
+ */
+BOOL GetRecentHosts(Host** hosts, int* count, int maxCount)
+{
+    Host* allHosts = NULL;
+    int allCount = 0;
+    
+    // Initialize output parameters
+    *hosts = NULL;
+    *count = 0;
+    
+    // Load all hosts
+    if (!LoadHosts(&allHosts, &allCount))
+        return FALSE;
+    
+    if (allCount == 0)
+    {
+        // No hosts at all
+        return TRUE;
+    }
+    
+    // Filter out hosts that have never been connected to
+    // and copy to a temporary array for sorting
+    Host* connectedHosts = (Host*)malloc(allCount * sizeof(Host));
+    if (connectedHosts == NULL)
+    {
+        FreeHosts(allHosts, allCount);
+        return FALSE;
+    }
+    
+    int connectedCount = 0;
+    for (int i = 0; i < allCount; i++)
+    {
+        // Skip hosts that have never been connected to
+        if (_wcsicmp(allHosts[i].lastConnected, L"Never") != 0)
+        {
+            connectedHosts[connectedCount] = allHosts[i];
+            connectedCount++;
+        }
+    }
+    
+    // Free the original list
+    FreeHosts(allHosts, allCount);
+    
+    if (connectedCount == 0)
+    {
+        // No connected hosts
+        free(connectedHosts);
+        return TRUE;
+    }
+    
+    // Sort by lastConnected timestamp (descending - most recent first)
+    // Simple bubble sort is fine for small lists (typically < 10 items)
+    for (int i = 0; i < connectedCount - 1; i++)
+    {
+        for (int j = 0; j < connectedCount - i - 1; j++)
+        {
+            // Compare timestamps (ISO 8601 format sorts correctly with string compare)
+            if (wcscmp(connectedHosts[j].lastConnected, connectedHosts[j + 1].lastConnected) < 0)
+            {
+                // Swap
+                Host temp = connectedHosts[j];
+                connectedHosts[j] = connectedHosts[j + 1];
+                connectedHosts[j + 1] = temp;
+            }
+        }
+    }
+    
+    // Return only the requested number of most recent hosts
+    int resultCount = (connectedCount < maxCount) ? connectedCount : maxCount;
+    
+    Host* result = (Host*)malloc(resultCount * sizeof(Host));
+    if (result == NULL)
+    {
+        free(connectedHosts);
+        return FALSE;
+    }
+    
+    // Copy the most recent hosts to result array
+    for (int i = 0; i < resultCount; i++)
+    {
+        result[i] = connectedHosts[i];
+    }
+    
+    free(connectedHosts);
+    
+    // Set output parameters
+    *hosts = result;
+    *count = resultCount;
+    
+    return TRUE;
+}
+
 

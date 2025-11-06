@@ -20,6 +20,7 @@
 #include <time.h>
 #include "config.h"
 #include "credentials.h"
+#include "hosts.h"
 #include "rdp.h"
 
 /*
@@ -280,6 +281,15 @@ BOOL LaunchRDP(const wchar_t* hostname, const wchar_t* username,
  */
 BOOL LaunchRDPWithDefaults(const wchar_t* hostname)
 {
-    return LaunchRDP(hostname, NULL, NULL);
+    BOOL result = LaunchRDP(hostname, NULL, NULL);
+    
+    // If connection was successful, update the last connected timestamp
+    if (result)
+    {
+        UpdateLastConnected(hostname);
+    }
+    
+    return result;
 }
+
 

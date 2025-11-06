@@ -38,6 +38,7 @@
 #define IDC_BTN_CONNECT         212
 #define IDC_BTN_MANAGE          213
 #define IDC_BTN_EDIT_CREDS      214
+#define IDC_STATIC_HOST_COUNT   215
 
 // Control IDs - Host Management Dialog
 #define IDC_LIST_HOSTS          220
@@ -46,6 +47,7 @@
 #define IDC_BTN_DELETE_HOST     223
 #define IDC_BTN_SCAN_DOMAIN     224
 #define IDC_EDIT_SEARCH_HOSTS   225
+#define IDC_STATIC_HOSTS_COUNT  226
 
 // Control IDs - Add/Edit Host Dialog
 #define IDC_EDIT_HOSTNAME       230
@@ -74,6 +76,10 @@
 #define IDM_DELETE_ALL          303
 #define IDM_GLOBAL_HOTKEY       304
 #define IDM_ABOUT_DIALOG        305  // About dialog menu item
+
+// Recent connections menu IDs (range for dynamic menu items)
+#define IDM_RECENT_START        310
+#define IDM_RECENT_END          319  // Allows for up to 10 recent connections
 
 // System Tray
 #define ID_TRAYICON             400

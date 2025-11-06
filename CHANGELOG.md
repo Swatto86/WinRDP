@@ -4,6 +4,40 @@ All notable changes to WinRDP will be documented in this file.
 
 ## [Unreleased]
 
+### Upcoming Features (Planned)
+
+The following UX improvements are planned for future releases:
+
+1. **Import/Export Functionality** - Backup and share host configurations
+   - Menu options to import/export hosts.csv
+   - Choose custom file location for backup
+   - Easy migration between systems
+
+2. **Visual Feedback on Connection** - Indicate when RDP is launching
+   - Status message or cursor change during connection
+   - Brief confirmation before minimizing window
+   - Clearer feedback for user actions
+
+3. **Highlight Search Results** - Visual indication of matching text
+   - Highlight matched text in ListView results
+   - Makes it clear why each result matched the search
+   - Improved visual feedback for filtering
+
+4. **Auto-resize Description Column** - Dynamic column width adjustment
+   - Description column auto-fills available space
+   - Adjusts when window is resized
+   - Better use of screen real estate
+
+5. **Enter Key to Connect** - Keyboard shortcut for connection
+   - Press Enter on selected host to connect
+   - Complements existing double-click behavior
+   - Better keyboard-only navigation
+
+6. **Delete Key to Remove Host** - Quick deletion with keyboard
+    - Press Delete key on selected host to remove it
+    - Confirmation dialog before deletion
+    - Faster host management workflow
+
 ### Added
 - **Edit Global Credentials Button** - New button on main window to change global credentials
   - Allows users to update their default RDP credentials without restarting
@@ -28,6 +62,48 @@ All notable changes to WinRDP will be documented in this file.
   - When editing credentials via button, no countdown timer appears
   - Prevents rushed editing experience
   - Shows simple "✓ Credentials saved" message in edit mode
+
+---
+
+## [1.1.0] - November 2025 - UX Enhancement Release
+
+### Added
+- **Recent Connections in Tray Menu** - Quick access to recently connected servers
+  - Last 5 servers displayed at the top of system tray context menu
+  - One-click connection without opening main window
+  - Most convenient access for frequently used servers
+  - Shows hostname and description for easy identification
+  - Dynamically updates based on connection history
+  - Only shows servers that have been connected to at least once
+
+- **Column Sorting by Clicking Headers** - Click ListView column headers to sort alphabetically
+  - Click "Hostname", "Description", or "Last Connected" columns to sort the list
+  - Click same column again to toggle between ascending and descending order
+  - Works in both main server list and host management dialogs
+  - Provides standard Windows ListView behavior users expect
+  - "Never" timestamps sort to the end in ascending order
+  
+- **Last Connected Timestamp** - Track and display when you last connected to each server
+  - New "Last Connected" column in both main and host management ListViews
+  - Shows ISO 8601 format: YYYY-MM-DD HH:MM:SS
+  - Displays "Never" for hosts that haven't been connected to yet
+  - Automatically updates when you connect to a server
+  - Stored in CSV file for persistence across app restarts
+  - Helps identify frequently/rarely used servers
+  - Sortable by clicking column header
+  
+- **Host Count Status Label** - Shows server count at bottom of dialogs
+  - Displays "X hosts" or "Showing X of Y hosts" when filtering active
+  - Real-time updates as search filter changes
+  - Better visibility of total and filtered host counts
+  - Professional status bar appearance
+  - Works in both main server list and host management dialogs
+
+### Changed
+- **Tray Menu Layout** - Improved organization for better usability
+  - Recent connections now appear at the top of the menu
+  - "Open" menu item moved below recent connections
+  - Provides faster access to frequently used servers
 
 ---
 

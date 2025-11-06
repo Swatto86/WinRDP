@@ -80,6 +80,17 @@ typedef struct {
     BOOL isEdit;  // TRUE if editing, FALSE if adding new
 } EditHostData;
 
+// ListView sorting state
+typedef struct {
+    int sortColumn;      // Column being sorted (1=Hostname, 2=Description)
+    BOOL sortAscending;  // TRUE for ascending, FALSE for descending
+    Host* hosts;         // Pointer to host array for sorting
+    int hostCount;       // Number of hosts
+} SortParams;
+
+// Forward declaration for sort comparison function
+int CALLBACK CompareListViewItems(LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort);
+
 /*
  * WinMain - Entry point for Windows GUI applications
  * 
@@ -300,6 +311,33 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 case IDM_EXIT:
                     PostQuitMessage(0);
                     break;
+                
+                default:
+                    // Handle recent connections menu items
+                    // These are in the range IDM_RECENT_START to IDM_RECENT_END
+                    if (LOWORD(wParam) >= IDM_RECENT_START && LOWORD(wParam) <= IDM_RECENT_END)
+                    {
+                        // Calculate which recent host was clicked
+                        int recentIndex = LOWORD(wParam) - IDM_RECENT_START;
+                        
+                        // Get the recent hosts again to retrieve the selected hostname
+                        Host* recentHosts = NULL;
+                        int recentCount = 0;
+                        
+                        if (GetRecentHosts(&recentHosts, &recentCount, 5))
+                        {
+                            // Verify the index is valid
+                            if (recentIndex >= 0 && recentIndex < recentCount)
+                            {
+                                // Launch RDP connection to the selected host
+                                LaunchRDPWithDefaults(recentHosts[recentIndex].hostname);
+                            }
+                            
+                            // Free the hosts array
+                            FreeHosts(recentHosts, recentCount);
+                        }
+                    }
+                    break;
             }
             return 0;
 
@@ -410,6 +448,12 @@ BOOL HideSystemTrayIcon(HWND hwnd)
 
 /*
  * ShowContextMenu - Display right-click menu for tray icon
+ * 
+ * Enhanced with Recent Connections feature:
+ * - Displays the 5 most recently connected servers
+ * - Allows one-click connection without opening main window
+ * - Shows only servers that have been connected to before
+ * - Most convenient access for frequently used servers
  */
 void ShowContextMenu(HWND hwnd)
 {
@@ -420,6 +464,46 @@ void ShowContextMenu(HWND hwnd)
     HMENU hMenu = CreatePopupMenu();
     if (hMenu)
     {
+        // Add recent connections section at the top
+        Host* recentHosts = NULL;
+        int recentCount = 0;
+        
+        // Get up to 5 most recently connected hosts
+        if (GetRecentHosts(&recentHosts, &recentCount, 5) && recentCount > 0)
+        {
+            // Add a header for the recent connections section
+            AppendMenuW(hMenu, MF_STRING | MF_GRAYED, 0, L"Recent Connections:");
+            
+            // Add each recent host to the menu
+            for (int i = 0; i < recentCount && i < 5; i++)
+            {
+                // Format: "hostname (description)" or just "hostname" if no description
+                wchar_t menuText[MAX_HOSTNAME_LEN + MAX_DESCRIPTION_LEN + 10];
+                if (wcslen(recentHosts[i].description) > 0)
+                {
+                    swprintf_s(menuText, sizeof(menuText)/sizeof(wchar_t), 
+                              L"  %s  (%s)", 
+                              recentHosts[i].hostname, 
+                              recentHosts[i].description);
+                }
+                else
+                {
+                    swprintf_s(menuText, sizeof(menuText)/sizeof(wchar_t), 
+                              L"  %s", 
+                              recentHosts[i].hostname);
+                }
+                
+                // Add menu item with ID in the range IDM_RECENT_START to IDM_RECENT_END
+                // We'll use the index to map back to the hostname
+                AppendMenuW(hMenu, MF_STRING, IDM_RECENT_START + i, menuText);
+            }
+            
+            // Free the hosts array
+            FreeHosts(recentHosts, recentCount);
+            
+            AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
+        }
+        
         AppendMenuW(hMenu, MF_STRING, IDM_OPEN, L"Open");
         AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
         
@@ -649,6 +733,119 @@ INT_PTR CALLBACK LoginDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
 }
 
 /*
+ * CompareListViewItems - Comparison function for ListView sorting
+ * 
+ * This is a callback function used by ListView_SortItems to compare two items.
+ * It compares items based on the current sort column and direction.
+ * 
+ * Parameters:
+ *   lParam1 - lParam of first item (host index in our case)
+ *   lParam2 - lParam of second item (host index in our case)
+ *   lParamSort - Pointer to SortParams structure
+ * 
+ * Returns:
+ *   Negative if item1 < item2
+ *   Zero if item1 == item2
+ *   Positive if item1 > item2
+ */
+int CALLBACK CompareListViewItems(LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort)
+{
+    SortParams* params = (SortParams*)lParamSort;
+    
+    // Get the host indices
+    int index1 = (int)lParam1;
+    int index2 = (int)lParam2;
+    
+    // Bounds check
+    if (index1 < 0 || index1 >= params->hostCount || 
+        index2 < 0 || index2 >= params->hostCount)
+    {
+        return 0;
+    }
+    
+    // Get the hosts to compare
+    Host* host1 = &params->hosts[index1];
+    Host* host2 = &params->hosts[index2];
+    
+    int result = 0;
+    
+    // Compare based on sort column
+    if (params->sortColumn == 1)
+    {
+        // Sort by hostname
+        result = _wcsicmp(host1->hostname, host2->hostname);
+    }
+    else if (params->sortColumn == 2)
+    {
+        // Sort by description
+        result = _wcsicmp(host1->description, host2->description);
+    }
+    else if (params->sortColumn == 3)
+    {
+        // Sort by last connected timestamp
+        // "Never" should sort to the end, so treat specially
+        BOOL host1Never = (_wcsicmp(host1->lastConnected, L"Never") == 0);
+        BOOL host2Never = (_wcsicmp(host2->lastConnected, L"Never") == 0);
+        
+        if (host1Never && host2Never)
+        {
+            result = 0;  // Both "Never" - equal
+        }
+        else if (host1Never)
+        {
+            result = 1;  // host1 is "Never", host2 has a date - host1 is "greater" (sorts later)
+        }
+        else if (host2Never)
+        {
+            result = -1;  // host2 is "Never", host1 has a date - host1 is "less" (sorts earlier)
+        }
+        else
+        {
+            // Both have dates - normal string compare works for ISO format
+            result = wcscmp(host1->lastConnected, host2->lastConnected);
+        }
+    }
+    
+    // Reverse for descending sort
+    if (!params->sortAscending)
+    {
+        result = -result;
+    }
+    
+    return result;
+}
+
+/*
+ * UpdateHostCountLabel - Update the host count status label
+ * 
+ * Parameters:
+ *   hwndDialog - Handle to the dialog containing the label
+ *   labelId - Control ID of the status label
+ *   displayedCount - Number of hosts currently displayed
+ *   totalCount - Total number of hosts
+ * 
+ * Updates the label to show "X hosts" or "Showing X of Y hosts" when filtered
+ */
+void UpdateHostCountLabel(HWND hwndDialog, int labelId, int displayedCount, int totalCount)
+{
+    wchar_t statusText[128];
+    
+    if (displayedCount == totalCount)
+    {
+        // No filtering - show simple count
+        swprintf_s(statusText, 128, L"%d host%s", totalCount, (totalCount == 1 ? L"" : L"s"));
+    }
+    else
+    {
+        // Filtering active - show "X of Y hosts"
+        swprintf_s(statusText, 128, L"Showing %d of %d host%s", 
+                  displayedCount, totalCount, (totalCount == 1 ? L"" : L"s"));
+    }
+    
+    SetDlgItemTextW(hwndDialog, labelId, statusText);
+}
+
+/*
  * RefreshHostListView - Refresh the main ListView with optional filtering
  * 
  * Parameters:
@@ -659,14 +856,15 @@ INT_PTR CALLBACK LoginDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
  * 
  * This function refreshes the ListView with all hosts, optionally filtered
  * by the search text (searches both hostname and description).
+ * Returns the number of displayed items.
  */
-void RefreshHostListView(HWND hList, Host* hosts, int hostCount, const wchar_t* searchText)
+int RefreshHostListView(HWND hList, Host* hosts, int hostCount, const wchar_t* searchText)
 {
     // Clear existing items
     ListView_DeleteAllItems(hList);
     
     if (hosts == NULL || hostCount == 0)
-        return;
+        return 0;
     
     // Check if we have a search filter
     BOOL hasFilter = (searchText != NULL && wcslen(searchText) > 0);
@@ -714,9 +912,12 @@ void RefreshHostListView(HWND hList, Host* hosts, int hostCount, const wchar_t* 
         
         ListView_SetItemText(hList, displayIndex, 1, hosts[i].hostname);  // Hostname in column 1
         ListView_SetItemText(hList, displayIndex, 2, hosts[i].description);  // Description in column 2
+        ListView_SetItemText(hList, displayIndex, 3, hosts[i].lastConnected);  // Last Connected in column 3
         
         displayIndex++;
     }
+    
+    return displayIndex;  // Return number of displayed items
 }
 
 /*
@@ -726,6 +927,7 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 {
     static Host* hosts = NULL;
     static int hostCount = 0;
+    static SortParams sortParams = {1, TRUE, NULL, 0};  // Default: sort by hostname, ascending
     
     switch (msg)
     {
@@ -778,13 +980,18 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             ListView_InsertColumn(hList, 1, &col);
             
             col.pszText = L"Description";
-            col.cx = listWidth - 180 - 5;  // Adjust for dummy column
+            col.cx = 220;
             ListView_InsertColumn(hList, 2, &col);
+            
+            col.pszText = L"Last Connected";
+            col.cx = listWidth - 180 - 220 - 5;  // Fill remaining space
+            ListView_InsertColumn(hList, 3, &col);
             
             // Load and display hosts
             if (LoadHosts(&hosts, &hostCount))
             {
-                RefreshHostListView(hList, hosts, hostCount, NULL);
+                int displayedCount = RefreshHostListView(hList, hosts, hostCount, NULL);
+                UpdateHostCountLabel(hwnd, IDC_STATIC_HOST_COUNT, displayedCount, hostCount);
             }
             
             return TRUE;
@@ -793,30 +1000,67 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
         case WM_NOTIFY:
         {
             LPNMHDR pnmhdr = (LPNMHDR)lParam;
-            if (pnmhdr->idFrom == IDC_LIST_SERVERS && pnmhdr->code == NM_DBLCLK)
+            
+            if (pnmhdr->idFrom == IDC_LIST_SERVERS)
             {
-                // Double-click on a server - connect to it
-                HWND hList = GetDlgItem(hwnd, IDC_LIST_SERVERS);
-                int selected = ListView_GetNextItem(hList, -1, LVNI_SELECTED);
-                
-                if (selected >= 0)
+                if (pnmhdr->code == NM_DBLCLK)
                 {
-                    // Get the original host index from lParam
-                    LVITEMW item = {0};
-                    item.mask = LVIF_PARAM;
-                    item.iItem = selected;
-                    ListView_GetItem(hList, &item);
-                    int hostIndex = (int)item.lParam;
+                    // Double-click on a server - connect to it
+                    HWND hList = GetDlgItem(hwnd, IDC_LIST_SERVERS);
+                    int selected = ListView_GetNextItem(hList, -1, LVNI_SELECTED);
                     
-                    if (hostIndex >= 0 && hostIndex < hostCount)
+                    if (selected >= 0)
                     {
-                        if (LaunchRDPWithDefaults(hosts[hostIndex].hostname))
+                        // Get the original host index from lParam
+                        LVITEMW item = {0};
+                        item.mask = LVIF_PARAM;
+                        item.iItem = selected;
+                        ListView_GetItem(hList, &item);
+                        int hostIndex = (int)item.lParam;
+                        
+                        if (hostIndex >= 0 && hostIndex < hostCount)
                         {
-                            EndDialog(hwnd, IDOK);
+                            if (LaunchRDPWithDefaults(hosts[hostIndex].hostname))
+                            {
+                                EndDialog(hwnd, IDOK);
+                            }
                         }
                     }
+                    return TRUE;
                 }
-                return TRUE;
+                else if (pnmhdr->code == LVN_COLUMNCLICK)
+                {
+                    // Column header clicked - sort by that column
+                    LPNMLISTVIEW pnmlv = (LPNMLISTVIEW)lParam;
+                    HWND hList = GetDlgItem(hwnd, IDC_LIST_SERVERS);
+                    
+                    // Note: Column 0 is dummy, so actual columns are 1, 2, 3
+                    int clickedColumn = pnmlv->iSubItem;
+                    
+                    // Only sort if clicking on actual columns (not dummy column 0)
+                    if (clickedColumn == 1 || clickedColumn == 2 || clickedColumn == 3)
+                    {
+                        // If clicking the same column, toggle sort direction
+                        if (sortParams.sortColumn == clickedColumn)
+                        {
+                            sortParams.sortAscending = !sortParams.sortAscending;
+                        }
+                        else
+                        {
+                            // New column - default to ascending
+                            sortParams.sortColumn = clickedColumn;
+                            sortParams.sortAscending = TRUE;
+                        }
+                        
+                        // Update sort params with current host data
+                        sortParams.hosts = hosts;
+                        sortParams.hostCount = hostCount;
+                        
+                        // Perform the sort
+                        ListView_SortItems(hList, CompareListViewItems, (LPARAM)&sortParams);
+                    }
+                    return TRUE;
+                }
             }
             break;
         }
@@ -857,7 +1101,8 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                         GetWindowTextW(hSearch, searchText, 256);
                         
                         // Refresh list with filter
-                        RefreshHostListView(hList, hosts, hostCount, searchText);
+                        int displayedCount = RefreshHostListView(hList, hosts, hostCount, searchText);
+                        UpdateHostCountLabel(hwnd, IDC_STATIC_HOST_COUNT, displayedCount, hostCount);
                     }
                     return TRUE;
                 }
@@ -893,7 +1138,8 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                         wchar_t searchText[256] = {0};
                         GetWindowTextW(hSearch, searchText, 256);
                         
-                        RefreshHostListView(hList, hosts, hostCount, searchText);
+                        int displayedCount = RefreshHostListView(hList, hosts, hostCount, searchText);
+                        UpdateHostCountLabel(hwnd, IDC_STATIC_HOST_COUNT, displayedCount, hostCount);
                     }
                     return TRUE;
                 }
@@ -970,6 +1216,7 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 {
     static Host* hosts = NULL;
     static int hostCount = 0;
+    static SortParams sortParams = {1, TRUE, NULL, 0};  // Default: sort by hostname, ascending
     
     switch (msg)
     {
@@ -1026,13 +1273,18 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             ListView_InsertColumn(hList, 1, &col);
             
             col.pszText = L"Description";
-            col.cx = listWidth - 200 - 5;  // Adjust for dummy column
+            col.cx = 220;
             ListView_InsertColumn(hList, 2, &col);
+            
+            col.pszText = L"Last Connected";
+            col.cx = listWidth - 200 - 220 - 5;  // Fill remaining space
+            ListView_InsertColumn(hList, 3, &col);
             
             // Load and display hosts
             if (LoadHosts(&hosts, &hostCount))
             {
-                RefreshHostListView(hList, hosts, hostCount, NULL);
+                int displayedCount = RefreshHostListView(hList, hosts, hostCount, NULL);
+                UpdateHostCountLabel(hwnd, IDC_STATIC_HOSTS_COUNT, displayedCount, hostCount);
             }
             
             return TRUE;
@@ -1090,7 +1342,8 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                             
                             if (LoadHosts(&hosts, &hostCount))
                             {
-                                RefreshHostListView(hList, hosts, hostCount, NULL);
+                                int displayedCount = RefreshHostListView(hList, hosts, hostCount, NULL);
+                                UpdateHostCountLabel(hwnd, IDC_STATIC_HOSTS_COUNT, displayedCount, hostCount);
                             }
                         }
                         else
@@ -1104,6 +1357,46 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                     }
                 }
                 
+                return TRUE;
+            }
+            break;
+        }
+
+        case WM_NOTIFY:
+        {
+            LPNMHDR pnmhdr = (LPNMHDR)lParam;
+            
+            if (pnmhdr->idFrom == IDC_LIST_HOSTS && pnmhdr->code == LVN_COLUMNCLICK)
+            {
+                // Column header clicked - sort by that column
+                LPNMLISTVIEW pnmlv = (LPNMLISTVIEW)lParam;
+                HWND hList = GetDlgItem(hwnd, IDC_LIST_HOSTS);
+                
+                // Note: Column 0 is dummy, so actual columns are 1, 2, 3
+                int clickedColumn = pnmlv->iSubItem;
+                
+                // Only sort if clicking on actual columns (not dummy column 0)
+                if (clickedColumn == 1 || clickedColumn == 2 || clickedColumn == 3)
+                {
+                    // If clicking the same column, toggle sort direction
+                    if (sortParams.sortColumn == clickedColumn)
+                    {
+                        sortParams.sortAscending = !sortParams.sortAscending;
+                    }
+                    else
+                    {
+                        // New column - default to ascending
+                        sortParams.sortColumn = clickedColumn;
+                        sortParams.sortAscending = TRUE;
+                    }
+                    
+                    // Update sort params with current host data
+                    sortParams.hosts = hosts;
+                    sortParams.hostCount = hostCount;
+                    
+                    // Perform the sort
+                    ListView_SortItems(hList, CompareListViewItems, (LPARAM)&sortParams);
+                }
                 return TRUE;
             }
             break;
@@ -1125,7 +1418,8 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                         GetWindowTextW(hSearch, searchText, 256);
                         
                         // Refresh list with filter
-                        RefreshHostListView(hList, hosts, hostCount, searchText);
+                        int displayedCount = RefreshHostListView(hList, hosts, hostCount, searchText);
+                        UpdateHostCountLabel(hwnd, IDC_STATIC_HOSTS_COUNT, displayedCount, hostCount);
                     }
                     return TRUE;
                 }
@@ -1160,7 +1454,8 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                             wchar_t searchText[256] = {0};
                             GetWindowTextW(hSearch, searchText, 256);
                             
-                            RefreshHostListView(hList, hosts, hostCount, searchText);
+                            int displayedCount = RefreshHostListView(hList, hosts, hostCount, searchText);
+                            UpdateHostCountLabel(hwnd, IDC_STATIC_HOSTS_COUNT, displayedCount, hostCount);
                         }
                     }
                     return TRUE;
@@ -1204,7 +1499,8 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                                 wchar_t searchText[256] = {0};
                                 GetWindowTextW(hSearch, searchText, 256);
                                 
-                                RefreshHostListView(hList, hosts, hostCount, searchText);
+                                int displayedCount = RefreshHostListView(hList, hosts, hostCount, searchText);
+                                UpdateHostCountLabel(hwnd, IDC_STATIC_HOSTS_COUNT, displayedCount, hostCount);
                             }
                         }
                     }
@@ -1243,7 +1539,8 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                                     wchar_t searchText[256] = {0};
                                     GetWindowTextW(hSearch, searchText, 256);
                                     
-                                    RefreshHostListView(hList, hosts, hostCount, searchText);
+                                    int displayedCount = RefreshHostListView(hList, hosts, hostCount, searchText);
+                                    UpdateHostCountLabel(hwnd, IDC_STATIC_HOSTS_COUNT, displayedCount, hostCount);
                                 }
                             }
                         }
