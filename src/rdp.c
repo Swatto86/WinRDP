@@ -18,10 +18,87 @@
 #include <shellapi.h>
 #include <stdio.h>
 #include <time.h>
+#include <shlobj.h>
 #include "config.h"
 #include "credentials.h"
 #include "hosts.h"
 #include "rdp.h"
+
+/*
+ * SanitizeHostnameForFilename - Convert hostname to valid filename
+ * 
+ * Replaces characters that are invalid in Windows filenames with underscores.
+ * This allows us to create persistent RDP files named after the host.
+ * 
+ * Parameters:
+ *   hostname  - The original hostname
+ *   output    - Buffer to receive sanitized filename
+ *   outputLen - Size of output buffer
+ */
+static void SanitizeHostnameForFilename(const wchar_t* hostname, 
+                                        wchar_t* output, size_t outputLen)
+{
+    size_t i = 0;
+    size_t maxLen = outputLen - 1;
+    
+    while (hostname[i] != L'\0' && i < maxLen)
+    {
+        wchar_t c = hostname[i];
+        
+        // Replace invalid filename characters with underscores
+        // Invalid: < > : " / \ | ? *
+        if (c == L'<' || c == L'>' || c == L':' || c == L'"' ||
+            c == L'/' || c == L'\\' || c == L'|' || c == L'?' || c == L'*')
+        {
+            output[i] = L'_';
+        }
+        else
+        {
+            output[i] = c;
+        }
+        i++;
+    }
+    output[i] = L'\0';
+}
+
+/*
+ * GetRDPStoragePath - Get or create the directory for persistent RDP files
+ * 
+ * Creates a directory in AppData\Roaming\WinRDP\Connections
+ * This ensures RDP files persist across sessions, preventing the
+ * security warning that appears when connecting to a new RDP file.
+ * 
+ * Parameters:
+ *   path    - Buffer to receive the directory path
+ *   pathLen - Size of path buffer
+ * 
+ * Returns:
+ *   TRUE on success, FALSE on failure
+ */
+static BOOL GetRDPStoragePath(wchar_t* path, size_t pathLen)
+{
+    wchar_t appDataPath[MAX_PATH];
+    
+    // Get the Roaming AppData directory
+    // This is typically C:\Users\[Username]\AppData\Roaming
+    if (FAILED(SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, 0, appDataPath)))
+    {
+        return FALSE;
+    }
+    
+    // Build path: AppData\Roaming\WinRDP\Connections
+    swprintf_s(path, pathLen, L"%s\\WinRDP\\Connections", appDataPath);
+    
+    // Create the directory if it doesn't exist
+    // CreateDirectoryW returns TRUE if created, or FALSE if it already exists
+    // We need to create both levels: WinRDP and WinRDP\Connections
+    wchar_t winrdpPath[MAX_PATH];
+    swprintf_s(winrdpPath, MAX_PATH, L"%s\\WinRDP", appDataPath);
+    CreateDirectoryW(winrdpPath, NULL);
+    CreateDirectoryW(path, NULL);
+    
+    return TRUE;
+}
 
 /*
  * CreateRDPFile - Generate an RDP configuration file
@@ -43,20 +120,24 @@ BOOL CreateRDPFile(const wchar_t* hostname, const wchar_t* username,
 {
     FILE* file = NULL;
     errno_t err;
-    wchar_t tempPath[MAX_PATH];
+    wchar_t storagePath[MAX_PATH];
     wchar_t rdpPath[MAX_PATH];
+    wchar_t sanitizedHost[MAX_PATH];
     
-    // Get the temporary directory
-    // This is typically C:\Users\[Username]\AppData\Local\Temp
-    if (GetTempPathW(MAX_PATH, tempPath) == 0)
+    // Get the persistent storage directory in AppData\Roaming
+    if (!GetRDPStoragePath(storagePath, MAX_PATH))
     {
         return FALSE;
     }
     
-    // Create a unique filename using timestamp
-    // This prevents conflicts if multiple connections are launched
-    time_t now = time(NULL);
-    swprintf_s(rdpPath, MAX_PATH, L"%sWinRDP_%lld.rdp", tempPath, (long long)now);
+    // Sanitize the hostname for use as a filename
+    // This replaces invalid characters (like :, /, \) with underscores
+    SanitizeHostnameForFilename(hostname, sanitizedHost, MAX_PATH);
+    
+    // Create a persistent filename based on the hostname
+    // This ensures the same RDP file is reused for each host,
+    // which prevents Windows from showing the security warning repeatedly
+    swprintf_s(rdpPath, MAX_PATH, L"%s\\%s.rdp", storagePath, sanitizedHost);
     
     // Open the file for writing
     err = _wfopen_s(&file, rdpPath, L"w, ccs=UTF-8");
@@ -258,17 +339,12 @@ BOOL LaunchRDP(const wchar_t* hostname, const wchar_t* username,
                   L"Failed to launch RDP client.\nError code: %d", 
                   (int)(INT_PTR)result);
         MessageBoxW(NULL, errorMsg, L"Error", MB_OK | MB_ICONERROR);
-        
-        // Clean up the RDP file
-        DeleteFileW(rdpPath);
         return FALSE;
     }
     
-    // Give mstsc.exe time to read the file before we delete it
-    Sleep(1000);
-    
-    // Clean up the temporary RDP file
-    DeleteFileW(rdpPath);
+    // RDP file is now persistent in AppData\Roaming\WinRDP\Connections
+    // This prevents the security warning from appearing on subsequent connections
+    // The file will be reused for future connections to the same host
     
     return TRUE;
 }

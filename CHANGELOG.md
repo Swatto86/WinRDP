@@ -4,6 +4,15 @@ All notable changes to WinRDP will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- **Persistent RDP Files** - RDP connection files now stored in AppData\Roaming\WinRDP\Connections
+  - Prevents security warning from appearing on every connection
+  - Each host gets its own persistent RDP file based on hostname
+  - Files remain between sessions for faster subsequent connections
+  - Follows Windows best practices for application data storage
+  - Hostnames sanitized for filesystem compatibility (replaces invalid characters)
+  - Windows recognizes trusted RDP files after first connection
+
 ### Upcoming Features (Planned)
 
 The following UX improvements are planned for future releases:
@@ -28,15 +37,28 @@ The following UX improvements are planned for future releases:
    - Adjusts when window is resized
    - Better use of screen real estate
 
-5. **Enter Key to Connect** - Keyboard shortcut for connection
-   - Press Enter on selected host to connect
-   - Complements existing double-click behavior
-   - Better keyboard-only navigation
-
-6. **Delete Key to Remove Host** - Quick deletion with keyboard
+5. **Delete Key to Remove Host** - Quick deletion with keyboard
     - Press Delete key on selected host to remove it
     - Confirmation dialog before deletion
     - Faster host management workflow
+
+### Added
+- **Tab Order Navigation** - Proper keyboard navigation across all dialogs
+  - Login dialog: Username → Password → Delete Saved → Save & Continue → Cancel
+  - Main dialog: Search → Server List → Connect → Manage Hosts → Edit Credentials → Close
+  - Host Management: Search → Host List → Add Host → Edit Host → Delete Host → Scan Domain → Close
+  - Add/Edit Host: Hostname → Description → Custom Credentials → Username → Password → Save → Cancel
+  - Scan Domain: Domain → Workstations → Servers → Domain Controllers → Scan → Cancel
+  - All interactive controls now participate in logical tab order
+  - Follows left-to-right, top-to-bottom navigation pattern
+
+- **Enter Key Shortcuts** - Connect and edit hosts with Enter key
+  - Press Enter on selected host in main dialog to connect instantly
+  - Press Enter on selected host in management dialog to edit
+  - Enter key activates default buttons on all dialogs
+  - Complements existing double-click behavior
+  - Full keyboard-only navigation support
+  - Improved accessibility and workflow efficiency
 
 ### Added
 - **Edit Global Credentials Button** - New button on main window to change global credentials

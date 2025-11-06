@@ -1028,6 +1028,36 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                     }
                     return TRUE;
                 }
+                else if (pnmhdr->code == LVN_KEYDOWN)
+                {
+                    // Handle Enter key on listview to connect to selected host
+                    LPNMLVKEYDOWN pnkd = (LPNMLVKEYDOWN)lParam;
+                    if (pnkd->wVKey == VK_RETURN)
+                    {
+                        // Same logic as Connect button and double-click
+                        HWND hList = GetDlgItem(hwnd, IDC_LIST_SERVERS);
+                        int selected = ListView_GetNextItem(hList, -1, LVNI_SELECTED);
+                        
+                        if (selected >= 0)
+                        {
+                            // Get the original host index from lParam
+                            LVITEMW item = {0};
+                            item.mask = LVIF_PARAM;
+                            item.iItem = selected;
+                            ListView_GetItem(hList, &item);
+                            int hostIndex = (int)item.lParam;
+                            
+                            if (hostIndex >= 0 && hostIndex < hostCount)
+                            {
+                                if (LaunchRDPWithDefaults(hosts[hostIndex].hostname))
+                                {
+                                    EndDialog(hwnd, IDOK);
+                                }
+                            }
+                        }
+                        return TRUE;
+                    }
+                }
                 else if (pnmhdr->code == LVN_COLUMNCLICK)
                 {
                     // Column header clicked - sort by that column
@@ -1366,38 +1396,52 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
         {
             LPNMHDR pnmhdr = (LPNMHDR)lParam;
             
-            if (pnmhdr->idFrom == IDC_LIST_HOSTS && pnmhdr->code == LVN_COLUMNCLICK)
+            if (pnmhdr->idFrom == IDC_LIST_HOSTS)
             {
-                // Column header clicked - sort by that column
-                LPNMLISTVIEW pnmlv = (LPNMLISTVIEW)lParam;
-                HWND hList = GetDlgItem(hwnd, IDC_LIST_HOSTS);
-                
-                // Note: Column 0 is dummy, so actual columns are 1, 2, 3
-                int clickedColumn = pnmlv->iSubItem;
-                
-                // Only sort if clicking on actual columns (not dummy column 0)
-                if (clickedColumn == 1 || clickedColumn == 2 || clickedColumn == 3)
+                if (pnmhdr->code == LVN_COLUMNCLICK)
                 {
-                    // If clicking the same column, toggle sort direction
-                    if (sortParams.sortColumn == clickedColumn)
-                    {
-                        sortParams.sortAscending = !sortParams.sortAscending;
-                    }
-                    else
-                    {
-                        // New column - default to ascending
-                        sortParams.sortColumn = clickedColumn;
-                        sortParams.sortAscending = TRUE;
-                    }
+                    // Column header clicked - sort by that column
+                    LPNMLISTVIEW pnmlv = (LPNMLISTVIEW)lParam;
+                    HWND hList = GetDlgItem(hwnd, IDC_LIST_HOSTS);
                     
-                    // Update sort params with current host data
-                    sortParams.hosts = hosts;
-                    sortParams.hostCount = hostCount;
+                    // Note: Column 0 is dummy, so actual columns are 1, 2, 3
+                    int clickedColumn = pnmlv->iSubItem;
                     
-                    // Perform the sort
-                    ListView_SortItems(hList, CompareListViewItems, (LPARAM)&sortParams);
+                    // Only sort if clicking on actual columns (not dummy column 0)
+                    if (clickedColumn == 1 || clickedColumn == 2 || clickedColumn == 3)
+                    {
+                        // If clicking the same column, toggle sort direction
+                        if (sortParams.sortColumn == clickedColumn)
+                        {
+                            sortParams.sortAscending = !sortParams.sortAscending;
+                        }
+                        else
+                        {
+                            // New column - default to ascending
+                            sortParams.sortColumn = clickedColumn;
+                            sortParams.sortAscending = TRUE;
+                        }
+                        
+                        // Update sort params with current host data
+                        sortParams.hosts = hosts;
+                        sortParams.hostCount = hostCount;
+                        
+                        // Perform the sort
+                        ListView_SortItems(hList, CompareListViewItems, (LPARAM)&sortParams);
+                    }
+                    return TRUE;
                 }
-                return TRUE;
+                else if (pnmhdr->code == LVN_KEYDOWN)
+                {
+                    // Handle Enter key on listview to edit selected host
+                    LPNMLVKEYDOWN pnkd = (LPNMLVKEYDOWN)lParam;
+                    if (pnkd->wVKey == VK_RETURN)
+                    {
+                        // Trigger edit host button
+                        PostMessage(hwnd, WM_COMMAND, MAKEWPARAM(IDC_BTN_EDIT_HOST, BN_CLICKED), 0);
+                        return TRUE;
+                    }
+                }
             }
             break;
         }

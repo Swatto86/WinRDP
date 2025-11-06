@@ -29,6 +29,11 @@ This project demonstrates:
 
 ### Core Features
 - **RDP Connection Management** - Store and organize all your RDP servers
+- **Persistent RDP Files** - Connection files stored in AppData for seamless reconnections
+  - Eliminates security warning after first connection to each host
+  - Files stored in %APPDATA%\Roaming\WinRDP\Connections
+  - Each host gets its own persistent, reusable RDP file
+  - Follows Windows best practices for application data
 - **Global Credentials** - Set once, use for all hosts
   - Edit global credentials anytime via dedicated button on main window
   - Switch between different user accounts without restarting application
@@ -327,7 +332,10 @@ DwmSetWindowAttribute(hwnd, 20, &darkMode, sizeof(darkMode));
 ## 🔐 Security Notes
 
 - Credentials are stored using Windows Credential Manager (encrypted)
-- RDP files are created in the temp directory and deleted after use
+- RDP files are stored persistently in %APPDATA%\Roaming\WinRDP\Connections
+  - Prevents security warnings on subsequent connections
+  - User-specific storage (each Windows user has their own)
+  - Can be manually deleted if needed
 - File I/O uses secure functions (_s versions)
 
 ## 🐛 Debugging Tips

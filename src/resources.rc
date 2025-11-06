@@ -58,22 +58,22 @@ FONT 9, "Segoe UI"
 BEGIN
     /* Username field with clean layout */
     LTEXT           "Username:", IDC_STATIC, 15, 18, 60, 10
-    EDITTEXT        IDC_EDIT_USERNAME, 85, 15, 220, 13, ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
+    EDITTEXT        IDC_EDIT_USERNAME, 85, 15, 220, 13, ES_AUTOHSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE
     
     /* Password field */
     LTEXT           "Password:", IDC_STATIC, 15, 45, 60, 10
-    EDITTEXT        IDC_EDIT_PASSWORD, 85, 42, 220, 13, ES_PASSWORD | ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
+    EDITTEXT        IDC_EDIT_PASSWORD, 85, 42, 220, 13, ES_PASSWORD | ES_AUTOHSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE
     
     /* Compact status line - only shown when credentials exist */
     LTEXT           "", IDC_STATIC_STATUS, 15, 72, 200, 10
-    PUSHBUTTON      "Delete Saved", IDC_BTN_DELETE_CREDS, 220, 69, 85, 18
+    PUSHBUTTON      "Delete Saved", IDC_BTN_DELETE_CREDS, 220, 69, 85, 18, WS_TABSTOP
     
     /* Separator line for visual grouping */
     CONTROL         "", IDC_STATIC, "Static", SS_ETCHEDHORZ, 15, 103, 290, 1
     
     /* Action buttons - aligned right for modern look */
-    DEFPUSHBUTTON   "Save && Continue", IDOK, 135, 115, 85, 22
-    PUSHBUTTON      "Cancel", IDCANCEL, 225, 115, 80, 22
+    DEFPUSHBUTTON   "Save && Continue", IDOK, 135, 115, 85, 22, WS_TABSTOP
+    PUSHBUTTON      "Cancel", IDCANCEL, 225, 115, 80, 22, WS_TABSTOP
 END
 
 /*
@@ -91,7 +91,7 @@ FONT 9, "Segoe UI"
 BEGIN
     /* Search box */
     LTEXT           "Search:", IDC_STATIC, 15, 15, 40, 10
-    EDITTEXT        IDC_EDIT_SEARCH, 60, 12, 420, 13, ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
+    EDITTEXT        IDC_EDIT_SEARCH, 60, 12, 420, 13, ES_AUTOHSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE
     
     /* Server list with modern appearance */
     CONTROL         "", IDC_LIST_SERVERS, "SysListView32", 
@@ -102,10 +102,10 @@ BEGIN
     LTEXT           "", IDC_STATIC_HOST_COUNT, 15, 333, 470, 10
     
     /* Action buttons with modern spacing and consistent sizing */
-    DEFPUSHBUTTON   "Connect", IDC_BTN_CONNECT, 15, 353, 100, 20
-    PUSHBUTTON      "Manage Hosts", IDC_BTN_MANAGE, 120, 353, 100, 20
-    PUSHBUTTON      "Edit Credentials", IDC_BTN_EDIT_CREDS, 225, 353, 100, 20
-    PUSHBUTTON      "Close", IDCANCEL, 330, 353, 100, 20
+    DEFPUSHBUTTON   "Connect", IDC_BTN_CONNECT, 15, 353, 100, 20, WS_TABSTOP
+    PUSHBUTTON      "Manage Hosts", IDC_BTN_MANAGE, 120, 353, 100, 20, WS_TABSTOP
+    PUSHBUTTON      "Edit Credentials", IDC_BTN_EDIT_CREDS, 225, 353, 100, 20, WS_TABSTOP
+    PUSHBUTTON      "Close", IDCANCEL, 330, 353, 100, 20, WS_TABSTOP
 END
 
 /*
@@ -121,7 +121,7 @@ FONT 9, "Segoe UI"
 BEGIN
     /* Search box for filtering */
     LTEXT           "Search:", IDC_STATIC, 15, 15, 30, 10
-    EDITTEXT        IDC_EDIT_SEARCH_HOSTS, 50, 12, 485, 13, ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
+    EDITTEXT        IDC_EDIT_SEARCH_HOSTS, 50, 12, 485, 13, ES_AUTOHSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE
     
     /* Host list with modern appearance and better sizing */
     CONTROL         "", IDC_LIST_HOSTS, "SysListView32",
@@ -132,11 +132,11 @@ BEGIN
     LTEXT           "", IDC_STATIC_HOSTS_COUNT, 15, 375, 520, 10
     
     /* Action buttons with modern spacing */
-    PUSHBUTTON      "Add Host", IDC_BTN_ADD_HOST, 15, 395, 90, 22
-    PUSHBUTTON      "Edit Host", IDC_BTN_EDIT_HOST, 110, 395, 90, 22
-    PUSHBUTTON      "Delete Host", IDC_BTN_DELETE_HOST, 205, 395, 90, 22
-    PUSHBUTTON      "Scan Domain", IDC_BTN_SCAN_DOMAIN, 300, 395, 95, 22
-    DEFPUSHBUTTON   "Close", IDCANCEL, 445, 395, 90, 22
+    PUSHBUTTON      "Add Host", IDC_BTN_ADD_HOST, 15, 395, 90, 22, WS_TABSTOP
+    PUSHBUTTON      "Edit Host", IDC_BTN_EDIT_HOST, 110, 395, 90, 22, WS_TABSTOP
+    PUSHBUTTON      "Delete Host", IDC_BTN_DELETE_HOST, 205, 395, 90, 22, WS_TABSTOP
+    PUSHBUTTON      "Scan Domain", IDC_BTN_SCAN_DOMAIN, 300, 395, 95, 22, WS_TABSTOP
+    DEFPUSHBUTTON   "Close", IDCANCEL, 445, 395, 90, 22, WS_TABSTOP
 END
 
 /*
@@ -153,31 +153,31 @@ FONT 9, "Segoe UI"
 BEGIN
     /* Hostname field */
     LTEXT           "Hostname:", IDC_STATIC, 15, 20, 65, 10
-    EDITTEXT        IDC_EDIT_HOSTNAME, 90, 17, 275, 13, ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
+    EDITTEXT        IDC_EDIT_HOSTNAME, 90, 17, 275, 13, ES_AUTOHSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE
     
     /* Description field - multiline with modern appearance */
     LTEXT           "Description:", IDC_STATIC, 15, 50, 65, 10
     EDITTEXT        IDC_EDIT_DESCRIPTION, 90, 47, 275, 45, 
-                    ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN | WS_VSCROLL, WS_EX_CLIENTEDGE
+                    ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN | WS_VSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE
     
     /* Per-host credentials section */
     GROUPBOX        "Per-Host Credentials (Optional)", IDC_STATIC, 15, 100, 350, 115
-    AUTOCHECKBOX    "Use custom credentials for this host", IDC_CHECK_USE_HOST_CREDS, 25, 115, 250, 12
+    AUTOCHECKBOX    "Use custom credentials for this host", IDC_CHECK_USE_HOST_CREDS, 25, 115, 250, 12, WS_TABSTOP
     
     /* Per-host username field - shown when checkbox is checked */
     LTEXT           "Username:", IDC_STATIC_HOST_USERNAME, 25, 135, 60, 10
-    EDITTEXT        IDC_EDIT_HOST_USERNAME, 90, 132, 270, 13, ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
+    EDITTEXT        IDC_EDIT_HOST_USERNAME, 90, 132, 270, 13, ES_AUTOHSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE
     
     /* Per-host password field - shown when checkbox is checked */
     LTEXT           "Password:", IDC_STATIC_HOST_PASSWORD, 25, 165, 60, 10
-    EDITTEXT        IDC_EDIT_HOST_PASSWORD, 90, 162, 270, 13, ES_PASSWORD | ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
+    EDITTEXT        IDC_EDIT_HOST_PASSWORD, 90, 162, 270, 13, ES_PASSWORD | ES_AUTOHSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE
     
     /* Help text */
     LTEXT           "Leave unchecked to use global credentials", IDC_STATIC, 90, 190, 270, 10
     
     /* Action buttons with modern spacing */
-    DEFPUSHBUTTON   "Save", IDOK, 205, 225, 80, 20
-    PUSHBUTTON      "Cancel", IDCANCEL, 290, 225, 75, 20
+    DEFPUSHBUTTON   "Save", IDOK, 205, 225, 80, 20, WS_TABSTOP
+    PUSHBUTTON      "Cancel", IDCANCEL, 290, 225, 75, 20, WS_TABSTOP
 END
 
 /*
@@ -192,14 +192,14 @@ FONT 9, "Segoe UI"
 BEGIN
     /* Domain field */
     LTEXT           "Domain / Workgroup:", IDC_STATIC, 20, 18, 85, 10
-    EDITTEXT        IDC_EDIT_DOMAIN, 110, 15, 290, 13, ES_AUTOHSCROLL, WS_EX_CLIENTEDGE
+    EDITTEXT        IDC_EDIT_DOMAIN, 110, 15, 290, 13, ES_AUTOHSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE
     LTEXT           "(Leave empty to scan current domain/workgroup)", IDC_STATIC, 110, 36, 290, 10
     
     /* Computer type filters */
     GROUPBOX        "Computer Types to Add", IDC_STATIC, 20, 60, 380, 45
-    AUTOCHECKBOX    "Workstations", IDC_CHECK_WORKSTATIONS, 40, 78, 110, 12
-    AUTOCHECKBOX    "Servers", IDC_CHECK_SERVERS, 160, 78, 110, 12
-    AUTOCHECKBOX    "Domain Controllers", IDC_CHECK_DOMAIN_CTRL, 280, 78, 110, 12
+    AUTOCHECKBOX    "Workstations", IDC_CHECK_WORKSTATIONS, 40, 78, 110, 12, WS_TABSTOP
+    AUTOCHECKBOX    "Servers", IDC_CHECK_SERVERS, 160, 78, 110, 12, WS_TABSTOP
+    AUTOCHECKBOX    "Domain Controllers", IDC_CHECK_DOMAIN_CTRL, 280, 78, 110, 12, WS_TABSTOP
     
     /* Info text */
     LTEXT           "Discovered computers will be automatically added to your hosts.", IDC_STATIC, 20, 115, 380, 10
@@ -208,8 +208,8 @@ BEGIN
     CONTROL         "", IDC_STATIC, "Static", SS_ETCHEDHORZ, 20, 135, 380, 1
     
     /* Action buttons */
-    DEFPUSHBUTTON   "Scan", IDOK, 245, 148, 75, 22
-    PUSHBUTTON      "Cancel", IDCANCEL, 325, 148, 75, 22
+    DEFPUSHBUTTON   "Scan", IDOK, 245, 148, 75, 22, WS_TABSTOP
+    PUSHBUTTON      "Cancel", IDCANCEL, 325, 148, 75, 22, WS_TABSTOP
 END
 
 /*
@@ -242,6 +242,6 @@ BEGIN
     LTEXT           "• Network computer discovery", IDC_STATIC, 30, 178, 310, 10
     
     /* OK button */
-    DEFPUSHBUTTON   "OK", IDOK, 265, 185, 85, 25
+    DEFPUSHBUTTON   "OK", IDOK, 265, 185, 85, 25, WS_TABSTOP
 END
 

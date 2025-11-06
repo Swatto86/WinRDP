@@ -281,9 +281,10 @@
         "name": "Swatto",
         "url": "https://swatto.co.uk"
       },
-      "softwareVersion": "1.1.0",
+      "softwareVersion": "1.2.0",
       "screenshot": "https://swatto.co.uk/",
       "featureList": [
+        "Persistent RDP files eliminate security warnings",
         "Recent connections in tray menu",
         "Last connected timestamps",
         "Sortable column headers",
@@ -338,31 +339,31 @@
         <div class="download-section">
             <h2 style="margin: 0 0 20px 0; color: #333;">📥 Download</h2>
             <p style="font-size: 1.1em; margin-bottom: 20px;">Click to download the installer</p>
-            <a href="https://github.com/Swatto86/WinRDP/releases/download/1.1.0/WinRDP-Setup-1.1.0.exe" class="download-button">
-                Download WinRDP v1.1.0
+            <a href="https://github.com/Swatto86/WinRDP/releases/download/1.2.0/WinRDP-Setup-1.2.0.exe" class="download-button">
+                Download WinRDP v1.2.0
             </a>
             <div class="version-info">
                 Windows 7+ (64-bit) • ~140 KB installer • NSIS-powered<br>
-                <span style="color: #3b82f6; font-weight: 600;">✨ New: UX enhancements for faster workflows</span>
+                <span style="color: #3b82f6; font-weight: 600;">✨ New: Persistent RDP files eliminate security warnings</span>
             </div>
         </div>
         
         <div class="section">
-            <h2>✨ Version 1.1.0 - UX Enhancement Release</h2>
+            <h2>✨ Version 1.2.0 - Persistent RDP Files Release</h2>
             <p style="margin-bottom: 15px; font-size: 1.05em; color: #555;">
-                <strong>Major usability improvements</strong> to streamline your workflow and provide better visibility.
+                <strong>Eliminates the repetitive security warning</strong> that appeared on every connection.
             </p>
             <div style="background: #e3f2fd; border-left: 4px solid #3b82f6; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
                 <p style="margin: 0; color: #1565c0;"><strong>What's new:</strong></p>
                 <ul style="margin: 10px 0 0 20px; color: #1565c0;">
-                    <li><strong>Recent Connections in Tray Menu</strong> - One-click access to your last 5 servers directly from the tray icon</li>
-                    <li><strong>Last Connected Timestamps</strong> - Track when you last connected to each server</li>
-                    <li><strong>Sortable Columns</strong> - Click column headers to sort by hostname, description, or last connected</li>
-                    <li><strong>Host Count Status</strong> - See total and filtered host counts at a glance</li>
+                    <li><strong>Persistent RDP Files</strong> - Connection files now stored in AppData\Roaming\WinRDP\Connections</li>
+                    <li><strong>No More Security Warnings</strong> - Warning only appears on first connection to each host</li>
+                    <li><strong>Seamless Reconnections</strong> - Each host reuses its trusted RDP file for future connections</li>
+                    <li><strong>Windows Best Practices</strong> - Follows Microsoft recommendations for application data storage</li>
                 </ul>
             </div>
             <p style="margin-top: 15px; font-size: 0.95em; color: #666;">
-                These enhancements make WinRDP even faster and more intuitive. Connect to your most-used servers instantly from the tray menu, identify frequently/rarely used hosts, and organize your server list more effectively.
+                Previously, RDP files were created temporarily and deleted after each connection, causing Windows to show the security warning every time. Now, RDP files persist in a dedicated directory and are reused, making subsequent connections completely seamless.
             </p>
         </div>
         
