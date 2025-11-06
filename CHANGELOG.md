@@ -5,6 +5,13 @@ All notable changes to WinRDP will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- **New Application Icon** - Professional blue monitor with green frame
+  - Large, clearly visible icon at all sizes (16x16 to 256x256)
+  - Modern design with blue screen and vibrant green bezel
+  - Proper monitor stand with realistic proportions
+  - Multi-resolution ICO file for crisp display everywhere
+  - Easily regenerated using included PowerShell script
+  
 - **Persistent RDP Files** - RDP connection files now stored in AppData\Roaming\WinRDP\Connections
   - Prevents security warning from appearing on every connection
   - Each host gets its own persistent RDP file based on hostname
@@ -73,6 +80,12 @@ The following UX improvements are planned for future releases:
   - Provides quick access and dismissal with the same keyboard shortcut
 
 ### Improved
+- **ListView Column Widths** - Optimized column sizing for better usability
+  - Description column now takes most available space
+  - Last Connected column fixed at 160px (perfect for timestamps)
+  - Hostname column reduced to 170px for better balance
+  - Applied to both main dialog and host management views
+  
 - **Consistent Textbox Heights** - All single-line textboxes now use uniform height (13 pixels)
   - Applied across all dialogs: Login, Main, Manage Hosts, Add/Edit Host, Scan Domain
   - Creates a more cohesive, professional appearance

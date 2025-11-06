@@ -976,15 +976,15 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             col.fmt = LVCFMT_CENTER;
             
             col.pszText = L"Hostname";
-            col.cx = 180;
+            col.cx = 170;
             ListView_InsertColumn(hList, 1, &col);
             
             col.pszText = L"Description";
-            col.cx = 220;
+            col.cx = listWidth - 170 - 160 - 5;  // Takes most of the remaining space
             ListView_InsertColumn(hList, 2, &col);
             
             col.pszText = L"Last Connected";
-            col.cx = listWidth - 180 - 220 - 5;  // Fill remaining space
+            col.cx = 160;  // Fixed width for timestamp
             ListView_InsertColumn(hList, 3, &col);
             
             // Load and display hosts
@@ -1299,15 +1299,15 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             col.fmt = LVCFMT_CENTER;
             
             col.pszText = L"Hostname";
-            col.cx = 200;
+            col.cx = 170;
             ListView_InsertColumn(hList, 1, &col);
             
             col.pszText = L"Description";
-            col.cx = 220;
+            col.cx = listWidth - 170 - 160 - 5;  // Takes most of the remaining space
             ListView_InsertColumn(hList, 2, &col);
             
             col.pszText = L"Last Connected";
-            col.cx = listWidth - 200 - 220 - 5;  // Fill remaining space
+            col.cx = 160;  // Fixed width for timestamp
             ListView_InsertColumn(hList, 3, &col);
             
             // Load and display hosts
