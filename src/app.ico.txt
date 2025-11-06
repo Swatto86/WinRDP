@@ -1,29 +1,48 @@
-Icon Placeholder
-================
+WinRDP Application Icon
+=======================
 
-To create an icon for this application:
+The WinRDP icon is a professional blue monitor with a vibrant green frame.
 
-1. Use an online icon generator or tool like:
-   - GIMP (free, open source)
-   - Paint.NET with icon plugin
-   - Online: https://www.icoconverter.com/
+Current Icon (app.ico):
+-----------------------
+- Multi-resolution ICO file (16x16 to 256x256)
+- Blue screen representing Remote Desktop
+- Green bezel/frame for visual distinction
+- Professional monitor stand design
+- Modern, clean appearance that scales well
 
-2. Create a 32x32 or 48x48 pixel icon
+How to Regenerate the Icon:
+---------------------------
 
-3. Save as "app.ico" in the src/ directory
+The icon is created using the included PowerShell script:
 
-4. The icon will automatically be embedded in the executable
+1. Run: .\create_icon.ps1
+2. The script generates:
+   - src\app.ico (multi-resolution ICO file)
+   - src\app_icon_preview.png (256x256 preview)
+3. Rebuild the application: .\build.bat
 
-For now, the application uses the default Windows application icon (IDI_APPLICATION).
+Customizing the Icon:
+---------------------
 
-Temporary solution:
-- Comment out the icon line in resources.rc
-- Or use a Windows system icon
+To change the icon design:
 
-To use a system icon, in resources.rc change:
+1. Edit create_icon.ps1
+2. Modify colors in the New-RDPIcon function:
+   - $primaryBlue = Screen color
+   - $greenBezel = Frame/bezel color
+3. Adjust dimensions or proportions as desired
+4. Run .\create_icon.ps1 to regenerate
+5. Rebuild the application
+
+The icon is automatically embedded in the executable via resources.rc:
   IDI_MAINICON ICON "app.ico"
-To:
-  // IDI_MAINICON ICON "app.ico"
 
-And the code will use LoadIcon(NULL, IDI_APPLICATION) for the default icon.
+Icon appears in:
+- Window title bars
+- System tray notification area  
+- Taskbar
+- Alt+Tab switcher
+- File Explorer
+- Installer
 

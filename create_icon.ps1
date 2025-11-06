@@ -1,5 +1,14 @@
 # Icon Generator for WinRDP
-# Creates an icon with two monitors and a connecting arrow using .NET System.Drawing
+# Creates a professional blue monitor icon with green frame using .NET System.Drawing
+# 
+# The icon features:
+# - Large blue screen (Windows blue #0078d4)
+# - Vibrant green bezel/frame (#16a34a)
+# - Professional monitor stand design
+# - Multi-resolution output (16x16 to 256x256)
+#
+# Usage: .\create_icon.ps1
+# Output: src\app.ico and src\app_icon_preview.png
 
 Add-Type -AssemblyName System.Drawing
 
@@ -111,7 +120,7 @@ function New-RDPIcon {
 }
 
 # Generate icon at multiple sizes
-Write-Host "Generating WinRDP icon with two monitors and connecting arrow..." -ForegroundColor Cyan
+Write-Host "Generating WinRDP icon - Professional blue monitor with green frame..." -ForegroundColor Cyan
 Write-Host ""
 
 $sizes = @(16, 32, 48, 64, 128, 256)
