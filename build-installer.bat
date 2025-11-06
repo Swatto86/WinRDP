@@ -32,6 +32,10 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b 0
 )
 
+REM Extract version from installer.nsi for dynamic display
+for /f "tokens=3 delims= " %%a in ('findstr /C:"!define APP_VERSION" installer.nsi') do set APP_VERSION=%%a
+set APP_VERSION=%APP_VERSION:"=%
+
 REM Build the installer
 echo.
 echo Step 2: Creating NSIS installer...
@@ -49,7 +53,7 @@ echo ================================================
 echo.
 echo Files created:
 echo   - build\WinRDP.exe (application)
-echo   - WinRDP-Setup-1.0.1.exe (installer)
+echo   - WinRDP-Setup-%APP_VERSION%.exe (installer)
 echo.
 pause
 
