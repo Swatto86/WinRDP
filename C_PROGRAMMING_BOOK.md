@@ -9782,6 +9782,21 @@ Windows automatically handles:
 - **Shift+Tab** - Move to previous control
 - **Alt+Letter** - Activate control with that mnemonic
 
+### WinRDP Keyboard Flow (v1.2.0 Update)
+
+The 1.2.0 polish pass standardized keyboard-first navigation across every dialog:
+
+- **Login dialog:** `Username → Password → Delete Saved → Save & Continue → Cancel`
+- **Main dialog:** `Search → Server List → Connect → Manage Hosts → Edit Credentials → Close`
+- **Manage Hosts dialog:** `Search → Host List → Add Host → Edit Host → Delete Host → Scan Domain → Close`
+- **Add/Edit Host dialog:** `Hostname → Description → Use custom credentials → Username → Password → Save → Cancel`
+- **Scan Domain dialog:** `Domain → Workstations → Servers → Domain Controllers → Scan → Cancel`
+
+> **Enter key shortcuts**
+> - Press **Enter** on a selected host in the main dialog to connect instantly (mirrors the `Connect` button)
+> - Press **Enter** on a selected host in the management dialog to open the edit form
+> - Default buttons (`DEFPUSHBUTTON`) now reflect the common action in each dialog, so the Enter key always does the right thing
+
 ### Setting Tab Order
 
 In resource file, define controls in tab order:
@@ -10153,7 +10168,7 @@ Host* LoadHosts(int* count)
 - System tray configuration
 - File paths
 
-### config.h Implementation
+### config.h Implementation (Updated for v1.2.0)
 
 Create `src/config.h`:
 
@@ -10163,170 +10178,84 @@ Create `src/config.h`:
 
 #include <windows.h>
 
-// ============================================================================
-// APPLICATION INFORMATION
-// ============================================================================
+// Application metadata
+#define APP_NAME                L"WinRDP"
+#define APP_VERSION             L"1.2.0"
+#define APP_CLASS_NAME          L"WinRDPWindowClass"
+#define APP_WINDOW_TITLE        L"WinRDP Manager"
 
-#define APP_NAME        L"WinRDP"
-#define APP_VERSION     L"1.0.0"
-#define APP_AUTHOR      L"Your Name"
-#define APP_COPYRIGHT   L"Copyright © 2024"
+// Credential storage targets (Windows Credential Manager)
+#define CRED_TARGET_NAME        L"WinRDP:DefaultCredentials"
+#define CRED_TARGET_PREFIX      L"WinRDP:TERMSRV/"
 
-// ============================================================================
-// WINDOW CONFIGURATION
-// ============================================================================
+// File locations
+#define HOSTS_FILE_NAME         L"hosts.csv"
 
-// Main window dimensions
-#define MAIN_WINDOW_WIDTH   600
-#define MAIN_WINDOW_HEIGHT  400
+// Registry autostart settings
+#define REG_RUN_KEY             L"Software\\Microsoft\\Windows\\CurrentVersion\\Run"
+#define REG_APP_NAME            L"WinRDP"
 
-// Dialog dimensions
-#define LOGIN_DLG_WIDTH     350
-#define LOGIN_DLG_HEIGHT    200
+// Buffer sizes used throughout the app
+#define MAX_HOSTNAME_LEN        256
+#define MAX_DESCRIPTION_LEN     512
+#define MAX_USERNAME_LEN        256
+#define MAX_PASSWORD_LEN        256
 
-// Main window class name
-#define MAIN_WINDOW_CLASS   L"WinRDP_MainWindow"
-
-// ============================================================================
-// RESOURCE IDs
-// ============================================================================
-
-// Icons
-#define IDI_APP             100
-
-// Dialogs
-#define IDD_LOGIN           101
-#define IDD_MAIN            102
-
-// Menu IDs
-#define ID_TRAY_OPEN        200
-#define ID_TRAY_EXIT        201
-#define ID_TRAY_ABOUT       202
-#define ID_TRAY_AUTOSTART   203
-
-// Control IDs
-#define IDC_USERNAME        1001
-#define IDC_PASSWORD        1002
-#define IDC_REMEMBER        1003
-#define IDC_HOSTLIST        1004
-#define IDC_ADD_HOST        1005
-#define IDC_REMOVE_HOST     1006
-#define IDC_CONNECT         1007
-#define IDC_HOSTNAME        1008
-#define IDC_DESCRIPTION     1009
-#define IDC_SCAN_NETWORK    1010
-
-// ============================================================================
-// SYSTEM TRAY CONFIGURATION
-// ============================================================================
-
-// Custom message for system tray
-#define WM_TRAYICON         (WM_USER + 1)
-
-// System tray icon ID
-#define TRAY_ICON_ID        1
-
-// ============================================================================
-// HOTKEY CONFIGURATION
-// ============================================================================
-
-// Global hotkey ID
-#define HOTKEY_SHOW         1
-
-// Default: Ctrl+Shift+R
-#define HOTKEY_MODIFIERS    (MOD_CONTROL | MOD_SHIFT)
-#define HOTKEY_VK           'R'
-
-// ============================================================================
-// FILE PATHS
-// ============================================================================
-
-// Host list CSV file (in user's Documents folder)
-#define HOSTS_FILENAME      L"winrdp_hosts.csv"
-
-// Credential target prefix (for Windows Credential Manager)
-#define CRED_TARGET_PREFIX  L"WinRDP:"
-
-// ============================================================================
-// REGISTRY PATHS
-// ============================================================================
-
-// Autostart registry key
-#define AUTOSTART_KEY       L"Software\\Microsoft\\Windows\\CurrentVersion\\Run"
-#define AUTOSTART_VALUE     L"WinRDP"
-
-// ============================================================================
-// APPLICATION BEHAVIOR
-// ============================================================================
-
-// Maximum hosts in list
-#define MAX_HOSTS           1000
-
-// CSV line buffer size
-#define CSV_LINE_SIZE       1024
-
-// RDP file template path
-#define RDP_TEMP_FILE       L"%TEMP%\\winrdp_temp.rdp"
-
-// ============================================================================
-// UTILITY MACROS
-// ============================================================================
-
-// Safe string copy (prevents buffer overflow)
-#define SAFE_STRCPY(dest, src) \
-    wcsncpy_s(dest, _countof(dest), src, _TRUNCATE)
-
-// Safe string concatenate
-#define SAFE_STRCAT(dest, src) \
-    wcsncat_s(dest, _countof(dest), src, _TRUNCATE)
-
-// Get array element count
-#define ARRAYSIZE(arr)  (sizeof(arr) / sizeof(arr[0]))
+// Utility helpers shared across modules
+void CenterWindow(HWND hwnd);
+void ShowErrorMessage(HWND hwnd, const wchar_t* message);
+void ShowInfoMessage(HWND hwnd, const wchar_t* message);
 
 #endif // CONFIG_H
 ```
 
 ### Understanding config.h
 
-Let's break down the key sections:
+Let's break down the key sections and why they matter in the current codebase:
 
-**1. Application Information**
+**1. Application metadata**
 ```c
 #define APP_NAME        L"WinRDP"
-#define APP_VERSION     L"1.0.0"
+#define APP_VERSION     L"1.2.0"
 ```
-- Used in window titles, about dialogs, error messages
-- The `L` prefix means **wide string** (Unicode)
+- Used to brand window captions, dialog titles, and the About box
+- Version number now tracks the shipping build (v1.2.0 introduces persistent RDP files and UI polish)
 
-**2. Resource IDs**
+**2. Credential targets**
 ```c
-#define IDI_APP             100
-#define IDD_LOGIN           101
+#define CRED_TARGET_NAME   L"WinRDP:DefaultCredentials"
+#define CRED_TARGET_PREFIX L"WinRDP:TERMSRV/"
 ```
-- Numeric IDs for resources (icons, dialogs, menus)
-- Must be unique across the application
-- Grouped logically (icons 100-199, dialogs 101-199, etc.)
+- `CRED_TARGET_NAME` identifies the **global credentials** that auto-fill connections
+- `CRED_TARGET_PREFIX` enables per-host credentials like `WinRDP:TERMSRV/server01`
+- These constants are shared by `credentials.c` and `rdp.c` to keep naming consistent when saving to Windows Credential Manager
 
-**3. System Tray Configuration**
+**3. File locations and registry data**
 ```c
-#define WM_TRAYICON         (WM_USER + 1)
+#define HOSTS_FILE_NAME  L"hosts.csv"
+#define REG_RUN_KEY      L"Software\\Microsoft\\Windows\\CurrentVersion\\Run"
 ```
-- Custom Windows message for system tray clicks
-- `WM_USER + 1` ensures it doesn't conflict with standard messages
+- `HOSTS_FILE_NAME` is combined with the executable path at runtime, ensuring autostart sessions open the correct CSV
+- `REG_RUN_KEY` / `REG_APP_NAME` allow Chapter 25's autostart feature to register the app with Windows safely
 
-**4. Utility Macros**
+**4. Buffer sizing**
 ```c
-#define SAFE_STRCPY(dest, src) \
-    wcsncpy_s(dest, _countof(dest), src, _TRUNCATE)
+#define MAX_HOSTNAME_LEN 256
+#define MAX_DESCRIPTION_LEN 512
 ```
-- Helper macros used throughout the code
-- `SAFE_STRCPY` prevents buffer overflows
-- `_TRUNCATE` safely handles strings that are too long
+- These limits align with UI expectations (text boxes sized to 256 or 512 characters)
+- Ensures every module allocates consistent buffers before reading CSV data or credentials
 
-**Why use #define for constants?**
-- Easy to change in one place
-- Compiler replaces them at compile time (no runtime cost)
-- Makes code more readable: `MAIN_WINDOW_WIDTH` vs `600`
+**5. Shared helpers**
+```c
+void ShowErrorMessage(HWND hwnd, const wchar_t* message);
+```
+- Declared here so any module can show consistent, branded dialogs without re-declaring the functions
+
+**Why centralize these constants?**
+- Adjusting branding or versioning for a release becomes a single-file change
+- Prevents magic strings scattered across modules (e.g., `"WinRDP:TERMSRV/"`)
+- Keeps new features—like the persistent credential and RDP storage introduced in v1.2.0—easy to document and maintain
 
 ## Resource Files: The GUI Definition
 
@@ -10337,7 +10266,7 @@ Windows applications use **resource files** (.rc) to define:
 - Version information
 - Strings
 
-### resource.h: Resource IDs
+### resource.h: Resource IDs (Updated for v1.2.0 UI)
 
 Create `src/resource.h`:
 
@@ -10345,127 +10274,204 @@ Create `src/resource.h`:
 #ifndef RESOURCE_H
 #define RESOURCE_H
 
-// This file is included by both C code and resource compiler (rc.exe)
-// Keep it simple - only #define statements
+// Dialog identifiers
+#define IDD_LOGIN               100
+#define IDD_MAIN                101
+#define IDD_HOSTS               102
+#define IDD_ADD_HOST            103
+#define IDD_SCAN_RESULTS        104
+#define IDD_SCAN_DOMAIN         105
+#define IDD_ABOUT               106
 
-// Icons
-#define IDI_APP             100
+// Login dialog controls
+#define IDC_EDIT_USERNAME       200
+#define IDC_EDIT_PASSWORD       201
+#define IDC_BTN_SAVE_CREDS      202
+#define IDC_BTN_DELETE_CREDS    203
+#define IDC_STATIC_STATUS       204
 
-// Dialogs
-#define IDD_LOGIN           101
-#define IDD_MAIN            102
-#define IDD_ADD_HOST        103
+// Main dialog controls
+#define IDC_LIST_SERVERS        210
+#define IDC_EDIT_SEARCH         211
+#define IDC_BTN_CONNECT         212
+#define IDC_BTN_MANAGE          213
+#define IDC_BTN_EDIT_CREDS      214
+#define IDC_STATIC_HOST_COUNT   215
 
-// Menus
-#define IDM_TRAY_MENU       200
+// Host management dialog
+#define IDC_LIST_HOSTS          220
+#define IDC_BTN_ADD_HOST        221
+#define IDC_BTN_EDIT_HOST       222
+#define IDC_BTN_DELETE_HOST     223
+#define IDC_BTN_SCAN_DOMAIN     224
+#define IDC_EDIT_SEARCH_HOSTS   225
+#define IDC_STATIC_HOSTS_COUNT  226
 
-// Menu items
-#define ID_TRAY_OPEN        201
-#define ID_TRAY_EXIT        202
-#define ID_TRAY_ABOUT       203
-#define ID_TRAY_AUTOSTART   204
+// Add/Edit host dialog
+#define IDC_EDIT_HOSTNAME       230
+#define IDC_EDIT_DESCRIPTION    231
+#define IDC_CHECK_USE_HOST_CREDS 232
+#define IDC_EDIT_HOST_USERNAME  233
+#define IDC_EDIT_HOST_PASSWORD  234
+#define IDC_STATIC_HOST_USERNAME 235
+#define IDC_STATIC_HOST_PASSWORD 236
 
-// Controls (must match config.h)
-#define IDC_USERNAME        1001
-#define IDC_PASSWORD        1002
-#define IDC_REMEMBER        1003
-#define IDC_HOSTLIST        1004
-#define IDC_ADD_HOST        1005
-#define IDC_REMOVE_HOST     1006
-#define IDC_CONNECT         1007
-#define IDC_HOSTNAME        1008
-#define IDC_DESCRIPTION     1009
-#define IDC_SCAN_NETWORK    1010
+// Scan results dialog
+#define IDC_LIST_SCAN_RESULTS   240
+#define IDC_BTN_ADD_SELECTED    241
+#define IDC_STATIC_SCAN_STATUS  242
+
+// Scan domain dialog
+#define IDC_EDIT_DOMAIN         250
+#define IDC_CHECK_WORKSTATIONS  254
+#define IDC_CHECK_SERVERS       255
+#define IDC_CHECK_DOMAIN_CTRL   256
+
+// Menu and hotkey identifiers
+#define IDM_OPEN                300
+#define IDM_EXIT                301
+#define IDM_ABOUT               302     // Autostart toggle reuses this ID
+#define IDM_DELETE_ALL          303
+#define IDM_GLOBAL_HOTKEY       304
+#define IDM_ABOUT_DIALOG        305
+
+// Dynamic recent-connection menu range (Tray → Recent Servers)
+#define IDM_RECENT_START        310
+#define IDM_RECENT_END          319
+
+// System tray plumbing
+#define ID_TRAYICON             400
+#define WM_TRAYICON             (WM_USER + 1)
+
+// Icon resource
+#define IDI_MAINICON            500
+
+// Accelerator tables
+#define IDM_HOSTS_ACCEL         600
 
 #endif // RESOURCE_H
 ```
 
-### resources.rc: Dialog Definitions
+### resources.rc: Dialog & Menu Layouts (Keyboard-First UX)
 
 Create `src/resources.rc`:
 
 ```rc
-#include "resource.h"
+/*
+ * WinRDP Resources
+ * - UTF-8 encoded via #pragma for clean non-ANSI text
+ * - Consistent 13px single-line edit controls per UX polish in v1.2.0
+ * - Uniform 100px buttons for visual balance
+ */
+
+#pragma code_page(65001)
+
 #include <windows.h>
+#include "resource.h"
 
-// ============================================================================
-// ICONS
-// ============================================================================
+IDI_MAINICON ICON "app.ico"
+1 RT_MANIFEST "app.manifest"
 
-IDI_APP ICON "app.ico"
-
-// ============================================================================
-// MENUS
-// ============================================================================
-
-IDM_TRAY_MENU MENU
-BEGIN
-    POPUP "TrayMenu"
-    BEGIN
-        MENUITEM "Open WinRDP",         ID_TRAY_OPEN
-        MENUITEM "Start with Windows",  ID_TRAY_AUTOSTART
-        MENUITEM SEPARATOR
-        MENUITEM "About",               ID_TRAY_ABOUT
-        MENUITEM "Exit",                ID_TRAY_EXIT
-    END
-END
-
-// ============================================================================
-// DIALOGS
-// ============================================================================
-
-// Login Dialog
-IDD_LOGIN DIALOGEX 0, 0, 250, 140
-STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "WinRDP - Login"
+// Login Dialog — countdown suppressed when editing credentials mid-session
+IDD_LOGIN DIALOGEX 0, 0, 320, 145
+STYLE DS_MODALFRAME | DS_CENTER | DS_SHELLFONT | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "WinRDP - Enter Credentials"
 FONT 9, "Segoe UI"
 BEGIN
-    LTEXT           "Username:",IDC_STATIC,20,20,80,12
-    EDITTEXT        IDC_USERNAME,20,35,210,14,ES_AUTOHSCROLL
-    
-    LTEXT           "Password:",IDC_STATIC,20,55,80,12
-    EDITTEXT        IDC_PASSWORD,20,70,210,14,ES_PASSWORD | ES_AUTOHSCROLL
-    
-    CONTROL         "Remember credentials",IDC_REMEMBER,"Button",
-                    BS_AUTOCHECKBOX | WS_TABSTOP,20,95,150,12
-    
-    DEFPUSHBUTTON   "Login",IDOK,80,115,50,16
-    PUSHBUTTON      "Cancel",IDCANCEL,140,115,50,16
+    LTEXT           "Username:",              IDC_STATIC,            15, 18, 60, 10
+    EDITTEXT        IDC_EDIT_USERNAME,        85, 15, 220, 13, ES_AUTOHSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE
+
+    LTEXT           "Password:",              IDC_STATIC,            15, 45, 60, 10
+    EDITTEXT        IDC_EDIT_PASSWORD,        85, 42, 220, 13, ES_PASSWORD | ES_AUTOHSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE
+
+    LTEXT           "",                       IDC_STATIC_STATUS,     15, 72, 200, 10
+    PUSHBUTTON      "Delete Saved",          IDC_BTN_DELETE_CREDS, 220, 69, 85, 18, WS_TABSTOP
+
+    CONTROL         "",                      IDC_STATIC,             "Static", SS_ETCHEDHORZ, 15, 103, 290, 1
+
+    DEFPUSHBUTTON   "Save && Continue",      IDOK,                  135, 115, 85, 22, WS_TABSTOP
+    PUSHBUTTON      "Cancel",                IDCANCEL,              225, 115, 80, 22, WS_TABSTOP
 END
 
-// Main Dialog (Host List)
-IDD_MAIN DIALOGEX 0, 0, 500, 350
-STYLE DS_SETFONT | WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | 
-      WS_MINIMIZEBOX | WS_MAXIMIZEBOX
-CAPTION "WinRDP - RDP Connection Manager"
+// Main Dialog — search + host count + Edit Credentials button (new in v1.2.0)
+IDD_MAIN DIALOGEX 0, 0, 500, 380
+STYLE DS_MODALFRAME | DS_CENTER | DS_SHELLFONT | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "WinRDP - Connect to Server"
 FONT 9, "Segoe UI"
 BEGIN
-    CONTROL         "",IDC_HOSTLIST,"SysListView32",
+    LTEXT           "Search:",                IDC_STATIC,            15, 15, 40, 10
+    EDITTEXT        IDC_EDIT_SEARCH,          60, 12, 420, 13, ES_AUTOHSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE
+
+    CONTROL         "",                      IDC_LIST_SERVERS,      "SysListView32",
                     LVS_REPORT | LVS_SINGLESEL | WS_BORDER | WS_TABSTOP,
-                    10,10,480,280
-    
-    PUSHBUTTON      "Connect",IDC_CONNECT,10,300,70,24
-    PUSHBUTTON      "Add Host",IDC_ADD_HOST,90,300,70,24
-    PUSHBUTTON      "Remove",IDC_REMOVE_HOST,170,300,70,24
-    PUSHBUTTON      "Scan Network",IDC_SCAN_NETWORK,250,300,90,24
+                    15, 42, 470, 286
+
+    LTEXT           "",                       IDC_STATIC_HOST_COUNT, 15, 333, 470, 10
+
+    DEFPUSHBUTTON   "Connect",               IDC_BTN_CONNECT,      15, 353, 100, 20, WS_TABSTOP
+    PUSHBUTTON      "Manage Hosts",          IDC_BTN_MANAGE,      120, 353, 100, 20, WS_TABSTOP
+    PUSHBUTTON      "Edit Credentials",      IDC_BTN_EDIT_CREDS,  225, 353, 100, 20, WS_TABSTOP
+    PUSHBUTTON      "Close",                 IDCANCEL,            330, 353, 100, 20, WS_TABSTOP
 END
 
-// Add Host Dialog
-IDD_ADD_HOST DIALOGEX 0, 0, 300, 150
-STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "Add RDP Host"
+// Host Management Dialog — mirrors main dialog layout with filtering + counts
+IDD_HOSTS DIALOGEX 0, 0, 550, 430
+STYLE DS_MODALFRAME | DS_CENTER | DS_SHELLFONT | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "WinRDP - Manage Hosts"
 FONT 9, "Segoe UI"
 BEGIN
-    LTEXT           "Hostname or IP:",IDC_STATIC,20,20,100,12
-    EDITTEXT        IDC_HOSTNAME,20,35,260,14,ES_AUTOHSCROLL
-    
-    LTEXT           "Description:",IDC_STATIC,20,60,100,12
-    EDITTEXT        IDC_DESCRIPTION,20,75,260,14,ES_AUTOHSCROLL
-    
-    DEFPUSHBUTTON   "Add",IDOK,100,115,50,16
-    PUSHBUTTON      "Cancel",IDCANCEL,160,115,50,16
+    LTEXT           "Search:",                IDC_STATIC,            15, 15, 30, 10
+    EDITTEXT        IDC_EDIT_SEARCH_HOSTS,    50, 12, 485, 13, ES_AUTOHSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE
+
+    CONTROL         "",                      IDC_LIST_HOSTS,        "SysListView32",
+                    LVS_REPORT | LVS_SINGLESEL | WS_BORDER | WS_TABSTOP,
+                    15, 35, 520, 335
+
+    LTEXT           "",                       IDC_STATIC_HOSTS_COUNT, 15, 375, 520, 10
+
+    PUSHBUTTON      "Add Host",              IDC_BTN_ADD_HOST,     15, 395, 90, 22, WS_TABSTOP
+    PUSHBUTTON      "Edit Host",             IDC_BTN_EDIT_HOST,   110, 395, 90, 22, WS_TABSTOP
+    PUSHBUTTON      "Delete Host",           IDC_BTN_DELETE_HOST, 205, 395, 90, 22, WS_TABSTOP
+    PUSHBUTTON      "Scan Domain",           IDC_BTN_SCAN_DOMAIN, 300, 395, 95, 22, WS_TABSTOP
+    DEFPUSHBUTTON   "Close",                 IDCANCEL,            445, 395, 90, 22, WS_TABSTOP
 END
+
+// Add/Edit Host Dialog — supports per-host credential override
+IDD_ADD_HOST DIALOGEX 0, 0, 380, 270
+STYLE DS_MODALFRAME | DS_CENTER | DS_SHELLFONT | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "WinRDP - Add/Edit Host"
+FONT 9, "Segoe UI"
+BEGIN
+    LTEXT           "Hostname:",             IDC_STATIC,            15, 20, 65, 10
+    EDITTEXT        IDC_EDIT_HOSTNAME,        90, 17, 275, 13, ES_AUTOHSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE
+
+    LTEXT           "Description:",          IDC_STATIC,            15, 50, 65, 10
+    EDITTEXT        IDC_EDIT_DESCRIPTION,     90, 47, 275, 45,
+                    ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN | WS_VSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE
+
+    GROUPBOX        "Per-Host Credentials (Optional)", IDC_STATIC, 15, 100, 350, 115
+    AUTOCHECKBOX    "Use custom credentials for this host", IDC_CHECK_USE_HOST_CREDS, 25, 115, 250, 12, WS_TABSTOP
+
+    LTEXT           "Username:",             IDC_STATIC_HOST_USERNAME, 25, 135, 60, 10
+    EDITTEXT        IDC_EDIT_HOST_USERNAME,   90, 132, 270, 13, ES_AUTOHSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE
+
+    LTEXT           "Password:",             IDC_STATIC_HOST_PASSWORD, 25, 165, 60, 10
+    EDITTEXT        IDC_EDIT_HOST_PASSWORD,   90, 162, 270, 13, ES_PASSWORD | ES_AUTOHSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE
+
+    LTEXT           "Leave unchecked to use global credentials", IDC_STATIC, 90, 190, 270, 10
+
+    DEFPUSHBUTTON   "Save",                  IDOK,                 205, 225, 80, 20, WS_TABSTOP
+    PUSHBUTTON      "Cancel",                IDCANCEL,             290, 225, 75, 20, WS_TABSTOP
+END
+
+// Additional dialogs (Scan Domain, About, etc.) follow similar patterns in the repo
 ```
+
+> **UX polish (v1.2.0)**
+> - Uniform 13px single-line edit controls → consistent baseline across dialogs
+> - Button widths standardized to 90–100px → balanced visual rhythm
+> - New `Edit Credentials` button provides in-session access to the login workflow
+> - Status labels (`IDC_STATIC_HOST_COUNT` / `IDC_STATIC_HOSTS_COUNT`) show filtered counts in real time
 
 ### Understanding Resource Files
 
@@ -10482,11 +10488,12 @@ IDD_LOGIN DIALOGEX 0, 0, 250, 140
 
 **Control syntax:**
 ```rc
-EDITTEXT IDC_USERNAME, 20, 35, 210, 14, ES_AUTOHSCROLL
-      |         |       |   |    |    |       |
-      |         |       |   |    |    |       Styles
-      |         |       |   |    |    Height
-      |         |       |   |    Width
+EDITTEXT IDC_EDIT_USERNAME, 85, 15, 220, 13, ES_AUTOHSCROLL | WS_TABSTOP, WS_EX_CLIENTEDGE
+      |         |       |   |    |    |       |       |
+      |         |       |   |    |    |       |       Extended styles
+      |         |       |   |    |    |       Styles (ES_*, WS_TABSTOP)
+      |         |       |   |    |    Height (dialog units)
+      |         |       |   |    Width (dialog units)
       |         |       |   Y position
       |         |       X position
       |         Control ID
@@ -15534,24 +15541,62 @@ case WM_TRAYICON:
     return 0;
 ```
 
-## Global Hotkeys
+## Global Hotkeys (Toggle Behaviour in v1.2.0)
 
-Register system-wide keyboard shortcuts:
+Register the Ctrl+Shift+R hotkey once during `WM_CREATE`, then let the handler decide whether to **show or hide** the main dialog:
 
 ```c
-// Register Ctrl+Shift+R
-RegisterHotKey(hwnd, 1, MOD_CONTROL | MOD_SHIFT, 'R');
+// Register Ctrl+Shift+R in WM_CREATE
+RegisterHotKey(hwnd, IDM_GLOBAL_HOTKEY, MOD_CONTROL | MOD_SHIFT, 'R');
 
 // Handle in WndProc
 case WM_HOTKEY:
-    if (wParam == 1)
+    if (wParam == IDM_GLOBAL_HOTKEY)
     {
-        // Hotkey pressed - show dialog
-        DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_MAIN), 
-                 hwnd, MainDialogProc);
+        wchar_t username[MAX_USERNAME_LEN];
+        wchar_t password[MAX_PASSWORD_LEN];
+
+        if (LoadCredentials(NULL, username, password))
+        {
+            if (g_hwndMainDialog == NULL)
+            {
+                // Not visible yet → show the main server list
+                DialogBox(g_hInstance, MAKEINTRESOURCE(IDD_MAIN), hwnd, MainDialogProc);
+            }
+            else if (IsWindowVisible(g_hwndMainDialog) && !IsIconic(g_hwndMainDialog))
+            {
+                // Already visible → close it for quick dismiss
+                PostMessage(g_hwndMainDialog, WM_CLOSE, 0, 0);
+            }
+            else
+            {
+                // Created but hidden/minimized → bring it back to the foreground
+                ShowWindow(g_hwndMainDialog, SW_RESTORE);
+                SetForegroundWindow(g_hwndMainDialog);
+            }
+        }
+        else
+        {
+            // No global creds yet → toggle the login dialog instead (no countdown in edit mode)
+            if (g_hwndLoginDialog == NULL)
+            {
+                DialogBoxParam(g_hInstance, MAKEINTRESOURCE(IDD_LOGIN), hwnd, LoginDialogProc, 0);
+            }
+            else if (IsWindowVisible(g_hwndLoginDialog) && !IsIconic(g_hwndLoginDialog))
+            {
+                PostMessage(g_hwndLoginDialog, WM_CLOSE, 0, 0);
+            }
+            else
+            {
+                ShowWindow(g_hwndLoginDialog, SW_RESTORE);
+                SetForegroundWindow(g_hwndLoginDialog);
+            }
+        }
     }
     return 0;
 ```
+
+**Why the toggle?** WinRDP behaves like a command palette: tap the hotkey to summon the list, tap it again to dismiss. If the user has not saved default credentials yet, the same shortcut pivots to the login dialog so they can supply them without touching the mouse.
 
 ## Summary
 
@@ -16721,6 +16766,39 @@ With filter "prod":
   "Showing 1 of 5 host"
   "Showing 0 of 5 hosts"
 ```
+
+## Edit Global Credentials Button (NEW!)
+
+> **🔑 Quick Credential Swaps**
+>
+> Give users a way to update their default credentials without restarting the app.
+
+```c
+case IDC_BTN_EDIT_CREDS:
+{
+    ShowWindow(hwnd, SW_HIDE);
+
+    if (g_hwndLoginDialog == NULL)
+    {
+        // Pass 1 → edit mode. Login dialog skips the startup countdown.
+        DialogBoxParam(g_hInstance, MAKEINTRESOURCE(IDD_LOGIN), hwnd, LoginDialogProc, 1);
+    }
+    else
+    {
+        SetForegroundWindow(g_hwndLoginDialog);
+    }
+
+    ShowWindow(hwnd, SW_SHOW);
+    SetForegroundWindow(hwnd);
+    return TRUE;
+}
+```
+
+**How it works:**
+- The main dialog hides while the login dialog is on screen, preventing overlapping modals.
+- Passing `1` as the dialog parameter switches the login dialog into **edit mode**—no countdown timer, just a simple "✓ Credentials saved" status message.
+- When the login dialog closes, the main dialog pops back to the foreground so the user can keep working.
+- Pressing **Enter** inside the login dialog still triggers the default `Save & Continue` button for quick keyboard workflows.
 
 ## Summary
 
@@ -18593,53 +18671,73 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 ### Step 4: Create the Context Menu
 
 ```c
-void ShowTrayMenu(HWND hwnd)
+void ShowContextMenu(HWND hwnd)
 {
     POINT pt;
-    HMENU hMenu, hSubMenu;
-    
-    // Get cursor position
     GetCursorPos(&pt);
-    
-    // Create popup menu
-    hMenu = CreatePopupMenu();
+
+    HMENU hMenu = CreatePopupMenu();
     if (hMenu == NULL)
         return;
-    
-    // Add menu items
-    AppendMenu(hMenu, MF_STRING, IDM_OPEN, L"&Open WinRDP");
-    AppendMenu(hMenu, MF_STRING, IDM_ABOUT, L"&About");
-    AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenu(hMenu, MF_STRING, IDM_EXIT, L"E&xit");
-    
-    // Set default menu item (bold text)
+
+    Host* recentHosts = NULL;
+    int recentCount = 0;
+
+    if (GetRecentHosts(&recentHosts, &recentCount, 5) && recentCount > 0)
+    {
+        AppendMenuW(hMenu, MF_STRING | MF_GRAYED, 0, L"Recent Connections:");
+
+        for (int i = 0; i < recentCount; i++)
+        {
+            wchar_t menuText[256];
+            swprintf_s(menuText, 256, L"%s — %s",
+                       recentHosts[i].hostname,
+                       recentHosts[i].description[0] ? recentHosts[i].description : L"No description");
+
+            AppendMenuW(hMenu, MF_STRING, IDM_RECENT_START + i, menuText);
+        }
+
+        AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
+    }
+
+    AppendMenuW(hMenu, MF_STRING, IDM_OPEN, L"Open");
+    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
+
+    UINT autostartFlags = MF_STRING;
+    if (IsAutostartEnabled())
+    {
+        autostartFlags |= MF_CHECKED;
+    }
+    AppendMenuW(hMenu, autostartFlags, IDM_ABOUT, L"Start with Windows");
+
+    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenuW(hMenu, MF_STRING, IDM_ABOUT_DIALOG, L"About");
+    AppendMenuW(hMenu, MF_STRING, IDM_EXIT, L"Exit");
+
     SetMenuDefaultItem(hMenu, IDM_OPEN, FALSE);
-    
-    // Required for proper popup behavior
     SetForegroundWindow(hwnd);
-    
-    // Display menu
+
     TrackPopupMenu(hMenu, TPM_BOTTOMALIGN | TPM_LEFTALIGN,
                    pt.x, pt.y, 0, hwnd, NULL);
-    
-    // Clean up
+
     DestroyMenu(hMenu);
-    
-    // Required for proper popup behavior
     PostMessage(hwnd, WM_NULL, 0, 0);
+
+    if (recentHosts != NULL)
+    {
+        FreeHosts(recentHosts, recentCount);
+    }
 }
 ```
 
 **Key Points:**
 
-- `GetCursorPos`: Get mouse position for menu placement
-- `CreatePopupMenu`: Create temporary popup menu
-- `AppendMenu`: Add menu items
-- `SetMenuDefaultItem`: Make "Open" bold (default action)
-- `SetForegroundWindow`: Required before showing popup (Windows quirk)
-- `TrackPopupMenu`: Display menu and wait for selection
-- `DestroyMenu`: Clean up menu when done
-- `PostMessage(WM_NULL)`: Required for proper menu dismissal (Windows quirk)
+- Recent connections appear **at the top** of the menu for one-click access
+- `IDM_RECENT_START + i` maps each menu item back to the host entry when the user clicks it
+- The autostart item doubles as a checkbox (`MF_CHECKED`) so users can see its current state
+- `SetMenuDefaultItem` keeps **Open** bold, matching standard Windows UX
+- `FreeHosts` cleans up the temporary array allocated by `GetRecentHosts`
+- `SetForegroundWindow` / `PostMessage(WM_NULL)` remain necessary Windows quirks for reliable popup menus
 
 ### Step 5: Show/Hide Window Functions
 
