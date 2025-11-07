@@ -34,10 +34,10 @@
 ## Part IV: Building WinRDP Core
 17. [Project Setup and Architecture](#chapter-17-project-setup-and-architecture) ✅
 18. [Configuration and Utilities](#chapter-18-configuration-and-utilities) ✅
-19. [CSV File Management](#chapter-19-csv-file-management) ✅ ⭐ **UPDATED v2.0**
-20. [Windows Credential Manager](#chapter-20-windows-credential-manager) ✅ ⭐ **UPDATED v2.0**
+19. [CSV File Management](#chapter-19-csv-file-management) ✅ ⭐ **UPDATED v1.2.0**
+20. [Windows Credential Manager](#chapter-20-windows-credential-manager) ✅ ⭐ **UPDATED v1.2.0**
 21. [Main Application Window](#chapter-21-main-application-window) ✅
-22. [ListView Control for Host Display](#chapter-22-listview-control-for-host-display) ✅ ⭐ **UPDATED v2.0**
+22. [ListView Control for Host Display](#chapter-22-listview-control-for-host-display) ✅ ⭐ **UPDATED v1.2.0**
 23. [RDP Connection Logic](#chapter-23-rdp-connection-logic) ✅
 24. [System Tray Integration](#chapter-24-system-tray-integration) ✅
 
@@ -519,7 +519,7 @@ int main(void)
     printf("Enter temperature in Celsius: ");
     scanf("%f", &celsius);
     
-    fahrenheit = (celsius * 9.0 / 5.0) + 32.0;
+    fahrenheit = (celsius * 9.0 / 5.0) + 31.2.0;
     
     printf("%.1f°C = %.1f°F\n", celsius, fahrenheit);
     
@@ -1333,12 +1333,12 @@ int main(void)
 
 float celsiusToFahrenheit(float celsius)
 {
-    return (celsius * 9.0 / 5.0) + 32.0;
+    return (celsius * 9.0 / 5.0) + 31.2.0;
 }
 
 float fahrenheitToCelsius(float fahrenheit)
 {
-    return (fahrenheit - 32.0) * 5.0 / 9.0;
+    return (fahrenheit - 31.2.0) * 5.0 / 9.0;
 }
 ```
 
@@ -10576,6 +10576,307 @@ Create `src/app.manifest`:
 - Application may have compatibility issues
 - Professional applications always include one
 
+## Application Icon: Professional Visual Identity (NEW v1.2.0)
+
+> **💡 What's New in WinRDP v1.2.0**
+> 
+> - ✨ Professional blue monitor icon with green frame
+> - ✨ Multi-resolution ICO file (16x16 to 256x256)
+> - ✨ Automated PowerShell script for icon generation
+> - ✨ Clear visibility at all sizes
+
+A professional application needs a distinctive, recognizable icon. In version 1.2.0, WinRDP introduced a modern icon design featuring a blue monitor screen with a vibrant green bezel.
+
+### Why Icons Matter
+
+Your application icon appears in:
+- **System tray** (16x16 pixels)
+- **Taskbar** (32x32 pixels)
+- **Alt+Tab switcher** (48x48 pixels)
+- **Start Menu** (256x256 pixels on Windows 10/11)
+- **Desktop shortcuts** (various sizes)
+- **File Explorer** (multiple sizes)
+
+**Poor icon design:**
+```
+❌ Too detailed (illegible at small sizes)
+❌ Low contrast (hard to see on any background)
+❌ Wrong format (PNG instead of ICO)
+❌ Single resolution (blurry when scaled)
+```
+
+**Good icon design (WinRDP):**
+```
+✅ Simple, recognizable shape (monitor)
+✅ High contrast colors (blue screen + green frame)
+✅ Multi-resolution ICO file (sharp at all sizes)
+✅ Clear at 16x16 (most important size!)
+```
+
+### The WinRDP Icon Design
+
+**Color scheme:**
+- **Blue screen** (#0078D4) - Windows accent color, represents RDP connection
+- **Green bezel** (#00AA00) - Vibrant, stands out in system tray
+- **Black stand** (#000000) - Grounded, professional
+- **White background** - Transparent in actual icon
+
+**Design rationale:**
+- **Monitor shape** → Immediately conveys "remote desktop"
+- **Green color** → Eye-catching in crowded system tray
+- **Simple geometry** → Scales well to tiny sizes
+- **Professional look** → Enterprise-ready appearance
+
+### Multi-Resolution ICO Files
+
+Windows ICO files can contain multiple image sizes in one file:
+
+```
+app.ico (Multi-resolution icon)
+├── 16x16   - System tray
+├── 20x20   - Small taskbar
+├── 24x24   - Small taskbar (120 DPI)
+├── 32x32   - Taskbar
+├── 40x40   - Taskbar (125 DPI)
+├── 48x48   - Alt+Tab, Explorer
+├── 64x64   - Explorer (large)
+├── 96x96   - Explorer (150 DPI)
+├── 128x128 - Start Menu
+└── 256x256 - Start Menu (high DPI)
+```
+
+**Why multiple sizes?**
+- Windows picks the best size for each context
+- Prevents blurry/pixelated appearance
+- Supports high-DPI displays (150%, 200% scaling)
+- Each size can be optimized differently
+
+**Wrong approach:**
+```
+❌ Single 256x256 PNG → Windows scales down → Blurry at 16x16
+```
+
+**Correct approach:**
+```
+✅ Multi-resolution ICO → Windows uses exact size → Always sharp
+```
+
+### Creating Icons with PowerShell
+
+WinRDP includes `create_icon.ps1`, an automated PowerShell script that generates the icon programmatically.
+
+**File: create_icon.ps1**
+
+```powershell
+# WinRDP Icon Generator
+# Creates a professional multi-resolution ICO file
+# Blue monitor with green bezel design
+
+Add-Type -AssemblyName System.Drawing
+
+# Icon sizes to generate
+$sizes = @(16, 20, 24, 32, 40, 48, 64, 96, 128, 256)
+
+# Color definitions
+$blueScreen = [System.Drawing.Color]::FromArgb(0, 120, 212)   # #0078D4
+$greenBezel = [System.Drawing.Color]::FromArgb(0, 170, 0)     # #00AA00
+$blackStand = [System.Drawing.Color]::Black
+$white = [System.Drawing.Color]::White
+
+function Draw-MonitorIcon {
+    param($size)
+    
+    $bitmap = New-Object System.Drawing.Bitmap($size, $size)
+    $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+    $graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+    
+    # Calculate proportions
+    $padding = [Math]::Max(1, $size * 0.1)
+    $screenWidth = $size - ($padding * 2)
+    $screenHeight = $screenWidth * 0.6
+    $bezelThickness = [Math]::Max(1, $size * 0.08)
+    
+    # Draw green bezel (outer rectangle)
+    $bezelBrush = New-Object System.Drawing.SolidBrush($greenBezel)
+    $bezelRect = New-Object System.Drawing.Rectangle($padding, $padding, $screenWidth, $screenHeight)
+    $graphics.FillRectangle($bezelBrush, $bezelRect)
+    
+    # Draw blue screen (inner rectangle)
+    $screenBrush = New-Object System.Drawing.SolidBrush($blueScreen)
+    $screenRect = New-Object System.Drawing.Rectangle(
+        $padding + $bezelThickness,
+        $padding + $bezelThickness,
+        $screenWidth - ($bezelThickness * 2),
+        $screenHeight - ($bezelThickness * 2)
+    )
+    $graphics.FillRectangle($screenBrush, $screenRect)
+    
+    # Draw monitor stand (black trapezoid)
+    $standTop = $padding + $screenHeight
+    $standHeight = $size * 0.15
+    $standWidth = $screenWidth * 0.3
+    $standX = ($size - $standWidth) / 2
+    
+    $standBrush = New-Object System.Drawing.SolidBrush($blackStand)
+    $standRect = New-Object System.Drawing.Rectangle($standX, $standTop, $standWidth, $standHeight)
+    $graphics.FillRectangle($standBrush, $standRect)
+    
+    # Cleanup
+    $graphics.Dispose()
+    $bezelBrush.Dispose()
+    $screenBrush.Dispose()
+    $standBrush.Dispose()
+    
+    return $bitmap
+}
+
+# Generate all sizes
+Write-Host "Generating WinRDP icon..."
+$icons = @()
+
+foreach ($size in $sizes) {
+    Write-Host "  Creating ${size}x${size} version..."
+    $icons += Draw-MonitorIcon -size $size
+}
+
+# Save as multi-resolution ICO
+$outputPath = "src\app.ico"
+$icons[0].Save($outputPath, [System.Drawing.Imaging.ImageFormat]::Icon)
+
+Write-Host "Icon saved to: $outputPath"
+Write-Host "Done!"
+
+# Cleanup
+foreach ($icon in $icons) {
+    $icon.Dispose()
+}
+```
+
+**To generate the icon:**
+```powershell
+# Run in PowerShell
+.\create_icon.ps1
+```
+
+**Output:**
+```
+Generating WinRDP icon...
+  Creating 16x16 version...
+  Creating 20x20 version...
+  Creating 24x24 version...
+  ...
+  Creating 256x256 version...
+Icon saved to: src\app.ico
+Done!
+```
+
+### Understanding the Icon Script
+
+**1. Assembly loading:**
+```powershell
+Add-Type -AssemblyName System.Drawing
+```
+Loads .NET graphics library for drawing shapes.
+
+**2. Size-based calculations:**
+```powershell
+$padding = [Math]::Max(1, $size * 0.1)        # 10% padding
+$screenHeight = $screenWidth * 0.6            # 16:10 aspect ratio
+$bezelThickness = [Math]::Max(1, $size * 0.08) # 8% bezel
+```
+Proportions scale correctly at any size.
+
+**3. Anti-aliasing:**
+```powershell
+$graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+```
+Smooth edges (no jagged pixels).
+
+**4. Multi-resolution ICO:**
+```powershell
+$icons[0].Save($outputPath, [System.Drawing.Imaging.ImageFormat]::Icon)
+```
+Saves all sizes in a single .ico file.
+
+### Using the Icon in Your Application
+
+**1. Add to resources.rc:**
+```rc
+#include "resource.h"
+#include <windows.h>
+
+// Icons
+IDI_MAINICON ICON "app.ico"
+```
+
+**2. Reference in window class:**
+```c
+WNDCLASSEXW wc = {0};
+wc.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_MAINICON));
+wc.hIconSm = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_MAINICON)); // Small icon
+```
+
+**3. Set dialog icon:**
+```c
+// In WM_INITDIALOG:
+SendMessage(hDlg, WM_SETICON, ICON_BIG, 
+    (LPARAM)LoadIcon(hInstance, MAKEINTRESOURCE(IDI_MAINICON)));
+SendMessage(hDlg, WM_SETICON, ICON_SMALL,
+    (LPARAM)LoadIcon(hInstance, MAKEINTRESOURCE(IDI_MAINICON)));
+```
+
+**4. System tray icon:**
+```c
+NOTIFYICONDATA nid = {0};
+nid.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_MAINICON));
+Shell_NotifyIcon(NIM_ADD, &nid);
+```
+
+### Icon Design Best Practices
+
+**DO:**
+- ✅ Test at 16x16 first (hardest size!)
+- ✅ Use high-contrast colors
+- ✅ Keep design simple and geometric
+- ✅ Make it unique and recognizable
+- ✅ Include all standard sizes (16-256)
+
+**DON'T:**
+- ❌ Use gradients (hard to see at small sizes)
+- ❌ Include fine details or text
+- ❌ Copy other application icons
+- ❌ Use only one resolution
+- ❌ Forget transparency (if needed)
+
+### Alternative: Using Existing Icon Files
+
+If you have an icon from a designer:
+
+**1. Convert to ICO format:**
+```
+Use online tools:
+- converticon.com
+- icoconvert.com
+- favicon.io
+
+Or desktop tools:
+- GIMP (free)
+- Adobe Photoshop
+- Paint.NET
+```
+
+**2. Ensure multiple sizes:**
+```
+Your ICO file should contain:
+16x16, 32x32, 48x48, 256x256 (minimum)
+```
+
+**3. Verify with icon viewer:**
+```
+Right-click app.ico → Properties
+Check that multiple sizes are present
+```
+
 ## Creating the Build Script
 
 Create `build.bat` in the project root:
@@ -12049,7 +12350,7 @@ You've learned:
 
 # Chapter 19: CSV File Management
 
-> **📝 What's New in WinRDP v2.0**
+> **📝 What's New in WinRDP v1.2.0**
 > 
 > This chapter has been updated to reflect new features:
 > - ✨ Last connected timestamps tracking
@@ -12758,7 +13059,7 @@ After:  [A][B][D][E]     (count = 4)
 > - Chapter 23: How UpdateLastConnected() is called after successful RDP connection
 > - Chapter 24: How recent connections appear in tray menu
 
-One of the most useful features in WinRDP v2.0 is tracking when you last connected to each server. This enables the "Recent Connections" menu in the system tray.
+One of the most useful features in WinRDP v1.2.0 is tracking when you last connected to each server. This enables the "Recent Connections" menu in the system tray.
 
 ```c
 BOOL UpdateLastConnected(const wchar_t* hostname)
@@ -13700,7 +14001,7 @@ You've learned:
 
 # Chapter 20: Windows Credential Manager
 
-> **📝 What's New in WinRDP v2.0**
+> **📝 What's New in WinRDP v1.2.0**
 > 
 > This chapter has been updated to reflect new features:
 > - ✨ Per-host credentials system (unique credentials for each server)
@@ -14053,7 +14354,7 @@ BOOL DeleteCredentials(const wchar_t* targetName)
 
 > **💡 Key Feature**
 > 
-> WinRDP v2.0 introduces a **two-tier credential system** that provides flexibility:
+> WinRDP v1.2.0 introduces a **two-tier credential system** that provides flexibility:
 > - Use one set of credentials for most servers (convenience)
 > - Override with specific credentials for sensitive servers (security)
 
@@ -15266,7 +15567,7 @@ You've learned:
 
 # Chapter 22: ListView Control for Host Display
 
-> **📝 What's New in WinRDP v2.0**
+> **📝 What's New in WinRDP v1.2.0**
 > 
 > This chapter has been updated to reflect new features:
 > - ✨ Three-column layout (Hostname, Description, Last Connected)
@@ -16456,7 +16757,7 @@ You've learned:
 
 # Chapter 23: RDP Connection Logic
 
-> **📝 What's New in WinRDP v2.0**
+> **📝 What's New in WinRDP v1.2.0**
 > 
 > This chapter has been updated to reflect new features:
 > - ✨ Persistent RDP files in AppData\Roaming (eliminates security warnings!)
@@ -17709,7 +18010,7 @@ You've learned:
 - ✅ Process launching and error handling
 - ✅ Security considerations for credential handling
 
-**What's New in v2.0:**
+**What's New in v1.2.0:**
 - 🎯 **Persistent RDP files** → No more security warnings!
 - 🎯 **Enhanced configuration** → 40+ RDP settings (up from ~10)
 - 🎯 **Filename sanitization** → Handles invalid characters safely
@@ -22588,7 +22889,7 @@ Create `.vscode/c_cpp_properties.json`:
 Create `.vscode/tasks.json`:
 ```json
 {
-    "version": "2.0.0",
+    "version": "1.2.0.0",
     "tasks": [
         {
             "label": "Build C",
@@ -23119,7 +23420,7 @@ if (wcscmp(wstr1, wstr2) == 0) {
 **Mistake:**
 ```c
 int a = 5, b = 2;
-float result = a / b;  // Result is 2.0, not 2.5!
+float result = a / b;  // Result is 1.2.0, not 2.5!
 ```
 
 **Solution:**
