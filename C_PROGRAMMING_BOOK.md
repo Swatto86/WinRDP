@@ -15598,6 +15598,433 @@ case WM_HOTKEY:
 
 **Why the toggle?** WinRDP behaves like a command palette: tap the hotkey to summon the list, tap it again to dismiss. If the user has not saved default credentials yet, the same shortcut pivots to the login dialog so they can supply them without touching the mouse.
 
+## Auto-Close Countdown Timer in Login Dialog (NEW!)
+
+> **⏱️ User Experience Enhancement**
+>
+> When the login dialog opens at startup with saved credentials, it shows a 5-second countdown and automatically closes, taking the user straight to the main dialog. This eliminates an unnecessary click when credentials are already saved.
+
+The auto-close countdown timer is a UX polish feature added in v1.2.0 that provides a smooth startup experience when credentials are already saved. When the login dialog detects existing credentials at startup, it displays a countdown timer and automatically closes after 5 seconds, immediately showing the main server list.
+
+### Why This Feature Exists
+
+**The Problem:**
+```
+User starts WinRDP → Login dialog appears → Credentials already filled
+→ User must click "Save & Continue" → Finally sees server list
+```
+
+**The Solution:**
+```
+User starts WinRDP → Login dialog appears → Credentials already filled
+→ "✓ Credentials saved - Auto-closing in 5 seconds..." → Countdown → Auto-close
+→ Server list appears automatically
+```
+
+### Implementation: State Management with Static Variables
+
+The countdown timer uses static variables to maintain state across dialog messages:
+
+```c
+INT_PTR CALLBACK LoginDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    // Static variables persist across messages
+    static int s_countdownSeconds = 0;
+    static BOOL s_isEditMode = FALSE;
+    
+    switch (msg)
+    {
+        // ... message handling
+    }
+}
+```
+
+**Why static variables?**
+
+Dialog procedures are called repeatedly for different messages. Static variables allow us to remember the countdown state between calls:
+
+```c
+Call 1: WM_INITDIALOG  → s_countdownSeconds = 5  → Start timer
+Call 2: WM_TIMER       → s_countdownSeconds = 4  → Update display
+Call 3: WM_TIMER       → s_countdownSeconds = 3  → Update display
+Call 4: WM_TIMER       → s_countdownSeconds = 2  → Update display
+Call 5: WM_TIMER       → s_countdownSeconds = 1  → Update display
+Call 6: WM_TIMER       → s_countdownSeconds = 0  → Kill timer, close dialog
+```
+
+### Timer ID Definition
+
+Define a unique timer ID in `main.c`:
+
+```c
+// Timer ID for auto-close countdown
+#define TIMER_AUTO_CLOSE_LOGIN 1
+```
+
+**Why define a timer ID?**
+- Multiple timers can exist in the same window
+- Each needs a unique ID to distinguish them
+- Using constants makes code more readable than magic numbers
+
+### WM_INITDIALOG: Starting the Countdown
+
+```c
+case WM_INITDIALOG:
+{
+    // Track this dialog instance
+    g_hwndLoginDialog = hwnd;
+    
+    // Reset countdown
+    s_countdownSeconds = 0;
+    
+    // Check if we're opening in edit mode (lParam = 1 means editing)
+    s_isEditMode = (lParam == 1);
+    
+    // Dialog is being initialized
+    CenterWindow(hwnd);
+    ApplyDarkModeToDialog(hwnd);
+    
+    // Set dialog icon
+    HICON hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCE(IDI_MAINICON));
+    SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+    SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+    
+    // Try to load existing credentials
+    wchar_t username[MAX_USERNAME_LEN];
+    wchar_t password[MAX_PASSWORD_LEN];
+    
+    if (LoadCredentials(NULL, username, password))
+    {
+        // Credentials exist - populate the fields
+        SetDlgItemTextW(hwnd, IDC_EDIT_USERNAME, username);
+        SetDlgItemTextW(hwnd, IDC_EDIT_PASSWORD, password);
+        
+        // Show delete button
+        ShowWindow(GetDlgItem(hwnd, IDC_BTN_DELETE_CREDS), SW_SHOW);
+        
+        // Only show countdown and start timer if NOT in edit mode
+        if (!s_isEditMode)
+        {
+            // Show compact status message and start countdown
+            s_countdownSeconds = 5;
+            wchar_t statusMsg[128];
+            swprintf_s(statusMsg, 128, L"✓ Credentials saved - Auto-closing in %d seconds...", s_countdownSeconds);
+            SetDlgItemTextW(hwnd, IDC_STATIC_STATUS, statusMsg);
+            
+            // Start timer - fires every 1 second (1000 milliseconds)
+            SetTimer(hwnd, TIMER_AUTO_CLOSE_LOGIN, 1000, NULL);
+        }
+        else
+        {
+            // Edit mode - show simple status without countdown
+            SetDlgItemTextW(hwnd, IDC_STATIC_STATUS, L"✓ Credentials saved");
+        }
+    }
+    else
+    {
+        // No credentials - hide the delete button
+        ShowWindow(GetDlgItem(hwnd, IDC_BTN_DELETE_CREDS), SW_HIDE);
+        SetDlgItemTextW(hwnd, IDC_STATIC_STATUS, L"");
+    }
+    
+    return TRUE;
+}
+```
+
+**Key points:**
+
+1. **`DialogBoxParam` with lParam** - Caller passes `0` for normal mode (with countdown) or `1` for edit mode (no countdown)
+2. **Edit mode check** - `s_isEditMode = (lParam == 1)` determines behavior
+3. **Conditional timer** - Timer only starts if NOT in edit mode AND credentials exist
+4. **SetTimer parameters**:
+   - `hwnd` - Window to receive WM_TIMER messages
+   - `TIMER_AUTO_CLOSE_LOGIN` - Timer ID (our constant)
+   - `1000` - Interval in milliseconds (1 second)
+   - `NULL` - No callback function (use WM_TIMER message instead)
+
+### WM_TIMER: Countdown Logic
+
+```c
+case WM_TIMER:
+{
+    // Handle timer events
+    if (wParam == TIMER_AUTO_CLOSE_LOGIN)
+    {
+        // Decrement countdown
+        s_countdownSeconds--;
+        
+        if (s_countdownSeconds > 0)
+        {
+            // Update countdown message
+            wchar_t statusMsg[128];
+            swprintf_s(statusMsg, 128, L"✓ Credentials saved - Auto-closing in %d seconds...", s_countdownSeconds);
+            SetDlgItemTextW(hwnd, IDC_STATIC_STATUS, statusMsg);
+        }
+        else
+        {
+            // Time's up - kill timer, close login dialog
+            KillTimer(hwnd, TIMER_AUTO_CLOSE_LOGIN);
+            s_countdownSeconds = 0;
+            
+            // Close the login dialog (returns IDOK to WinMain)
+            EndDialog(hwnd, IDOK);
+        }
+    }
+    return TRUE;
+}
+```
+
+**How it works:**
+
+1. **Timer fires** - Windows sends `WM_TIMER` every 1000ms
+2. **Check timer ID** - Multiple timers might exist, so verify it's ours
+3. **Decrement** - Reduce `s_countdownSeconds` by 1
+4. **Update UI** - Show new countdown value to user
+5. **Final check** - When countdown reaches 0:
+   - **KillTimer** - Stop timer (no more WM_TIMER messages)
+   - **EndDialog** - Close dialog with IDOK result
+   - **WinMain** - Receives IDOK and opens main dialog
+
+### Canceling the Countdown
+
+Users can interact with the dialog to cancel the countdown:
+
+```c
+case WM_COMMAND:
+    switch (LOWORD(wParam))
+    {
+        case IDOK:
+        {
+            // Kill timer if it's running (user clicked OK manually)
+            KillTimer(hwnd, TIMER_AUTO_CLOSE_LOGIN);
+            s_countdownSeconds = 0;
+            
+            // User clicked OK - save credentials
+            wchar_t username[MAX_USERNAME_LEN];
+            wchar_t password[MAX_PASSWORD_LEN];
+            
+            GetDlgItemTextW(hwnd, IDC_EDIT_USERNAME, username, MAX_USERNAME_LEN);
+            GetDlgItemTextW(hwnd, IDC_EDIT_PASSWORD, password, MAX_PASSWORD_LEN);
+            
+            // Validate and save...
+            if (SaveCredentials(NULL, username, password))
+            {
+                ShowInfoMessage(hwnd, L"Credentials saved successfully!");
+                EndDialog(hwnd, IDOK);
+            }
+            return TRUE;
+        }
+
+        case IDC_BTN_DELETE_CREDS:
+        {
+            // Kill timer if running
+            KillTimer(hwnd, TIMER_AUTO_CLOSE_LOGIN);
+            s_countdownSeconds = 0;
+            
+            // Delete saved credentials
+            if (DeleteCredentials(NULL))
+            {
+                SetDlgItemTextW(hwnd, IDC_EDIT_USERNAME, L"");
+                SetDlgItemTextW(hwnd, IDC_EDIT_PASSWORD, L"");
+                SetDlgItemTextW(hwnd, IDC_STATIC_STATUS, L"");
+                ShowWindow(GetDlgItem(hwnd, IDC_BTN_DELETE_CREDS), SW_HIDE);
+                ShowInfoMessage(hwnd, L"Credentials deleted.");
+            }
+            return TRUE;
+        }
+
+        case IDCANCEL:
+            // Kill timer if running
+            KillTimer(hwnd, TIMER_AUTO_CLOSE_LOGIN);
+            s_countdownSeconds = 0;
+            g_hwndLoginDialog = NULL;
+            EndDialog(hwnd, IDCANCEL);
+            return TRUE;
+    }
+    break;
+
+case WM_CLOSE:
+    // Kill timer if running
+    KillTimer(hwnd, TIMER_AUTO_CLOSE_LOGIN);
+    s_countdownSeconds = 0;
+    g_hwndLoginDialog = NULL;
+    EndDialog(hwnd, IDCANCEL);
+    return TRUE;
+```
+
+**Important:** Always call `KillTimer` before the dialog closes!
+- Prevents timer from firing after dialog is destroyed
+- Avoids sending messages to invalid window handle
+- Proper resource cleanup
+
+### Edit Mode vs Normal Mode
+
+The dialog supports two modes:
+
+**Normal Mode (Startup with Countdown):**
+```c
+// Called from WinMain at startup
+DialogBoxParam(g_hInstance, MAKEINTRESOURCE(IDD_LOGIN), 
+              g_hwndMain, LoginDialogProc, 0);
+```
+- lParam = 0
+- Shows countdown if credentials exist
+- Auto-closes after 5 seconds
+- Smooth startup experience
+
+**Edit Mode (No Countdown):**
+```c
+// Called from main dialog's "Edit Credentials" button
+DialogBoxParam(g_hInstance, MAKEINTRESOURCE(IDD_LOGIN), 
+              hwnd, LoginDialogProc, 1);
+```
+- lParam = 1
+- No countdown, even if credentials exist
+- User explicitly wants to edit credentials
+- Simple status: "✓ Credentials saved"
+
+### Visual Flow
+
+```
+┌──────────────────────────────────────────────┐
+│           WinRDP - Enter Credentials         │
+├──────────────────────────────────────────────┤
+│ Username:  [administrator              ]     │
+│ Password:  [**************             ]     │
+│                                              │
+│ ✓ Credentials saved - Auto-closing in 5...  │    ← Countdown display
+│                            [Delete Saved]     │
+│                                              │
+│          [Save & Continue]  [Cancel]         │
+└──────────────────────────────────────────────┘
+
+After 1 second:
+
+┌──────────────────────────────────────────────┐
+│           WinRDP - Enter Credentials         │
+├──────────────────────────────────────────────┤
+│ Username:  [administrator              ]     │
+│ Password:  [**************             ]     │
+│                                              │
+│ ✓ Credentials saved - Auto-closing in 4...  │    ← Updated countdown
+│                            [Delete Saved]     │
+│                                              │
+│          [Save & Continue]  [Cancel]         │
+└──────────────────────────────────────────────┘
+
+... continues until 0, then dialog closes automatically ...
+```
+
+### Complete Code Summary
+
+```c
+// Timer ID definition
+#define TIMER_AUTO_CLOSE_LOGIN 1
+
+INT_PTR CALLBACK LoginDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    // Static variables for state persistence
+    static int s_countdownSeconds = 0;
+    static BOOL s_isEditMode = FALSE;
+
+    switch (msg)
+    {
+        case WM_INITDIALOG:
+        {
+            s_countdownSeconds = 0;
+            s_isEditMode = (lParam == 1);  // Check edit mode
+            
+            wchar_t username[MAX_USERNAME_LEN];
+            wchar_t password[MAX_PASSWORD_LEN];
+            
+            if (LoadCredentials(NULL, username, password))
+            {
+                SetDlgItemTextW(hwnd, IDC_EDIT_USERNAME, username);
+                SetDlgItemTextW(hwnd, IDC_EDIT_PASSWORD, password);
+                
+                if (!s_isEditMode)
+                {
+                    // Start countdown timer
+                    s_countdownSeconds = 5;
+                    wchar_t statusMsg[128];
+                    swprintf_s(statusMsg, 128, 
+                              L"✓ Credentials saved - Auto-closing in %d seconds...", 
+                              s_countdownSeconds);
+                    SetDlgItemTextW(hwnd, IDC_STATIC_STATUS, statusMsg);
+                    SetTimer(hwnd, TIMER_AUTO_CLOSE_LOGIN, 1000, NULL);
+                }
+            }
+            return TRUE;
+        }
+        
+        case WM_TIMER:
+        {
+            if (wParam == TIMER_AUTO_CLOSE_LOGIN)
+            {
+                s_countdownSeconds--;
+                
+                if (s_countdownSeconds > 0)
+                {
+                    // Update countdown display
+                    wchar_t statusMsg[128];
+                    swprintf_s(statusMsg, 128, 
+                              L"✓ Credentials saved - Auto-closing in %d seconds...", 
+                              s_countdownSeconds);
+                    SetDlgItemTextW(hwnd, IDC_STATIC_STATUS, statusMsg);
+                }
+                else
+                {
+                    // Time's up - close dialog
+                    KillTimer(hwnd, TIMER_AUTO_CLOSE_LOGIN);
+                    EndDialog(hwnd, IDOK);
+                }
+            }
+            return TRUE;
+        }
+
+        case WM_COMMAND:
+            // Always kill timer when user interacts
+            KillTimer(hwnd, TIMER_AUTO_CLOSE_LOGIN);
+            // ... handle commands ...
+            break;
+
+        case WM_CLOSE:
+        case WM_DESTROY:
+            KillTimer(hwnd, TIMER_AUTO_CLOSE_LOGIN);
+            EndDialog(hwnd, IDCANCEL);
+            return TRUE;
+    }
+
+    return FALSE;
+}
+```
+
+### Key Takeaways
+
+**Benefits:**
+- ✅ **Smooth UX** - One less click for returning users
+- ✅ **Still accessible** - Users can cancel anytime by clicking
+- ✅ **Mode-aware** - No countdown when explicitly editing
+- ✅ **Clean implementation** - Static variables + timers
+
+**Technical concepts:**
+- **SetTimer/KillTimer** - Windows timer management
+- **WM_TIMER** - Periodic message handling
+- **Static variables** - State persistence across messages
+- **DialogBoxParam** - Passing mode flags via lParam
+- **Resource cleanup** - Always kill timers before destroying windows
+
+**Common mistakes:**
+- ❌ Forgetting to kill timer → Crashes when timer fires on destroyed window
+- ❌ Not handling user interaction → Timer keeps running even when user clicks
+- ❌ Using same countdown in edit mode → Annoying UX when user wants to edit
+
+**Next steps:**
+- **Try it!** - Build and run WinRDP to see the countdown in action
+- **Experiment** - Change countdown from 5 to 3 seconds
+- **Extend** - Add a "Don't show this again" checkbox
+- **Polish** - Add visual progress bar instead of text countdown
+
 ## Summary
 
 You've learned:
@@ -15606,6 +16033,7 @@ You've learned:
 - ✅ System tray icon implementation  
 - ✅ Global hotkey registration
 - ✅ Dialog creation and management
+- ✅ **NEW: Auto-close countdown timer** with state management
 
 **Next chapter:** ListView controls for displaying host lists!
 
