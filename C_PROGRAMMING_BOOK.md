@@ -10,34 +10,34 @@
 # Table of Contents
 
 ## Part I: C Fundamentals
-1. [Introduction to C Programming](#chapter-1-introduction-to-c-programming)
-2. [Variables, Data Types, and Operators](#chapter-2-variables-data-types-and-operators)
-3. [Control Flow: Making Decisions](#chapter-3-control-flow-making-decisions)
-4. [Functions: Building Blocks of Programs](#chapter-4-functions-building-blocks-of-programs)
-5. [Arrays: Working with Multiple Values](#chapter-5-arrays-working-with-multiple-values)
-6. [Pointers: The Heart of C](#chapter-6-pointers-the-heart-of-c)
-7. [Strings: Text Processing in C](#chapter-7-strings-text-processing-in-c)
-8. [Structures: Organizing Related Data](#chapter-8-structures-organizing-related-data)
+1. [Introduction to C Programming](#chapter-1-introduction-to-c-programming) ✅
+2. [Variables, Data Types, and Operators](#chapter-2-variables-data-types-and-operators) ✅
+3. [Control Flow: Making Decisions](#chapter-3-control-flow-making-decisions) ✅
+4. [Functions: Building Blocks of Programs](#chapter-4-functions-building-blocks-of-programs) ✅
+5. [Arrays: Working with Multiple Values](#chapter-5-arrays-working-with-multiple-values) ✅
+6. [Pointers: The Heart of C](#chapter-6-pointers-the-heart-of-c) ✅
+7. [Strings: Text Processing in C](#chapter-7-strings-text-processing-in-c) ✅
+8. [Structures: Organizing Related Data](#chapter-8-structures-organizing-related-data) ✅
 
 ## Part II: Advanced C Concepts
-9. [Dynamic Memory Management](#chapter-9-dynamic-memory-management)
-10. [File Input/Output](#chapter-10-file-inputoutput)
-11. [Function Pointers and Callbacks](#chapter-11-function-pointers-and-callbacks)
-12. [Preprocessor and Multi-File Programs](#chapter-12-preprocessor-and-multi-file-programs)
+9. [Dynamic Memory Management](#chapter-9-dynamic-memory-management) ✅
+10. [File Input/Output](#chapter-10-file-inputoutput) ✅
+11. [Function Pointers and Callbacks](#chapter-11-function-pointers-and-callbacks) ✅
+12. [Preprocessor and Multi-File Programs](#chapter-12-preprocessor-and-multi-file-programs) ✅
 
 ## Part III: Windows Programming Basics
-13. [Introduction to Windows Programming](#chapter-13-introduction-to-windows-programming)
-14. [Your First Windows Application](#chapter-14-your-first-windows-application)
-15. [Windows Message System](#chapter-15-windows-message-system)
-16. [Dialog Boxes and Controls](#chapter-16-dialog-boxes-and-controls)
+13. [Introduction to Windows Programming](#chapter-13-introduction-to-windows-programming) ✅
+14. [Your First Windows Application](#chapter-14-your-first-windows-application) ✅
+15. [Windows Message System](#chapter-15-windows-message-system) ✅
+16. [Dialog Boxes and Controls](#chapter-16-dialog-boxes-and-controls) ✅
 
 ## Part IV: Building WinRDP Core
 17. [Project Setup and Architecture](#chapter-17-project-setup-and-architecture) ✅
 18. [Configuration and Utilities](#chapter-18-configuration-and-utilities) ✅
-19. [CSV File Management](#chapter-19-csv-file-management) ✅
-20. [Windows Credential Manager](#chapter-20-windows-credential-manager) ✅
+19. [CSV File Management](#chapter-19-csv-file-management) ✅ ⭐ **UPDATED v2.0**
+20. [Windows Credential Manager](#chapter-20-windows-credential-manager) ✅ ⭐ **UPDATED v2.0**
 21. [Main Application Window](#chapter-21-main-application-window) ✅
-22. [ListView Control for Host Display](#chapter-22-listview-control-for-host-display) ✅
+22. [ListView Control for Host Display](#chapter-22-listview-control-for-host-display) ✅ ⭐ **UPDATED v2.0**
 23. [RDP Connection Logic](#chapter-23-rdp-connection-logic) ✅
 24. [System Tray Integration](#chapter-24-system-tray-integration) ✅
 
@@ -12049,14 +12049,24 @@ You've learned:
 
 # Chapter 19: CSV File Management
 
+> **📝 What's New in WinRDP v2.0**
+> 
+> This chapter has been updated to reflect new features:
+> - ✨ Last connected timestamps tracking
+> - ✨ Recent connections feature (GetRecentHosts)
+> - ✨ Persistent file path handling (fixes autostart issues)
+> - ✨ Enhanced 3-field CSV format
+> - ✨ Bulk delete functionality
+
 ## Introduction
 
 In this chapter, we'll implement the host management system for WinRDP. We need a way to:
 
-1. **Store a list of RDP servers** (hostname and description for each)
+1. **Store a list of RDP servers** (hostname, description, and last connected time)
 2. **Load the list** when the application starts
 3. **Save changes** when users add or delete servers
 4. **Persist data** across application restarts
+5. **Track connection history** for recent connections feature
 
 We'll use a **CSV (Comma-Separated Values) file** for storage. CSV is:
 - ✅ **Simple** - Easy to read and write
@@ -12070,6 +12080,7 @@ This chapter demonstrates:
 - **File I/O** with UTF-8 encoding for international characters
 - **CSV parsing** with proper quote handling
 - **Memory management patterns** you'll use in every C project
+- **Persistent file paths** (critical for autostart scenarios)
 
 ## What We're Building
 
@@ -12080,6 +12091,7 @@ We'll create the `hosts.h` and `hosts.c` module that provides:
 typedef struct {
     wchar_t hostname[MAX_HOSTNAME_LEN];
     wchar_t description[MAX_DESCRIPTION_LEN];
+    wchar_t lastConnected[64];  // NEW: ISO 8601 format timestamp or "Never"
 } Host;
 
 // Core functions
@@ -12087,17 +12099,26 @@ BOOL LoadHosts(Host** hosts, int* count);      // Load from CSV
 BOOL SaveHosts(const Host* hosts, int count);  // Save to CSV
 BOOL AddHost(const wchar_t* hostname, const wchar_t* description);
 BOOL DeleteHost(const wchar_t* hostname);
+BOOL DeleteAllHosts(void);                     // NEW: Bulk delete all hosts
+BOOL UpdateLastConnected(const wchar_t* hostname);  // NEW: Update timestamp
+BOOL GetRecentHosts(Host** hosts, int* count, int maxCount);  // NEW: Get recent
 void FreeHosts(Host* hosts, int count);        // Free memory
 ```
 
 ### Example CSV File
 
 ```csv
-hostname,description
-server1.company.com,Production Server
-192.168.1.100,Development Machine
-laptop-office,John's Office Laptop
+hostname,description,lastConnected
+server1.company.com,Production Server,2025-11-07 09:30:15
+192.168.1.100,Development Machine,2025-11-06 14:20:00
+laptop-office,John's Office Laptop,Never
 ```
+
+**What's new in the CSV format:**
+- **Third column**: `lastConnected` - timestamp when the connection was last used
+- **ISO 8601 format**: `YYYY-MM-DD HH:MM:SS` for easy sorting and parsing
+- **"Never" value**: For hosts that haven't been connected to yet
+- **Backward compatible**: Old 2-field format still works (defaults to "Never")
 
 ## The Host Structure
 
@@ -12107,6 +12128,7 @@ First, let's define what data we need for each server:
 typedef struct {
     wchar_t hostname[MAX_HOSTNAME_LEN];       // e.g., "server1.company.com"
     wchar_t description[MAX_DESCRIPTION_LEN]; // e.g., "Production Server"
+    wchar_t lastConnected[64];                // NEW: "2025-11-07 09:30:15" or "Never"
 } Host;
 ```
 
@@ -12122,6 +12144,13 @@ typedef struct {
    - Windows API uses Unicode (UTF-16)
    - Handles international characters (Chinese, Arabic, emoji, etc.)
    - All Windows functions use `W` suffix: `MessageBoxW`, `CreateFileW`
+
+3. **lastConnected field** (NEW):
+   - Tracks when each host was last connected to
+   - ISO 8601 format for proper sorting (newer timestamps > older)
+   - "Never" for hosts never connected
+   - Enables "Recent Connections" feature in system tray
+   - 64 characters is plenty for the timestamp format
 
 ## Memory Management Strategy
 
@@ -12188,20 +12217,96 @@ LoadHosts(&myHosts, &myCount);
 
 This is a **common C pattern** for returning dynamically allocated data.
 
-### Step 2: Initialize and Open File
+### Step 2: Persistent File Path Handling (CRITICAL!)
+
+> **⚠️ Critical Bug Fix**
+> 
+> Early versions of WinRDP used relative paths like `"hosts.csv"`. This **breaks when the app autostarts with Windows** because the working directory is `C:\Windows\System32` instead of the executable's directory!
+
+**The Problem:**
+
+```c
+// WRONG - Breaks on autostart!
+_wfopen_s(&file, L"hosts.csv", L"rb");
+// This looks for C:\Windows\System32\hosts.csv (wrong!)
+```
+
+**The Solution: Absolute Paths**
+
+We need to construct an absolute path based on where the executable is located:
+
+```c
+static BOOL get_hosts_file_path(wchar_t* path, size_t pathLen)
+{
+    wchar_t exePath[MAX_PATH];
+    
+    // Get the full path to the executable
+    if (GetModuleFileNameW(NULL, exePath, MAX_PATH) == 0)
+    {
+        return FALSE;
+    }
+    
+    // Find the last backslash to get the directory
+    wchar_t* lastSlash = wcsrchr(exePath, L'\\');
+    if (lastSlash == NULL)
+    {
+        return FALSE;
+    }
+    
+    // Terminate the string at the last backslash
+    *(lastSlash + 1) = L'\0';
+    
+    // Build the full path: executable_directory + hosts.csv
+    if (swprintf_s(path, pathLen, L"%s%s", exePath, HOSTS_FILE_NAME) < 0)
+    {
+        return FALSE;
+    }
+    
+    return TRUE;
+}
+```
+
+**How it works:**
+
+1. `GetModuleFileNameW(NULL, ...)` - Get full path to current executable
+   - Example: `C:\Program Files\WinRDP\winrdp.exe`
+
+2. `wcsrchr(exePath, L'\\')` - Find last backslash
+   - Pointer to: `\winrdp.exe`
+
+3. `*(lastSlash + 1) = L'\0'` - Truncate after last backslash
+   - Result: `C:\Program Files\WinRDP\`
+
+4. `swprintf_s(...)` - Append filename
+   - Final: `C:\Program Files\WinRDP\hosts.csv`
+
+**Why this matters:**
+- ✅ Works from any working directory
+- ✅ Works when autostarting with Windows
+- ✅ Works when launched from shortcuts
+- ✅ Works when launched from other programs
+
+### Step 3: Initialize and Open File
 
 ```c
 BOOL LoadHosts(Host** hosts, int* count)
 {
     FILE* file = NULL;
     errno_t err;
+    wchar_t hostsFilePath[MAX_PATH];  // NEW: Store full path
     
     // ALWAYS initialize output parameters first!
     *hosts = NULL;
     *count = 0;
     
-    // Try to open the file
-    err = _wfopen_s(&file, HOSTS_FILE_NAME, L"rb");
+    // NEW: Get the full path to hosts.csv (critical for autostart)
+    if (!get_hosts_file_path(hostsFilePath, MAX_PATH))
+    {
+        return FALSE;
+    }
+    
+    // Try to open the file with absolute path
+    err = _wfopen_s(&file, hostsFilePath, L"rb");
     if (err != 0 || file == NULL)
     {
         // File doesn't exist - that's okay, return empty list
@@ -12215,9 +12320,10 @@ BOOL LoadHosts(Host** hosts, int* count)
 **Key points:**
 - `_wfopen_s` is the **secure version** of `fopen` (Microsoft)
 - `L"rb"` means read (`r`) in binary mode (`b`)
+- **NEW**: Use `get_hosts_file_path()` to construct absolute path
 - If file doesn't exist, we return an empty list (not an error!)
 
-### Step 3: Handle UTF-8 BOM
+### Step 4: Handle UTF-8 BOM
 
 ```c
 // Skip UTF-8 BOM (Byte Order Mark) if present
@@ -12237,7 +12343,7 @@ if (!(bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF))
 - Many text editors (Notepad) add it automatically
 - We need to skip it or first line will be corrupted
 
-### Step 4: Allocate Initial Array
+### Step 5: Allocate Initial Array
 
 ```c
 int capacity = 10;  // Start with space for 10 hosts
@@ -12256,7 +12362,7 @@ if (*hosts == NULL)
 - Requested size too large
 - Memory fragmentation
 
-### Step 5: Read and Grow Loop
+### Step 6: Read and Grow Loop
 
 ```c
 char line[1024];
@@ -12358,7 +12464,7 @@ hosts = newHosts;  // Success! Update pointer
 
 ## Parsing CSV Lines
 
-CSV parsing is trickier than it looks:
+CSV parsing is trickier than it looks, especially with our new 3-field format!
 
 ```c
 static BOOL parse_csv_line(wchar_t* line, Host* host)
@@ -12367,22 +12473,40 @@ static BOOL parse_csv_line(wchar_t* line, Host* host)
     line[wcscspn(line, L"\r\n")] = L'\0';
     
     // Find the first comma
-    wchar_t* comma = wcschr(line, L',');
+    wchar_t* comma1 = wcschr(line, L',');
     
-    if (comma == NULL) {
-        // No comma - just hostname, no description
+    if (comma1 == NULL) {
+        // No comma - just hostname, no description or lastConnected
         wcsncpy_s(host->hostname, MAX_HOSTNAME_LEN, 
                   trim_whitespace(line), _TRUNCATE);
         host->description[0] = L'\0';
+        wcscpy_s(host->lastConnected, 64, L"Never");  // NEW: Default value
         return TRUE;
     }
     
-    // Split at comma
-    *comma = L'\0';  // Terminate hostname at comma
+    // Split at the first comma
+    *comma1 = L'\0';  // Terminate hostname string at comma
     wchar_t* hostname = trim_whitespace(line);
-    wchar_t* description = trim_whitespace(comma + 1);
+    wchar_t* remainder = comma1 + 1;
     
-    // Remove quotes if present
+    // NEW: Find the second comma for lastConnected field
+    wchar_t* comma2 = wcschr(remainder, L',');
+    wchar_t* description;
+    wchar_t* lastConnected;
+    
+    if (comma2 == NULL) {
+        // No second comma - we have hostname,description (old 2-field format)
+        // This maintains backward compatibility!
+        description = trim_whitespace(remainder);
+        lastConnected = L"Never";
+    } else {
+        // We have hostname,description,lastConnected (new 3-field format)
+        *comma2 = L'\0';
+        description = trim_whitespace(remainder);
+        lastConnected = trim_whitespace(comma2 + 1);
+    }
+    
+    // Remove quotes from hostname if present
     if (hostname[0] == L'"') {
         hostname++;
         size_t len = wcslen(hostname);
@@ -12390,9 +12514,18 @@ static BOOL parse_csv_line(wchar_t* line, Host* host)
             hostname[len-1] = L'\0';
     }
     
-    // Copy to structure
+    // Remove quotes from description if present
+    if (description[0] == L'"') {
+        description++;
+        size_t len = wcslen(description);
+        if (len > 0 && description[len-1] == L'"')
+            description[len-1] = L'\0';
+    }
+    
+    // Copy to host structure
     wcsncpy_s(host->hostname, MAX_HOSTNAME_LEN, hostname, _TRUNCATE);
     wcsncpy_s(host->description, MAX_DESCRIPTION_LEN, description, _TRUNCATE);
+    wcsncpy_s(host->lastConnected, 64, lastConnected, _TRUNCATE);  // NEW
     
     return TRUE;
 }
@@ -12401,8 +12534,11 @@ static BOOL parse_csv_line(wchar_t* line, Host* host)
 **CSV Complications:**
 - Trailing/leading whitespace: `"  server1  , Production Server  "`
 - Quotes: `"server,1","Production, Main Server"`
-- Empty fields: `server1,`
+- Empty fields: `server1,,`
 - No comma: `server1`
+- **NEW**: Three fields: `server1,Description,2025-11-07 09:30:15`
+- **NEW**: Backward compatibility with 2-field format: `server1,Description`
+- **NEW**: Default to "Never" if lastConnected missing
 
 ## Saving Hosts
 
@@ -12413,9 +12549,16 @@ BOOL SaveHosts(const Host* hosts, int count)
 {
     FILE* file = NULL;
     errno_t err;
+    wchar_t hostsFilePath[MAX_PATH];  // NEW: Use absolute path
+    
+    // NEW: Get the full path to hosts.csv
+    if (!get_hosts_file_path(hostsFilePath, MAX_PATH))
+    {
+        return FALSE;
+    }
     
     // Open file for writing (overwrites existing)
-    err = _wfopen_s(&file, HOSTS_FILE_NAME, L"wb");
+    err = _wfopen_s(&file, hostsFilePath, L"wb");
     if (err != 0 || file == NULL)
         return FALSE;
     
@@ -12423,8 +12566,8 @@ BOOL SaveHosts(const Host* hosts, int count)
     unsigned char bom[3] = {0xEF, 0xBB, 0xBF};
     fwrite(bom, 1, 3, file);
     
-    // Write CSV header
-    const char* header = "hostname,description\r\n";
+    // Write CSV header - NEW: Added lastConnected column
+    const char* header = "hostname,description,lastConnected\r\n";
     fwrite(header, 1, strlen(header), file);
     
     // Write each host
@@ -12433,30 +12576,55 @@ BOOL SaveHosts(const Host* hosts, int count)
         // Convert wide strings to UTF-8
         char utf8_hostname[MAX_HOSTNAME_LEN * 3];
         char utf8_description[MAX_DESCRIPTION_LEN * 3];
+        char utf8_lastConnected[200];  // NEW: Third field
         
         WideCharToMultiByte(CP_UTF8, 0, hosts[i].hostname, -1, 
                            utf8_hostname, sizeof(utf8_hostname), NULL, NULL);
         WideCharToMultiByte(CP_UTF8, 0, hosts[i].description, -1, 
                            utf8_description, sizeof(utf8_description), NULL, NULL);
+        WideCharToMultiByte(CP_UTF8, 0, hosts[i].lastConnected, -1,  // NEW
+                           utf8_lastConnected, sizeof(utf8_lastConnected), NULL, NULL);
         
-        // Write with quotes if contains comma
+        // Write hostname with quotes if contains comma
         BOOL hostnameNeedsQuotes = (strchr(utf8_hostname, ',') != NULL);
-        BOOL descNeedsQuotes = (strchr(utf8_description, ',') != NULL);
-        
         if (hostnameNeedsQuotes)
-            fprintf(file, "\"%s\"", utf8_hostname);
-        else
+        {
+            fwrite("\"", 1, 1, file);
             fwrite(utf8_hostname, 1, strlen(utf8_hostname), file);
+            fwrite("\"", 1, 1, file);
+        }
+        else
+        {
+            fwrite(utf8_hostname, 1, strlen(utf8_hostname), file);
+        }
         
+        // Write comma
         fwrite(",", 1, 1, file);
         
+        // Write description with quotes if contains comma
+        BOOL descNeedsQuotes = (strchr(utf8_description, ',') != NULL);
         if (descNeedsQuotes)
-            fprintf(file, "\"%s\"", utf8_description);
-        else
+        {
+            fwrite("\"", 1, 1, file);
             fwrite(utf8_description, 1, strlen(utf8_description), file);
+            fwrite("\"", 1, 1, file);
+        }
+        else
+        {
+            fwrite(utf8_description, 1, strlen(utf8_description), file);
+        }
         
+        // Write comma
+        fwrite(",", 1, 1, file);
+        
+        // NEW: Write lastConnected (timestamps don't contain commas, no quoting needed)
+        fwrite(utf8_lastConnected, 1, strlen(utf8_lastConnected), file);
+        
+        // Write newline
         fwrite("\r\n", 1, 2, file);
-        fflush(file);  // Flush after each line
+        
+        // Flush after each write
+        fflush(file);
     }
     
     fclose(file);
@@ -12465,9 +12633,11 @@ BOOL SaveHosts(const Host* hosts, int count)
 ```
 
 **Key points:**
+- **NEW**: Use `get_hosts_file_path()` for absolute path
 - `L"wb"` = write binary mode (prevents Windows newline conversion)
 - `\r\n` = Windows line endings (CRLF)
 - Quote fields that contain commas
+- **NEW**: Write third field (lastConnected) - timestamps don't need quoting
 - `fflush()` ensures data is written immediately
 
 ## Adding a Host
@@ -12509,6 +12679,7 @@ BOOL AddHost(const wchar_t* hostname, const wchar_t* description)
     // Copy new host data
     wcsncpy_s(hosts[count].hostname, MAX_HOSTNAME_LEN, hostname, _TRUNCATE);
     wcsncpy_s(hosts[count].description, MAX_DESCRIPTION_LEN, description, _TRUNCATE);
+    wcscpy_s(hosts[count].lastConnected, 64, L"Never");  // NEW: Initialize to "Never"
     count++;
     
     // Save and cleanup
@@ -12523,6 +12694,8 @@ BOOL AddHost(const wchar_t* hostname, const wchar_t* description)
 2. Modify in memory
 3. Save back to file
 4. Free memory
+
+**NEW**: When adding a host, initialize `lastConnected` to `"Never"` since it hasn't been connected to yet.
 
 This is simple but rewrites the whole file each time. Fine for small lists.
 
@@ -12577,6 +12750,297 @@ Step 2: [A][B][D][E][E]  (copy E to position 3)
 After:  [A][B][D][E]     (count = 4)
 ```
 
+## Updating Last Connected Timestamp (NEW!)
+
+> **🔗 Related Chapters**
+> 
+> - Chapter 22: How timestamps are displayed in the ListView
+> - Chapter 23: How UpdateLastConnected() is called after successful RDP connection
+> - Chapter 24: How recent connections appear in tray menu
+
+One of the most useful features in WinRDP v2.0 is tracking when you last connected to each server. This enables the "Recent Connections" menu in the system tray.
+
+```c
+BOOL UpdateLastConnected(const wchar_t* hostname)
+{
+    Host* hosts = NULL;
+    int count = 0;
+    
+    // Load all hosts
+    if (!LoadHosts(&hosts, &count))
+        return FALSE;
+    
+    // Find the host to update
+    int foundIndex = -1;
+    for (int i = 0; i < count; i++)
+    {
+        if (_wcsicmp(hosts[i].hostname, hostname) == 0)
+        {
+            foundIndex = i;
+            break;
+        }
+    }
+    
+    if (foundIndex == -1)
+    {
+        FreeHosts(hosts, count);
+        return FALSE;  // Host not found
+    }
+    
+    // Get current time from Windows
+    SYSTEMTIME st;
+    GetLocalTime(&st);
+    
+    // Format as ISO 8601-like: YYYY-MM-DD HH:MM:SS
+    swprintf_s(hosts[foundIndex].lastConnected, 64, 
+               L"%04d-%02d-%02d %02d:%02d:%02d",
+               st.wYear, st.wMonth, st.wDay,
+               st.wHour, st.wMinute, st.wSecond);
+    
+    // Save and cleanup
+    BOOL result = SaveHosts(hosts, count);
+    FreeHosts(hosts, count);
+    return result;
+}
+```
+
+**Key points:**
+
+1. **SYSTEMTIME structure**: Windows API structure for date/time
+   ```c
+   typedef struct _SYSTEMTIME {
+       WORD wYear;
+       WORD wMonth;       // 1-12
+       WORD wDayOfWeek;   // 0-6 (Sunday = 0)
+       WORD wDay;         // 1-31
+       WORD wHour;        // 0-23
+       WORD wMinute;      // 0-59
+       WORD wSecond;      // 0-59
+       WORD wMilliseconds;
+   } SYSTEMTIME;
+   ```
+
+2. **GetLocalTime()**: Gets current local time (not UTC)
+   - Alternative: `GetSystemTime()` for UTC
+   - We use local time because users think in local time
+
+3. **ISO 8601 format**: `YYYY-MM-DD HH:MM:SS`
+   - **Sortable**: String comparison works! "2025-11-07" > "2025-11-06"
+   - **Human-readable**: Easy to understand at a glance
+   - **Parseable**: Can convert back to SYSTEMTIME if needed
+
+4. **swprintf_s**: Wide-character version of sprintf_s
+   - `%04d` = 4 digits, zero-padded (2025)
+   - `%02d` = 2 digits, zero-padded (09, not 9)
+
+**Usage in WinRDP:**
+
+```c
+// After successfully launching RDP connection (Chapter 23):
+if (ConnectToHost(hostname))
+{
+    UpdateLastConnected(hostname);  // Record the connection
+}
+```
+
+## Getting Recent Hosts (NEW!)
+
+The "Recent Connections" feature needs to quickly retrieve the 3-5 most recently connected hosts. Let's implement that:
+
+```c
+BOOL GetRecentHosts(Host** hosts, int* count, int maxCount)
+{
+    Host* allHosts = NULL;
+    int allCount = 0;
+    
+    // Initialize output parameters
+    *hosts = NULL;
+    *count = 0;
+    
+    // Load all hosts
+    if (!LoadHosts(&allHosts, &allCount))
+        return FALSE;
+    
+    if (allCount == 0)
+    {
+        // No hosts at all
+        return TRUE;
+    }
+    
+    // Filter out hosts that have never been connected to
+    Host* connectedHosts = (Host*)malloc(allCount * sizeof(Host));
+    if (connectedHosts == NULL)
+    {
+        FreeHosts(allHosts, allCount);
+        return FALSE;
+    }
+    
+    int connectedCount = 0;
+    for (int i = 0; i < allCount; i++)
+    {
+        // Skip hosts that have never been connected to
+        if (_wcsicmp(allHosts[i].lastConnected, L"Never") != 0)
+        {
+            connectedHosts[connectedCount] = allHosts[i];
+            connectedCount++;
+        }
+    }
+    
+    // Free the original list
+    FreeHosts(allHosts, allCount);
+    
+    if (connectedCount == 0)
+    {
+        // No connected hosts
+        free(connectedHosts);
+        return TRUE;
+    }
+    
+    // Sort by lastConnected timestamp (descending - most recent first)
+    // Simple bubble sort is fine for small lists (typically < 10 items)
+    for (int i = 0; i < connectedCount - 1; i++)
+    {
+        for (int j = 0; j < connectedCount - i - 1; j++)
+        {
+            // Compare timestamps (ISO 8601 format sorts correctly!)
+            if (wcscmp(connectedHosts[j].lastConnected, 
+                       connectedHosts[j + 1].lastConnected) < 0)
+            {
+                // Swap
+                Host temp = connectedHosts[j];
+                connectedHosts[j] = connectedHosts[j + 1];
+                connectedHosts[j + 1] = temp;
+            }
+        }
+    }
+    
+    // Return only the requested number of most recent hosts
+    int resultCount = (connectedCount < maxCount) ? connectedCount : maxCount;
+    
+    Host* result = (Host*)malloc(resultCount * sizeof(Host));
+    if (result == NULL)
+    {
+        free(connectedHosts);
+        return FALSE;
+    }
+    
+    // Copy the most recent hosts to result array
+    for (int i = 0; i < resultCount; i++)
+    {
+        result[i] = connectedHosts[i];
+    }
+    
+    free(connectedHosts);
+    
+    // Set output parameters
+    *hosts = result;
+    *count = resultCount;
+    
+    return TRUE;
+}
+```
+
+**Algorithm breakdown:**
+
+1. **Load all hosts** from CSV file
+
+2. **Filter**: Copy only hosts with lastConnected != "Never"
+   ```
+   All: [Host1: Never, Host2: 2025-11-07 09:30, Host3: Never, Host4: 2025-11-06 14:20]
+   Filtered: [Host2: 2025-11-07 09:30, Host4: 2025-11-06 14:20]
+   ```
+
+3. **Sort** by timestamp descending (newest first)
+   ```
+   Before: [Host2: 2025-11-07 09:30, Host4: 2025-11-06 14:20]
+   After:  [Host2: 2025-11-07 09:30, Host4: 2025-11-06 14:20]  (already sorted!)
+   ```
+
+4. **Take top N** (usually 3-5 for system tray menu)
+   ```
+   If maxCount = 3, return first 3 items
+   ```
+
+**Why bubble sort?**
+- Simple to understand
+- Fine for small lists (<100 items)
+- Stable sort (preserves order of equal items)
+- For large lists, use qsort() instead
+
+**ISO 8601 sorting magic:**
+```c
+wcscmp(L"2025-11-07 09:30:15", L"2025-11-06 14:20:00") > 0
+// "2025-11-07" > "2025-11-06" (string comparison works!)
+```
+
+**Usage example:**
+
+```c
+// In system tray menu update (Chapter 24):
+Host* recentHosts = NULL;
+int recentCount = 0;
+
+if (GetRecentHosts(&recentHosts, &recentCount, 5))
+{
+    // Show top 5 in tray menu
+    for (int i = 0; i < recentCount; i++)
+    {
+        wchar_t menuText[256];
+        swprintf_s(menuText, 256, L"%s - %s", 
+                   recentHosts[i].hostname,
+                   recentHosts[i].description);
+        // Add to menu...
+    }
+    
+    FreeHosts(recentHosts, recentCount);
+}
+```
+
+## Deleting All Hosts (NEW!)
+
+Sometimes users want to start fresh. We provide a bulk delete function:
+
+```c
+BOOL DeleteAllHosts(void)
+{
+    FILE* file = NULL;
+    errno_t err;
+    wchar_t hostsFilePath[MAX_PATH];
+    
+    // Get the full path to hosts.csv
+    if (!get_hosts_file_path(hostsFilePath, MAX_PATH))
+    {
+        return FALSE;
+    }
+    
+    // Open file for writing (overwrites existing)
+    err = _wfopen_s(&file, hostsFilePath, L"wb");
+    if (err != 0 || file == NULL)
+    {
+        return FALSE;
+    }
+    
+    // Write UTF-8 BOM
+    unsigned char bom[3] = {0xEF, 0xBB, 0xBF};
+    fwrite(bom, 1, 3, file);
+    
+    // Write CSV header only (no hosts!)
+    const char* header = "hostname,description,lastConnected\r\n";
+    fwrite(header, 1, strlen(header), file);
+    
+    fclose(file);
+    return TRUE;
+}
+```
+
+**Why not just delete the file?**
+- Better to keep the file with header
+- Consistent with LoadHosts() expecting header line
+- Next save operation doesn't need to create file from scratch
+
+**Security note:**
+In WinRDP, this function is activated by a **secret hotkey** (Ctrl+Shift+Delete+Delete) to prevent accidental data loss. We'll cover that in Chapter 26 (Global Hotkeys).
+
 ## Freeing Memory
 
 ```c
@@ -12625,6 +13089,7 @@ FreeHosts(&hosts, count);  // Caller's 'hosts' is set to NULL
 typedef struct {
     wchar_t hostname[MAX_HOSTNAME_LEN];
     wchar_t description[MAX_DESCRIPTION_LEN];
+    wchar_t lastConnected[64];  // NEW: ISO 8601 format or "Never"
 } Host;
 
 // Host management functions
@@ -12632,7 +13097,9 @@ BOOL LoadHosts(Host** hosts, int* count);
 BOOL SaveHosts(const Host* hosts, int count);
 BOOL AddHost(const wchar_t* hostname, const wchar_t* description);
 BOOL DeleteHost(const wchar_t* hostname);
-BOOL DeleteAllHosts(void);
+BOOL DeleteAllHosts(void);                                          // NEW
+BOOL UpdateLastConnected(const wchar_t* hostname);                   // NEW
+BOOL GetRecentHosts(Host** hosts, int* count, int maxCount);         // NEW
 void FreeHosts(Host* hosts, int count);
 
 #endif // HOSTS_H
@@ -13208,17 +13675,45 @@ You've learned:
 - ✅ **File I/O** with error handling
 - ✅ **Load-Modify-Save-Free** pattern
 - ✅ **Memory management discipline** - every malloc has a free
+- ✅ **NEW: Persistent file paths** with `GetModuleFileNameW()` (fixes autostart issues)
+- ✅ **NEW: Timestamp tracking** with `SYSTEMTIME` and ISO 8601 format
+- ✅ **NEW: Recent connections** feature with sorting and filtering
+- ✅ **NEW: Enhanced CSV parsing** for 3-field format with backward compatibility
+- ✅ **NEW: Bulk delete** functionality
 
 **You now have:**
 - Complete host management module (`hosts.h` and `hosts.c`)
-- Ability to load/save RDP server lists
+- Ability to load/save RDP server lists with connection history
+- Last connected timestamp tracking (enables "Recent Connections")
+- Persistent file path handling (works with Windows autostart)
 - Foundation for building the UI in later chapters
 - Essential C patterns used in every real project
+
+**Key new features:**
+- `UpdateLastConnected()` - Records when a host was last accessed
+- `GetRecentHosts()` - Retrieves most recently connected hosts
+- `DeleteAllHosts()` - Bulk delete with security considerations
+- `get_hosts_file_path()` - Constructs absolute paths (critical for autostart)
 
 **Next chapter:** We'll implement secure credential storage using Windows Credential Manager!
 
 
 # Chapter 20: Windows Credential Manager
+
+> **📝 What's New in WinRDP v2.0**
+> 
+> This chapter has been updated to reflect new features:
+> - ✨ Per-host credentials system (unique credentials for each server)
+> - ✨ Two-tier credential lookup (per-host → global fallback)
+> - ✨ SaveRDPCredentials/LoadRDPCredentials/DeleteRDPCredentials functions
+> - ✨ Bulk credential deletion (DeleteAllWinRDPCredentials)
+> - ✨ Credential target naming conventions
+
+> **🔗 Related Chapters**
+> 
+> - Chapter 19: How hosts are stored and managed
+> - Chapter 23: How credentials are used in RDP connections
+> - Chapter 24: How per-host credentials integrate with UI
 
 ## Introduction
 
@@ -13246,9 +13741,10 @@ In this chapter, we'll use the **Windows Credential Manager** - a secure, encryp
 You'll learn:
 - ✅ Windows Credential Manager API (`wincred.h`)
 - ✅ Secure password storage with encryption
-- ✅ Per-host and global credential management
+- ✅ **NEW: Per-host and global credential management** (two-tier system)
 - ✅ The `CREDENTIALW` structure
 - ✅ Best practices for handling passwords in memory
+- ✅ **NEW: Credential enumeration and bulk operations**
 
 ## What is Windows Credential Manager?
 
@@ -13553,28 +14049,69 @@ BOOL DeleteCredentials(const wchar_t* targetName)
 - We treat this as success (goal achieved: no credential exists)
 - Other errors are actual failures
 
-## Per-Host Credentials
+## Per-Host Credentials (NEW!)
+
+> **💡 Key Feature**
+> 
+> WinRDP v2.0 introduces a **two-tier credential system** that provides flexibility:
+> - Use one set of credentials for most servers (convenience)
+> - Override with specific credentials for sensitive servers (security)
 
 WinRDP supports two types of credentials:
 
-1. **Global credentials** - Used for all servers
-2. **Per-host credentials** - Specific to one server
+1. **Global credentials** (`"WinRDP:DefaultCredentials"`) - Used as default for all servers
+2. **Per-host credentials** (`"WinRDP:TERMSRV/hostname"`) - Specific to one server
+
+### Credential Hierarchy
+
+```
+Connection Request for "server1.company.com"
+         ↓
+┌────────────────────────────────────────────┐
+│ Step 1: Check per-host credentials        │
+│ Look for: "WinRDP:TERMSRV/server1..."     │
+└────────────────────────────────────────────┘
+         ↓
+    Found? ──Yes──→ Use per-host credentials
+         │
+         No
+         ↓
+┌────────────────────────────────────────────┐
+│ Step 2: Check global credentials          │
+│ Look for: "WinRDP:DefaultCredentials"     │
+└────────────────────────────────────────────┘
+         ↓
+    Found? ──Yes──→ Use global credentials
+         │
+         No
+         ↓
+    Show login dialog (no credentials saved)
+```
 
 ### Target Name Convention
 
 ```c
-// Global credentials
+// Global credentials (used as fallback)
 "WinRDP:DefaultCredentials"
 
-// Per-host credentials
+// Per-host credentials (take precedence)
 "WinRDP:TERMSRV/server1.company.com"
 "WinRDP:TERMSRV/192.168.1.100"
+"WinRDP:TERMSRV/production-db-01"
 ```
 
 **Why "TERMSRV"?**
 - Matches Windows RDP client convention
 - TERMSRV = Terminal Services (old name for RDP)
 - Helps organize credentials in Credential Manager
+- RDP client expects format: `TERMSRV/hostname`
+- Distinguishes per-host from global credentials
+
+**Why this design?**
+- **Convenience**: Most servers use the same credentials (global)
+- **Security**: Production/sensitive servers get unique credentials (per-host)
+- **Flexibility**: Easy to override global credentials for specific hosts
+- **No complexity**: Users don't need to manage credentials for every server
 
 ### Saving Per-Host Credentials
 
@@ -13605,29 +14142,85 @@ BOOL LoadRDPCredentials(const wchar_t* hostname, wchar_t* username, wchar_t* pas
 {
     wchar_t targetName[512];
     swprintf_s(targetName, 512, L"%s%s", CRED_TARGET_PREFIX, hostname);
+    // Example: "WinRDP:TERMSRV/server1.company.com"
     
     return LoadCredentials(targetName, username, password);
 }
 ```
 
-### Connection Logic with Fallback
+**Returns:**
+- `TRUE` if per-host credentials exist for this hostname
+- `FALSE` if no per-host credentials (use global credentials instead)
 
-When connecting to a server:
+### Deleting Per-Host Credentials (NEW!)
 
 ```c
+BOOL DeleteRDPCredentials(const wchar_t* hostname)
+{
+    wchar_t targetName[512];
+    swprintf_s(targetName, 512, L"%s%s", CRED_TARGET_PREFIX, hostname);
+    
+    return DeleteCredentials(targetName);
+}
+```
+
+**Use cases:**
+- User wants to revert to global credentials for a specific host
+- User changes credentials and wants to re-enter them
+- Host is decommissioned/no longer used
+- Security policy requires credential rotation
+
+**Example usage in UI:**
+
+```c
+// User right-clicks on host in ListView, selects "Delete Host Credentials"
+if (MessageBoxW(hWnd, 
+                L"Delete saved credentials for this host?\n"
+                L"Global credentials will be used instead.",
+                L"Confirm", MB_YESNO) == IDYES)
+{
+    if (DeleteRDPCredentials(selectedHostname))
+    {
+        MessageBoxW(hWnd, L"Credentials deleted.", L"Success", MB_OK);
+    }
+}
+```
+
+### Connection Logic with Two-Tier Fallback
+
+When connecting to a server, we implement a two-tier lookup:
+
+```c
+BOOL GetCredentialsForHost(const wchar_t* hostname, 
+                           wchar_t* username, wchar_t* password)
+{
+    // Step 1: Try per-host credentials first (highest priority)
+    if (LoadRDPCredentials(hostname, username, password))
+    {
+        // Found per-host credentials for this specific server
+        wprintf(L"Using per-host credentials for %s\n", hostname);
+        return TRUE;
+    }
+    
+    // Step 2: Fall back to global credentials (default)
+    if (LoadCredentials(NULL, username, password))
+    {
+        // Use global/default credentials
+        wprintf(L"Using global credentials for %s\n", hostname);
+        return TRUE;
+    }
+    
+    // Step 3: No credentials found at all
+    return FALSE;
+}
+
+// Usage in connection code:
 wchar_t username[MAX_USERNAME_LEN];
 wchar_t password[MAX_PASSWORD_LEN];
 
-// 1. Try per-host credentials first
-if (LoadRDPCredentials(hostname, username, password))
+if (GetCredentialsForHost(hostname, username, password))
 {
-    // Found per-host credentials!
-    ConnectToServer(hostname, username, password);
-}
-// 2. Fall back to global credentials
-else if (LoadCredentials(NULL, username, password))
-{
-    // Use global credentials
+    // Have credentials - proceed with connection
     ConnectToServer(hostname, username, password);
 }
 else
@@ -13637,30 +14230,60 @@ else
 }
 ```
 
-This allows:
-- Most servers use global credentials
-- Specific servers (e.g., production) use separate credentials
-- Flexibility without complexity
+**Real-world example:**
 
-## Enumerating All Credentials
+```
+You have:
+- Global: username="john.doe", password="Password123"
+- Per-host for "prod-server": username="admin", password="AdminPass!"
 
-To delete all WinRDP credentials (e.g., when uninstalling):
+Connections:
+- Connect to "dev-server"  → Uses global (john.doe)
+- Connect to "test-server" → Uses global (john.doe)
+- Connect to "prod-server" → Uses per-host (admin)  ✨
+```
+
+**Benefits of this approach:**
+- ✅ **Convenience**: Set global credentials once, works for most servers
+- ✅ **Security**: Override with stronger credentials for production servers
+- ✅ **Flexibility**: Add per-host credentials anytime without affecting others
+- ✅ **Clean fallback**: Simple if-else logic, no complex credential management
+
+## Bulk Credential Deletion (NEW!)
+
+> **⚠️ Important Use Cases**
+> 
+> - User clicks "Delete All Credentials" (with confirmation!)
+> - Application uninstaller cleanup
+> - Security hotkey (Ctrl+Shift+Delete+Delete in WinRDP)
+> - Reset to fresh state
+
+To delete all WinRDP credentials, we need to:
+1. Enumerate all credentials (CredEnumerateW)
+2. Filter for WinRDP credentials (pattern matching)
+3. Delete each matching credential
+4. Clean up allocated memory
 
 ```c
 BOOL DeleteAllWinRDPCredentials(void)
 {
     DWORD count = 0;
     PCREDENTIALW* credentials = NULL;
+    int deletedCount = 0;
     
-    // Enumerate all credentials
+    // Enumerate all credentials for current user
+    // credentials will point to an array of PCREDENTIALW pointers
     if (!CredEnumerateW(NULL, 0, &count, &credentials))
     {
         DWORD error = GetLastError();
         
-        // ERROR_NOT_FOUND is okay - no credentials exist
+        // ERROR_NOT_FOUND is okay - just means no credentials exist
         if (error == ERROR_NOT_FOUND)
-            return TRUE;
+        {
+            return TRUE;  // Success: no credentials to delete
+        }
         
+        // Other errors are actual failures
         return FALSE;
     }
     
@@ -13668,27 +14291,138 @@ BOOL DeleteAllWinRDPCredentials(void)
     for (DWORD i = 0; i < count; i++)
     {
         // Check if this credential belongs to WinRDP
+        // Match both "WinRDP:DefaultCredentials" and "WinRDP:TERMSRV/..."
         if (credentials[i]->TargetName != NULL &&
             wcsstr(credentials[i]->TargetName, L"WinRDP:") == credentials[i]->TargetName)
         {
             // Delete this credential
-            CredDeleteW(credentials[i]->TargetName, CRED_TYPE_GENERIC, 0);
-            // Note: We don't fail if individual delete fails
+            if (CredDeleteW(credentials[i]->TargetName, CRED_TYPE_GENERIC, 0))
+            {
+                deletedCount++;
+            }
+            // Note: We don't fail if individual delete fails,
+            // we just continue with the rest
         }
     }
     
-    // Free memory allocated by CredEnumerateW
-    CredFree(credentials);
+    // IMPORTANT: Free the memory allocated by CredEnumerateW
+    if (credentials != NULL)
+    {
+        CredFree(credentials);
+    }
     
+    // Return success if we got here (even if deletedCount is 0)
     return TRUE;
 }
 ```
 
+### Understanding CredEnumerateW
+
+```c
+BOOL CredEnumerateW(
+    LPCWSTR Filter,               // NULL = all credentials
+    DWORD Flags,                  // 0 for default
+    DWORD *Count,                 // Receives count
+    PCREDENTIALW **Credentials    // Receives pointer to array
+);
+```
+
+**Memory allocation:**
+```c
+PCREDENTIALW* credentials;  // Pointer to array of pointers
+// After CredEnumerateW:
+// credentials[0] → First CREDENTIALW
+// credentials[1] → Second CREDENTIALW
+// ...
+// credentials[count-1] → Last CREDENTIALW
+```
+
+**Example with 3 credentials:**
+```
+credentials → [ptr] [ptr] [ptr]
+               ↓     ↓     ↓
+            Cred1  Cred2  Cred3
+```
+
+### Pattern Matching with wcsstr
+
 **Key points:**
-- `CredEnumerateW` returns **all credentials** for current user
+- `CredEnumerateW` returns **all credentials** for current user (not just WinRDP)
 - We filter for ones starting with `"WinRDP:"`
 - `wcsstr(target, L"WinRDP:") == target` checks if string starts with prefix
 - Must free with `CredFree(credentials)` - it's an array
+
+**How the prefix check works:**
+
+```c
+// Check if targetName starts with "WinRDP:"
+wcsstr(targetName, L"WinRDP:") == targetName
+```
+
+Breakdown:
+- `wcsstr(str, substr)` finds `substr` in `str`, returns pointer to first occurrence
+- If `substr` is at the start, it returns pointer to start of `str`
+- If `substr` is elsewhere or not found, returns different pointer or NULL
+- Comparing result to `str` checks if match is at position 0
+
+**Examples:**
+
+```c
+// Example 1: Match!
+wchar_t* name1 = L"WinRDP:DefaultCredentials";
+wcsstr(name1, L"WinRDP:") == name1  // TRUE ✅
+
+// Example 2: No match (wrong prefix)
+wchar_t* name2 = L"Microsoft:Office";
+wcsstr(name2, L"WinRDP:") == name2  // FALSE ❌
+
+// Example 3: No match (substring present but not at start)
+wchar_t* name3 = L"NotWinRDP:Something";
+wcsstr(name3, L"WinRDP:") == name3  // FALSE ❌
+
+// Example 4: Match! (per-host credential)
+wchar_t* name4 = L"WinRDP:TERMSRV/server1";
+wcsstr(name4, L"WinRDP:") == name4  // TRUE ✅
+```
+
+**What gets deleted:**
+```c
+"WinRDP:DefaultCredentials"         // ✅ Deleted (global)
+"WinRDP:TERMSRV/server1.com"        // ✅ Deleted (per-host)
+"WinRDP:TERMSRV/192.168.1.100"      // ✅ Deleted (per-host)
+"Microsoft:Office365"                // ❌ Kept (not ours)
+"GitHub:PersonalAccessToken"         // ❌ Kept (not ours)
+```
+
+### Security Considerations
+
+**Always confirm before deleting:**
+
+```c
+// In UI code:
+int result = MessageBoxW(
+    hWnd,
+    L"This will delete ALL saved credentials.\n"
+    L"You will need to re-enter them.\n\n"
+    L"Are you sure?",
+    L"Confirm Delete All",
+    MB_YESNO | MB_ICONWARNING
+);
+
+if (result == IDYES)
+{
+    if (DeleteAllWinRDPCredentials())
+    {
+        MessageBoxW(hWnd, L"All credentials deleted.", L"Success", MB_OK);
+    }
+}
+```
+
+**In WinRDP:**
+- Activated by secret hotkey: Ctrl+Shift+Delete+Delete (must press Delete twice!)
+- Requires confirmation dialog
+- Shows count of deleted credentials
+- Logs action (for auditing)
 
 ### Checking for Prefix
 
@@ -14301,17 +15035,33 @@ You've learned:
 - ✅ **Windows Credential Manager** - Secure password storage API
 - ✅ **CREDENTIALW structure** - How credentials are represented
 - ✅ **CredWriteW/CredReadW/CredDeleteW** - Core API functions
+- ✅ **CredEnumerateW** - Bulk operations on credentials
 - ✅ **CredFree** - Proper memory management
-- ✅ **Per-host vs. global credentials** - Flexible credential organization
+- ✅ **NEW: Two-tier credential system** - Per-host credentials with global fallback
+- ✅ **NEW: SaveRDPCredentials/LoadRDPCredentials/DeleteRDPCredentials** - Per-host management
+- ✅ **NEW: DeleteAllWinRDPCredentials** - Bulk deletion with pattern matching
 - ✅ **Security best practices** - Zero memory, avoid logging, validate inputs
-- ✅ **Target naming conventions** - Organizing credentials logically
+- ✅ **Target naming conventions** - Global vs per-host credential formats
 - ✅ **Credential enumeration** - Finding all application credentials
 
 **You now have:**
 - Secure credential storage module (`credentials.h` and `credentials.c`)
 - Ability to save/load passwords safely
-- Per-host credential support for flexibility
+- **NEW: Per-host credential support** with automatic fallback to global
+- **NEW: Bulk credential operations** for cleanup scenarios
 - Foundation for secure RDP connections
+
+**Key new features:**
+- **Two-tier lookup**: Check per-host first, fall back to global
+- **Target name formats**: `"WinRDP:DefaultCredentials"` vs `"WinRDP:TERMSRV/hostname"`
+- **Pattern matching**: `wcsstr()` to filter WinRDP credentials
+- **Security hotkey**: Ctrl+Shift+Delete+Delete for bulk deletion (Chapter 26)
+
+**Real-world benefits:**
+- Use one set of credentials for most servers (convenience)
+- Override with specific credentials for production/sensitive servers (security)
+- Easy credential rotation per host
+- Clean uninstall with DeleteAllWinRDPCredentials()
 
 **Next chapter:** We'll implement the main application window with system tray icon and login dialog!
 
@@ -14516,16 +15266,35 @@ You've learned:
 
 # Chapter 22: ListView Control for Host Display
 
+> **📝 What's New in WinRDP v2.0**
+> 
+> This chapter has been updated to reflect new features:
+> - ✨ Three-column layout (Hostname, Description, Last Connected)
+> - ✨ Column sorting with click-to-sort headers
+> - ✨ Real-time search/filter functionality
+> - ✨ Dynamic host count status label
+> - ✨ lParam preservation for filtered view stability
+> - ✨ Dummy column workaround for centering
+
+> **🔗 Related Chapters**
+> 
+> - Chapter 19: How hosts and lastConnected timestamps are stored
+> - Chapter 21: Main dialog creation and message handling
+> - Chapter 23: How hosts are launched from ListView selection
+
 **What You'll Learn:**
 - Creating and configuring ListView controls
-- Adding columns to ListViews
+- **NEW: Adding three columns** including Last Connected timestamp
 - Populating ListViews with data
+- **NEW: Implementing column sorting** with ascending/descending toggle
+- **NEW: Real-time search/filter** with case-insensitive matching
+- **NEW: Using lParam to preserve data indices** after filtering
 - Handling ListView selection and double-click events
-- Implementing search/filter functionality
 - Working with extended ListView styles
+- **NEW: Dynamic status labels** showing filter state
 
 **Why It Matters:**
-The ListView control is essential for displaying tabular data in Windows applications. In this chapter, you'll learn how to create a professional-looking host list that users can browse, search, and select from. This is a critical UI component that appears in countless Windows applications.
+The ListView control is essential for displaying tabular data in Windows applications. In this chapter, you'll learn how to create a professional-looking host list that users can browse, search, filter, and sort. This is a critical UI component that appears in countless Windows applications.
 
 ## Introduction
 
@@ -14624,23 +15393,44 @@ void AddListViewColumns(HWND hList)
     // Workaround: Add an invisible dummy column at position 0
     col.mask = LVCF_TEXT | LVCF_WIDTH;
     col.pszText = L"";
-    col.cx = 1;  // Nearly invisible
+    col.cx = 1;  // Nearly invisible (just 1 pixel)
     ListView_InsertColumn(hList, 0, &col);
     
     // Now add real columns that CAN be centered
     col.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_FMT;
     col.fmt = LVCFMT_CENTER;  // Center text in column
     
-    // Hostname column
+    // Column 1: Hostname
     col.pszText = L"Hostname";
-    col.cx = 180;
+    col.cx = 170;  // Fixed width for hostnames
     ListView_InsertColumn(hList, 1, &col);
     
-    // Description column
+    // Column 2: Description (takes most space)
     col.pszText = L"Description";
-    col.cx = listWidth - 180 - 5;  // Fill remaining space
+    col.cx = listWidth - 170 - 160 - 5;  // Fill remaining space
     ListView_InsertColumn(hList, 2, &col);
+    
+    // Column 3: Last Connected (NEW!)
+    col.pszText = L"Last Connected";
+    col.cx = 160;  // Fixed width for timestamps
+    ListView_InsertColumn(hList, 3, &col);
 }
+```
+
+**Column width calculation:**
+```
+Total width = 800 pixels (example)
+- Column 0 (dummy) = 1 pixel
+- Column 1 (Hostname) = 170 pixels
+- Column 2 (Description) = 800 - 170 - 160 - 5 = 465 pixels
+- Column 3 (Last Connected) = 160 pixels
+- Padding = 5 pixels (scrollbar, borders)
+```
+
+**Why these widths?**
+- **Hostname (170px)**: Fits typical hostnames like "server01.company.com"
+- **Description (flexible)**: Takes remaining space, adapts to window size
+- **Last Connected (160px)**: Fits "YYYY-MM-DD HH:MM:SS" or "Never"
 ```
 
 ### The Column 0 Centering Problem
@@ -14726,17 +15516,41 @@ void RefreshHostListView(HWND hList, Host* hosts, int hostCount, const wchar_t* 
         item.mask = LVIF_TEXT | LVIF_PARAM;
         item.iItem = displayIndex;
         item.iSubItem = 0;
-        item.pszText = L"";  // Dummy column
-        item.lParam = (LPARAM)i;  // Store original index
+        item.pszText = L"";  // Dummy column (column 0)
+        item.lParam = (LPARAM)i;  // CRITICAL: Store original index!
         ListView_InsertItem(hList, &item);
         
-        // Set text for columns
-        ListView_SetItemText(hList, displayIndex, 1, hosts[i].hostname);
-        ListView_SetItemText(hList, displayIndex, 2, hosts[i].description);
+        // Set text for columns (remember: 0 is dummy, real columns are 1,2,3)
+        ListView_SetItemText(hList, displayIndex, 1, hosts[i].hostname);      // Column 1
+        ListView_SetItemText(hList, displayIndex, 2, hosts[i].description);   // Column 2
+        ListView_SetItemText(hList, displayIndex, 3, hosts[i].lastConnected); // Column 3 (NEW!)
         
         displayIndex++;
     }
+    
+    return displayIndex;  // Return number of displayed items
 }
+
+/**
+ * Why lParam is CRITICAL:
+ *
+ * Problem: When filtering, ListView row indices don't match array indices!
+ * 
+ * Example:
+ *   Array: [server1, server2, server3, server4, server5]
+ *   Filter "2" shows only: server2, server3
+ *   ListView indices: [0, 1]
+ *   Array indices:    [1, 2]  <- NOT the same!
+ * 
+ * Solution: Store original array index in lParam
+ * 
+ * When user clicks row 0:
+ *   ListView row = 0
+ *   Get item.lParam = 1  (the original array index)
+ *   Access hosts[1] = server2  <- Correct!
+ * 
+ * Without lParam, we'd try hosts[0] = server1 <- WRONG!
+ */
 ```
 
 ### LVITEM Structure
@@ -14775,8 +15589,71 @@ item.lParam = 123;       // Store custom data (e.g., original index)
 int index = ListView_InsertItem(hList, &item);
 
 // 2. Set text for other columns (subitems)
-ListView_SetItemText(hList, index, 1, L"server01");       // Column 1
-ListView_SetItemText(hList, index, 2, L"Production Server"); // Column 2
+ListView_SetItemText(hList, index, 1, L"server01");           // Column 1: Hostname
+ListView_SetItemText(hList, index, 2, L"Production Server");  // Column 2: Description
+ListView_SetItemText(hList, index, 3, L"2025-11-07 09:30:15"); // Column 3: Last Connected
+```
+
+### The lParam Trick (CRITICAL for Filtering!)
+
+> **💡 Key Concept**
+>
+> When filtering the ListView, displayed row indices ≠ original array indices!
+> Use `lParam` to store the original array index so you can access the correct data.
+
+**The Problem:**
+
+```
+Original array:
+  Index: 0        1        2        3        4
+  Host:  prod-01  dev-02   prod-03  test-04  dev-05
+
+Filter by "prod" shows:
+  ListView Row: 0        1
+  Host:         prod-01  prod-03
+  Array Index:  0        2        <- Not sequential!
+
+User clicks row 1:
+  ❌ WRONG: hosts[1] = dev-02  (not visible!)
+  ✅ RIGHT: hosts[2] = prod-03 (what user sees)
+```
+
+**The Solution:**
+
+```c
+// When inserting item, store original array index in lParam
+item.lParam = (LPARAM)i;  // i = original array index
+ListView_InsertItem(hList, &item);
+
+// When handling click, retrieve original index from lParam
+LVITEMW item = {0};
+item.mask = LVIF_PARAM;
+item.iItem = selectedRow;  // ListView row
+ListView_GetItem(hList, &item);
+int originalIndex = (int)item.lParam;  // Original array index!
+
+// Now access correct host
+connectToHost(hosts[originalIndex].hostname);  // ✅ Correct!
+```
+
+**Real-world example:**
+
+```c
+case NM_DBLCLK:  // User double-clicked a row
+{
+    int selectedRow = ListView_GetNextItem(hList, -1, LVNI_SELECTED);
+    
+    // DON'T do this:
+    // connectToHost(hosts[selectedRow].hostname);  // ❌ WRONG!
+    
+    // DO this:
+    LVITEMW item = {0};
+    item.mask = LVIF_PARAM;
+    item.iItem = selectedRow;
+    ListView_GetItem(hList, &item);
+    int originalIndex = (int)item.lParam;
+    connectToHost(hosts[originalIndex].hostname);  // ✅ Correct!
+}
 ```
 
 ## Handling ListView Events
@@ -15250,22 +16127,328 @@ case NM_CUSTOMDRAW:
 }
 ```
 
+## Column Sorting (NEW!)
+
+> **💡 Professional Feature**
+>
+> Click column headers to sort! Click again to toggle between ascending/descending.
+
+### The Sort Parameters Structure
+
+```c
+typedef struct {
+    Host* hosts;          // Pointer to host array
+    int hostCount;        // Number of hosts
+    int sortColumn;       // Which column to sort by (1=Hostname, 2=Description, 3=LastConnected)
+    BOOL sortAscending;   // TRUE = ascending, FALSE = descending
+} SortParams;
+
+// Global variable to track sort state
+static SortParams sortParams = {NULL, 0, 1, TRUE};
+```
+
+### Handling Column Header Clicks
+
+```c
+case LVN_COLUMNCLICK:
+{
+    // User clicked a column header
+    LPNMLISTVIEW pnmlv = (LPNMLISTVIEW)lParam;
+    HWND hList = GetDlgItem(hwnd, IDC_LIST_SERVERS);
+    
+    int clickedColumn = pnmlv->iSubItem;
+    
+    // Only sort if clicking on actual columns (not dummy column 0)
+    if (clickedColumn == 1 || clickedColumn == 2 || clickedColumn == 3)
+    {
+        // If clicking the same column, toggle sort direction
+        if (sortParams.sortColumn == clickedColumn)
+        {
+            sortParams.sortAscending = !sortParams.sortAscending;
+        }
+        else
+        {
+            // New column - default to ascending
+            sortParams.sortColumn = clickedColumn;
+            sortParams.sortAscending = TRUE;
+        }
+        
+        // Update sort params with current host data
+        sortParams.hosts = hosts;
+        sortParams.hostCount = hostCount;
+        
+        // Perform the sort
+        ListView_SortItems(hList, CompareListViewItems, (LPARAM)&sortParams);
+    }
+    return TRUE;
+}
+```
+
+### The Comparison Function
+
+```c
+int CALLBACK CompareListViewItems(LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort)
+{
+    SortParams* params = (SortParams*)lParamSort;
+    
+    // lParam1 and lParam2 are the original array indices (from lParam!)
+    int index1 = (int)lParam1;
+    int index2 = (int)lParam2;
+    
+    // Bounds check
+    if (index1 < 0 || index1 >= params->hostCount || 
+        index2 < 0 || index2 >= params->hostCount)
+    {
+        return 0;
+    }
+    
+    // Get the hosts to compare
+    Host* host1 = &params->hosts[index1];
+    Host* host2 = &params->hosts[index2];
+    
+    int result = 0;
+    
+    // Compare based on sort column
+    if (params->sortColumn == 1)
+    {
+        // Sort by hostname
+        result = _wcsicmp(host1->hostname, host2->hostname);
+    }
+    else if (params->sortColumn == 2)
+    {
+        // Sort by description
+        result = _wcsicmp(host1->description, host2->description);
+    }
+    else if (params->sortColumn == 3)
+    {
+        // Sort by last connected timestamp
+        // Special handling: "Never" should sort to the end
+        BOOL host1Never = (_wcsicmp(host1->lastConnected, L"Never") == 0);
+        BOOL host2Never = (_wcsicmp(host2->lastConnected, L"Never") == 0);
+        
+        if (host1Never && host2Never)
+        {
+            result = 0;  // Both "Never" - equal
+        }
+        else if (host1Never)
+        {
+            result = 1;  // host1 is "Never" - sorts later
+        }
+        else if (host2Never)
+        {
+            result = -1;  // host2 is "Never" - host1 sorts earlier
+        }
+        else
+        {
+            // Both have dates - ISO format sorts correctly with string compare!
+            result = wcscmp(host1->lastConnected, host2->lastConnected);
+        }
+    }
+    
+    // Reverse for descending sort
+    if (!params->sortAscending)
+    {
+        result = -result;
+    }
+    
+    return result;
+}
+```
+
+**Why this works:**
+- `ListView_SortItems()` calls our comparison function for each pair of items
+- `lParam1` and `lParam2` are the `lParam` values we stored (original array indices)
+- We compare the actual Host data, not the ListView display text
+- ISO 8601 timestamps sort correctly with simple string comparison!
+
+**Sorting examples:**
+
+```
+Hostname ascending:
+  dev-server
+  prod-server
+  test-server
+
+Last Connected descending (most recent first):
+  2025-11-07 14:30:00  (today)
+  2025-11-06 09:15:00  (yesterday)
+  2025-10-15 16:45:00  (weeks ago)
+  Never                (never connected)
+```
+
+## Real-Time Search/Filter (NEW!)
+
+> **⚡ User Experience**
+>
+> As users type in the search box, the list updates instantly - no "Search" button needed!
+
+### Setting Up the Search Box
+
+```c
+case IDC_EDIT_SEARCH:
+{
+    // Handle search text changes
+    if (HIWORD(wParam) == EN_CHANGE)
+    {
+        HWND hList = GetDlgItem(hwnd, IDC_LIST_SERVERS);
+        HWND hSearch = GetDlgItem(hwnd, IDC_EDIT_SEARCH);
+        
+        // Get search text
+        wchar_t searchText[256] = {0};
+        GetWindowTextW(hSearch, searchText, 256);
+        
+        // Refresh list with filter
+        int displayedCount = RefreshHostListView(hList, hosts, hostCount, searchText);
+        
+        // Update status label
+        UpdateHostCountLabel(hwnd, IDC_STATIC_HOST_COUNT, displayedCount, hostCount);
+    }
+    return TRUE;
+}
+```
+
+### Enhanced RefreshHostListView with Filtering
+
+The complete implementation (from earlier) now includes:
+
+```c
+int RefreshHostListView(HWND hList, Host* hosts, int hostCount, const wchar_t* searchText)
+{
+    ListView_DeleteAllItems(hList);
+    
+    if (hosts == NULL || hostCount == 0)
+        return 0;
+    
+    // Check if we have a search filter
+    BOOL hasFilter = (searchText != NULL && wcslen(searchText) > 0);
+    
+    // Convert search text to lowercase for case-insensitive search
+    wchar_t searchLower[256] = {0};
+    if (hasFilter)
+    {
+        wcsncpy_s(searchLower, 256, searchText, _TRUNCATE);
+        _wcslwr_s(searchLower, 256);  // Convert to lowercase
+    }
+    
+    // Add hosts to list, filtering if necessary
+    int displayIndex = 0;
+    for (int i = 0; i < hostCount; i++)
+    {
+        // If filtering, check if hostname or description matches
+        if (hasFilter)
+        {
+            wchar_t hostnameLower[256] = {0};
+            wchar_t descriptionLower[256] = {0};
+            
+            wcsncpy_s(hostnameLower, 256, hosts[i].hostname, _TRUNCATE);
+            _wcslwr_s(hostnameLower, 256);
+            
+            wcsncpy_s(descriptionLower, 256, hosts[i].description, _TRUNCATE);
+            _wcslwr_s(descriptionLower, 256);
+            
+            // Skip if neither hostname nor description contains the search text
+            if (wcsstr(hostnameLower, searchLower) == NULL && 
+                wcsstr(descriptionLower, searchLower) == NULL)
+            {
+                continue;  // Skip this host
+            }
+        }
+        
+        // Insert the item (filtering passed or no filter)
+        LVITEMW item = {0};
+        item.mask = LVIF_TEXT | LVIF_PARAM;
+        item.iItem = displayIndex;
+        item.iSubItem = 0;
+        item.pszText = L"";
+        item.lParam = (LPARAM)i;  // Store original index!
+        ListView_InsertItem(hList, &item);
+        
+        ListView_SetItemText(hList, displayIndex, 1, hosts[i].hostname);
+        ListView_SetItemText(hList, displayIndex, 2, hosts[i].description);
+        ListView_SetItemText(hList, displayIndex, 3, hosts[i].lastConnected);
+        
+        displayIndex++;
+    }
+    
+    return displayIndex;  // Number of items displayed
+}
+```
+
+**Key points:**
+- Case-insensitive matching with `_wcslwr_s()`
+- Searches both hostname AND description
+- Substring matching with `wcsstr()`
+- Returns count of displayed items for status label
+
+## Host Count Status Label (NEW!)
+
+> **📊 User Feedback**
+>
+> Show "5 hosts" normally, or "Showing 2 of 5 hosts" when filtering.
+
+```c
+void UpdateHostCountLabel(HWND hwndDialog, int labelId, int displayedCount, int totalCount)
+{
+    wchar_t statusText[128];
+    
+    if (displayedCount == totalCount)
+    {
+        // No filtering - show simple count
+        swprintf_s(statusText, 128, L"%d host%s", 
+                  totalCount, (totalCount == 1 ? L"" : L"s"));
+    }
+    else
+    {
+        // Filtering active - show "X of Y hosts"
+        swprintf_s(statusText, 128, L"Showing %d of %d host%s", 
+                  displayedCount, totalCount, (totalCount == 1 ? L"" : L"s"));
+    }
+    
+    SetDlgItemTextW(hwndDialog, labelId, statusText);
+}
+```
+
+**Examples:**
+```
+No filter:
+  "5 hosts"
+  "1 host"   (singular)
+  "0 hosts"
+
+With filter "prod":
+  "Showing 2 of 5 hosts"
+  "Showing 1 of 5 host"
+  "Showing 0 of 5 hosts"
+```
+
 ## Summary
 
 You've learned:
 - ✅ Creating and configuring ListView controls
 - ✅ Adding columns (with the dummy column trick for centering)
+- ✅ **NEW: Three-column layout** with Last Connected timestamp
 - ✅ Populating ListViews with data
+- ✅ **NEW: Using lParam** to preserve original indices during filtering
 - ✅ Handling double-click to connect
-- ✅ Implementing real-time search/filtering
-- ✅ Using lParam to preserve data relationships
+- ✅ **NEW: Column sorting** with click-to-sort headers
+- ✅ **NEW: Real-time search/filter** with instant updates
+- ✅ **NEW: Dynamic status labels** showing filter state
 - ✅ Common ListView pitfalls and solutions
 
 **You now have:**
-- A fully functional host list display
-- Search/filter capability
+- A fully functional host list display with sorting
+- Real-time search/filter capability  
+- Professional user feedback (status labels)
 - Double-click to connect
+- Column sorting (click headers to sort)
 - Professional-looking data presentation
+
+**Key techniques:**
+- **lParam trick**: Store original array index to handle filtering correctly
+- **Comparison callback**: Custom sorting logic with `ListView_SortItems()`
+- **EN_CHANGE**: Real-time filtering as user types
+- **Case-insensitive search**: `_wcslwr_s()` for user-friendly matching
+- **ISO 8601 sorting**: Timestamps sort correctly with string comparison
 
 **Next chapter:** Implementing RDP connection logic to actually connect to servers!
 
@@ -15273,16 +16456,33 @@ You've learned:
 
 # Chapter 23: RDP Connection Logic
 
+> **📝 What's New in WinRDP v2.0**
+> 
+> This chapter has been updated to reflect new features:
+> - ✨ Persistent RDP files in AppData\Roaming (eliminates security warnings!)
+> - ✨ Filename sanitization for safe file creation
+> - ✨ Enhanced RDP settings (~40 optimized parameters)
+> - ✨ Integration with UpdateLastConnected() timestamp tracking
+> - ✨ Two-tier credential lookup with per-host support
+
+> **🔗 Related Chapters**
+> 
+> - Chapter 19: UpdateLastConnected() called after successful connection
+> - Chapter 20: Two-tier credential system (per-host → global)
+> - Chapter 22: How hosts are selected from ListView
+
 **What You'll Learn:**
 - Creating RDP configuration files programmatically
+- **NEW: Persistent file storage** in AppData\Roaming (prevents security warnings)
+- **NEW: Filename sanitization** for hostname-to-filename conversion
 - Understanding the RDP file format
+- **NEW: Enhanced RDP settings** for optimal user experience
 - Launching external applications with ShellExecuteW
 - Implementing credential strategies (per-host vs. global)
-- Working with temporary files
-- Process management and cleanup
+- **NEW: Integrating with timestamp tracking** for connection history
 
 **Why It Matters:**
-This is the moment everything comes together! You've built the UI, stored credentials securely, and managed host lists. Now you'll implement the core functionality: launching RDP connections to servers. This chapter shows how to integrate with external applications (mstsc.exe) and work with file-based configuration.
+This is the moment everything comes together! You've built the UI, stored credentials securely, and managed host lists. Now you'll implement the core functionality: launching RDP connections to servers. This chapter shows how to integrate with external applications (mstsc.exe), eliminate security warnings with persistent files, and track connection history.
 
 ## Introduction
 
@@ -15409,7 +16609,232 @@ BOOL CreateRDPFile(const wchar_t* hostname, const wchar_t* username,
 }
 ```
 
-### GetTempPathW Function
+> **⚠️ PROBLEM: Temp Files Show Security Warning!**
+>
+> The above code creates temp files which causes Windows to show this warning **every time**:
+> 
+> ```
+> ┌─────────────────────────────────────────┐
+> │ Remote Desktop Connection               │
+> ├─────────────────────────────────────────┤
+> │ Do you want to connect?                 │
+> │                                         │
+> │ Publisher: Unknown                      │
+> │ From: C:\Users\...\Temp\WinRDP_123.rdp │
+> │                                         │
+> │ [x] Don't ask me again for...          │
+> │                                         │
+> │      [Connect]    [Cancel]              │
+> └─────────────────────────────────────────┘
+> ```
+>
+> **Annoying!** Users have to click this every single time they connect.
+
+## Persistent RDP Files (NEW!) - Eliminating Security Warnings
+
+> **💡 Solution**
+>
+> Store RDP files in a **persistent location** (AppData\Roaming) with **consistent filenames**.
+> Windows remembers "trusted" locations and stops showing the warning!
+
+### GetRDPStoragePath - Create Persistent Directory
+
+```c
+static BOOL GetRDPStoragePath(wchar_t* path, size_t pathLen)
+{
+    wchar_t appDataPath[MAX_PATH];
+    
+    // Get the Roaming AppData directory
+    // Typically: C:\Users\[Username]\AppData\Roaming
+    if (FAILED(SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, 0, appDataPath)))
+    {
+        return FALSE;
+    }
+    
+    // Build path: AppData\Roaming\WinRDP\Connections
+    swprintf_s(path, pathLen, L"%s\\WinRDP\\Connections", appDataPath);
+    
+    // Create the directory if it doesn't exist
+    wchar_t winrdpPath[MAX_PATH];
+    swprintf_s(winrdpPath, MAX_PATH, L"%s\\WinRDP", appDataPath);
+    CreateDirectoryW(winrdpPath, NULL);      // Create WinRDP folder
+    CreateDirectoryW(path, NULL);             // Create Connections subfolder
+    
+    return TRUE;
+}
+```
+
+**Why AppData\Roaming?**
+- ✅ User-specific (no admin rights needed)
+- ✅ Persistent across reboots
+- ✅ Roams with user profile (in domain environments)
+- ✅ Standard location for application data
+- ✅ Not shown in temp file warnings
+
+**SHGetFolderPathW parameters:**
+```c
+CSIDL_APPDATA      // AppData\Roaming
+CSIDL_LOCAL_APPDATA // AppData\Local
+CSIDL_DESKTOP      // Desktop
+CSIDL_PERSONAL     // Documents (My Documents)
+```
+
+## Filename Sanitization (NEW!)
+
+> **⚠️ Problem: Hostnames Can Contain Invalid Characters!**
+>
+> ```c
+> Hostname: "server01:3389"      // Contains : (invalid in Windows filenames)
+> Hostname: "192.168.1.100/vm"   // Contains / (invalid)
+> Hostname: "dev\\test"          // Contains \ (invalid)
+> ```
+>
+> These would crash or fail when used as filenames!
+
+```c
+static void SanitizeHostnameForFilename(const wchar_t* hostname, 
+                                        wchar_t* output, size_t outputLen)
+{
+    size_t i = 0;
+    size_t maxLen = outputLen - 1;
+    
+    while (hostname[i] != L'\0' && i < maxLen)
+    {
+        wchar_t c = hostname[i];
+        
+        // Replace invalid filename characters with underscores
+        // Invalid in Windows: < > : " / \ | ? *
+        if (c == L'<' || c == L'>' || c == L':' || c == L'"' ||
+            c == L'/' || c == L'\\' || c == L'|' || c == L'?' || c == L'*')
+        {
+            output[i] = L'_';
+        }
+        else
+        {
+            output[i] = c;
+        }
+        i++;
+    }
+    output[i] = L'\0';
+}
+```
+
+**Examples:**
+```c
+"server01:3389"        → "server01_3389.rdp"
+"192.168.1.100/vm"     → "192.168.1.100_vm.rdp"
+"prod\\app-server"     → "prod__app-server.rdp"
+"test?debug=true"      → "test_debug=true.rdp"
+```
+
+## Updated CreateRDPFile with Persistent Storage (NEW!)
+
+```c
+BOOL CreateRDPFile(const wchar_t* hostname, const wchar_t* username,
+                   wchar_t* outputPath, size_t outputLen)
+{
+    FILE* file = NULL;
+    errno_t err;
+    wchar_t storagePath[MAX_PATH];
+    wchar_t rdpPath[MAX_PATH];
+    wchar_t sanitizedHost[MAX_PATH];
+    
+    // Get the persistent storage directory in AppData\Roaming
+    if (!GetRDPStoragePath(storagePath, MAX_PATH))
+    {
+        return FALSE;
+    }
+    
+    // Sanitize the hostname for use as a filename
+    SanitizeHostnameForFilename(hostname, sanitizedHost, MAX_PATH);
+    
+    // Create a persistent filename based on the hostname
+    // Same hostname → same file → no security warning!
+    swprintf_s(rdpPath, MAX_PATH, L"%s\\%s.rdp", storagePath, sanitizedHost);
+    
+    // Open file for writing (overwrites existing)
+    err = _wfopen_s(&file, rdpPath, L"w, ccs=UTF-8");
+    if (err != 0 || file == NULL)
+    {
+        return FALSE;
+    }
+    
+    // Write comprehensive RDP configuration (40+ settings!)
+    fwprintf(file, L"screen mode id:i:2\n");
+    fwprintf(file, L"use multimon:i:0\n");
+    fwprintf(file, L"desktopwidth:i:1920\n");
+    fwprintf(file, L"desktopheight:i:1080\n");
+    fwprintf(file, L"session bpp:i:32\n");
+    fwprintf(file, L"full address:s:%ls\n", hostname);
+    fwprintf(file, L"compression:i:1\n");
+    fwprintf(file, L"keyboardhook:i:2\n");
+    fwprintf(file, L"audiocapturemode:i:0\n");
+    fwprintf(file, L"videoplaybackmode:i:1\n");
+    fwprintf(file, L"connection type:i:7\n");
+    fwprintf(file, L"networkautodetect:i:1\n");
+    fwprintf(file, L"bandwidthautodetect:i:1\n");
+    fwprintf(file, L"displayconnectionbar:i:1\n");
+    fwprintf(file, L"enableworkspacereconnect:i:1\n");
+    fwprintf(file, L"disable wallpaper:i:0\n");
+    fwprintf(file, L"allow font smoothing:i:1\n");
+    fwprintf(file, L"allow desktop composition:i:1\n");
+    fwprintf(file, L"disable full window drag:i:0\n");
+    fwprintf(file, L"disable menu anims:i:0\n");
+    fwprintf(file, L"disable themes:i:0\n");
+    fwprintf(file, L"disable cursor setting:i:0\n");
+    fwprintf(file, L"bitmapcachepersistenable:i:1\n");
+    fwprintf(file, L"audiomode:i:0\n");
+    fwprintf(file, L"redirectprinters:i:1\n");
+    fwprintf(file, L"redirectcomports:i:0\n");
+    fwprintf(file, L"redirectsmartcards:i:1\n");
+    fwprintf(file, L"redirectclipboard:i:1\n");
+    fwprintf(file, L"redirectposdevices:i:0\n");
+    fwprintf(file, L"autoreconnection enabled:i:1\n");
+    fwprintf(file, L"authentication level:i:0\n");
+    fwprintf(file, L"prompt for credentials:i:0\n");
+    fwprintf(file, L"negotiate security layer:i:1\n");
+    fwprintf(file, L"remoteapplicationmode:i:0\n");
+    fwprintf(file, L"alternate shell:s:\n");
+    fwprintf(file, L"shell working directory:s:\n");
+    fwprintf(file, L"gatewayhostname:s:\n");
+    fwprintf(file, L"gatewayusagemethod:i:4\n");
+    fwprintf(file, L"gatewaycredentialssource:i:4\n");
+    fwprintf(file, L"gatewayprofileusagemethod:i:0\n");
+    fwprintf(file, L"promptcredentialonce:i:1\n");
+    fwprintf(file, L"use redirection server name:i:0\n");
+    
+    // Add username if provided
+    if (username != NULL && wcslen(username) > 0)
+    {
+        fwprintf(file, L"username:s:%ls\n", username);
+    }
+    
+    fclose(file);
+    
+    // Return the path to the caller
+    wcsncpy_s(outputPath, outputLen, rdpPath, _TRUNCATE);
+    
+    return TRUE;
+}
+```
+
+**Benefits of Persistent Files:**
+- ✅ **No security warning** after first connection
+- ✅ **Better performance** (no file creation overhead each time)
+- ✅ **User can edit** RDP files manually if needed
+- ✅ **Settings persist** even if app is closed
+- ✅ **One file per host** (organized, predictable)
+
+**File locations:**
+```
+C:\Users\YourName\AppData\Roaming\WinRDP\Connections\
+    ├── server01.company.com.rdp
+    ├── 192.168.1.100.rdp
+    ├── prod-db-server.rdp
+    └── dev_test_3389.rdp
+```
+
+### Old Approach: GetTempPathW Function (For Reference)
 
 ```c
 DWORD GetTempPathW(
@@ -15586,6 +17011,163 @@ SaveRDPCredentials(hostname, username, password);
 // Why? Because mstsc.exe expects credentials in a specific format:
 // Target: TERMSRV/hostname
 // This is how Windows RDP client looks up credentials
+```
+
+## LaunchRDP Function (NEW!) - Two-Tier Credentials + Connection Tracking
+
+The heart of WinRDP is the `LaunchRDP()` function. It implements the two-tier credential system (per-host first, then global fallback) and integrates with connection timestamp tracking from Chapter 19.
+
+```c
+BOOL LaunchRDP(const wchar_t* hostname, const wchar_t* username, const wchar_t* password)
+{
+    wchar_t rdpPath[MAX_PATH];
+    wchar_t finalUsername[CRED_MAX_USERNAME_LENGTH] = L"";
+    wchar_t finalPassword[CRED_MAX_CREDENTIAL_BLOB_SIZE / sizeof(wchar_t)] = L"";
+    
+    // STEP 1: Resolve credentials using two-tier strategy
+    if (username != NULL && wcslen(username) > 0)
+    {
+        // Use provided credentials
+        wcsncpy_s(finalUsername, CRED_MAX_USERNAME_LENGTH, username, _TRUNCATE);
+        if (password != NULL)
+        {
+            wcsncpy_s(finalPassword, CRED_MAX_CREDENTIAL_BLOB_SIZE / sizeof(wchar_t), 
+                     password, _TRUNCATE);
+        }
+    }
+    else
+    {
+        // Try per-host credentials first
+        if (!LoadRDPCredentials(hostname, finalUsername, finalPassword))
+        {
+            // Fall back to global credentials
+            LoadCredentials(NULL, finalUsername, finalPassword);
+        }
+        // If both fail, finalUsername/finalPassword remain empty
+        // mstsc.exe will prompt the user for credentials
+    }
+    
+    // STEP 2: Create persistent RDP file
+    if (!CreateRDPFile(hostname, finalUsername, rdpPath, MAX_PATH))
+    {
+        MessageBoxW(NULL, L"Failed to create RDP file", L"Error", MB_ICONERROR);
+        return FALSE;
+    }
+    
+    // STEP 3: Launch mstsc.exe
+    HINSTANCE result = ShellExecuteW(
+        NULL,           // No parent window
+        L"open",        // Open action
+        L"mstsc.exe",   // Remote Desktop Connection executable
+        rdpPath,        // RDP file as parameter
+        NULL,           // No working directory
+        SW_SHOWNORMAL   // Show window normally
+    );
+    
+    // STEP 4: Check for errors
+    if ((INT_PTR)result <= 32)
+    {
+        MessageBoxW(NULL, L"Failed to launch mstsc.exe", L"Error", MB_ICONERROR);
+        return FALSE;
+    }
+    
+    // Success! (Note: We DON'T delete the file - it's persistent)
+    return TRUE;
+}
+```
+
+**Credential Resolution Flow:**
+```
+┌─────────────────────────────────────────────────┐
+│ LaunchRDP(hostname, username, password)         │
+└────────────────┬────────────────────────────────┘
+                 │
+         ┌───────▼────────┐
+         │ Credentials    │
+         │ provided?      │
+         └───┬────────┬───┘
+             │        │
+            YES       NO
+             │        │
+             │        ├──────────────────────┐
+             │        │ Try per-host first   │
+             │        │ LoadRDPCredentials() │
+             │        └──────────┬───────────┘
+             │                   │
+             │              ┌────▼─────┐
+             │              │ Found?   │
+             │              └──┬───┬───┘
+             │                 │   │
+             │                YES  NO
+             │                 │   │
+             │                 │   ├──────────────────┐
+             │                 │   │ Try global       │
+             │                 │   │ LoadCredentials()│
+             │                 │   └──────┬───────────┘
+             │                 │          │
+             └─────────────────┴──────────┘
+                               │
+                    ┌──────────▼───────────┐
+                    │ CreateRDPFile()      │
+                    │ ShellExecuteW()      │
+                    └──────────────────────┘
+```
+
+## LaunchRDPWithDefaults (NEW!) - Connection Tracking Integration
+
+This convenience function adds automatic connection timestamp updates:
+
+```c
+BOOL LaunchRDPWithDefaults(const wchar_t* hostname)
+{
+    // Launch using two-tier credential strategy
+    if (LaunchRDP(hostname, NULL, NULL))
+    {
+        // Update the lastConnected timestamp (see Chapter 19)
+        UpdateLastConnected(hostname);
+        return TRUE;
+    }
+    return FALSE;
+}
+```
+
+**Why separate function?**
+- `LaunchRDP()` = low-level, doesn't modify data
+- `LaunchRDPWithDefaults()` = high-level, updates timestamps, used by UI
+
+**Usage in UI code (from Chapter 22):**
+```c
+case IDC_BTN_CONNECT:
+{
+    int selectedIndex = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
+    if (selectedIndex != -1)
+    {
+        // Get hostname from ListView
+        wchar_t hostname[256];
+        ListView_GetItemText(hListView, selectedIndex, 0, hostname, 256);
+        
+        // Connect and update timestamp
+        if (LaunchRDPWithDefaults(hostname))
+        {
+            // Refresh ListView to show new "Last Connected" time
+            RefreshHostListView(hListView);
+        }
+    }
+    break;
+}
+```
+
+**Complete flow:**
+```
+User clicks "Connect" button
+    ↓
+LaunchRDPWithDefaults("server01.company.com")
+    ↓
+LaunchRDP() → Creates RDP file, launches mstsc.exe
+    ↓
+Success? → UpdateLastConnected() → Saves timestamp to CSV
+    ↓
+RefreshHostListView() → Shows "2025-01-17T14:30:25Z" in Last Connected column
 ```
 
 ## Launching External Applications with ShellExecuteW
@@ -16116,19 +17698,30 @@ BOOL LaunchRDPWithFlags(const wchar_t* hostname, RDPFlags flags);
 ## Summary
 
 You've learned:
-- ✅ Creating RDP configuration files programmatically
-- ✅ Understanding the RDP file format and common settings
-- ✅ Implementing two-tier credential strategy (per-host, then global)
+- ✅ Creating RDP configuration files programmatically with 40+ settings
+- ✅ Understanding the RDP file format and common parameters
+- ✅ **NEW!** Implementing persistent RDP files in AppData\Roaming to eliminate security warnings
+- ✅ **NEW!** Using GetRDPStoragePath() with SHGetFolderPathW(CSIDL_APPDATA) for proper directory creation
+- ✅ **NEW!** Sanitizing hostnames for safe filename usage (SanitizeHostnameForFilename)
+- ✅ Implementing two-tier credential strategy (per-host, then global) in LaunchRDP()
+- ✅ **NEW!** Integrating connection timestamp tracking with LaunchRDPWithDefaults()
 - ✅ Launching external applications with ShellExecuteW
-- ✅ Managing temporary files safely
-- ✅ Process launching and cleanup
+- ✅ Process launching and error handling
 - ✅ Security considerations for credential handling
 
+**What's New in v2.0:**
+- 🎯 **Persistent RDP files** → No more security warnings!
+- 🎯 **Enhanced configuration** → 40+ RDP settings (up from ~10)
+- 🎯 **Filename sanitization** → Handles invalid characters safely
+- 🎯 **Connection tracking** → Automatic lastConnected timestamp updates
+- 🎯 **AppData storage** → Organized in WinRDP\Connections folder
+
 **You now have:**
-- Complete RDP connection functionality
-- Flexible credential management
-- Robust file handling
-- Foundation for advanced features
+- Complete RDP connection functionality with no security warnings
+- Two-tier credential resolution (per-host → global → prompt)
+- Automatic connection history tracking (integrates with Chapter 19)
+- Persistent, organized RDP file storage (integrates with Chapter 20)
+- Foundation for system tray quick-connect (coming in Chapter 24)
 
 **🎉 Congratulations! WinRDP is now fully functional! 🎉**
 
