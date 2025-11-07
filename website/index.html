@@ -316,21 +316,25 @@
       "screenshot": "https://swatto.co.uk/",
       "featureList": [
         "Persistent RDP files eliminate security warnings",
-        "Recent connections in tray menu",
-        "Last connected timestamps",
-        "Sortable column headers",
-        "Host count status labels",
-        "RDP connection management",
-        "Global and per-host credentials",
-        "Edit credentials anytime",
-        "Toggle hotkey (Ctrl+Shift+R)",
-        "Active Directory scanning",
-        "Network computer discovery",
-        "Secure credential storage",
-        "Dark mode support",
-        "Search and filter",
-        "System tray integration",
-        "Autostart with Windows"
+        "Recent connections in tray menu (5 most recent)",
+        "Last connected timestamps with ISO 8601 format",
+        "Sortable column headers (click to sort ascending/descending)",
+        "Real-time search and filter (case-insensitive)",
+        "Dynamic host count status labels",
+        "Auto-close countdown timer (5-second smart startup)",
+        "Two-tier credential system (per-host with global fallback)",
+        "Edit credentials anytime without restart",
+        "Toggle hotkey (Ctrl+Shift+R) for quick access",
+        "Secret bulk delete hotkey (Ctrl+Shift+Alt+D)",
+        "Active Directory scanning with computer type filters",
+        "Network computer discovery (workstations, servers, DCs)",
+        "Windows Credential Manager integration",
+        "Dark mode support (follows Windows theme)",
+        "System tray integration with context menu",
+        "Autostart with Windows (registry-based)",
+        "Single instance enforcement (mutex-based)",
+        "ListView column sorting with comparison callbacks",
+        "Absolute path resolution (works with autostart)"
       ],
       "programmingLanguage": "C",
       "license": "https://github.com/Swatto86/WinRDP/blob/main/LICENSE"
@@ -380,21 +384,26 @@
         </div>
         
         <div class="section">
-            <h2>✨ Version 1.2.0 - Persistent RDP Files Release</h2>
+            <h2>✨ Version 1.2.0 - Polish & Productivity Release</h2>
             <p style="margin-bottom: 15px; font-size: 1.05em; color: #ccc;">
-                <strong>Eliminates the repetitive security warning</strong> that appeared on every connection.
+                <strong>Major UX improvements</strong> that make WinRDP faster and more polished than ever.
             </p>
             <div style="background: #1e3a1e; border-left: 4px solid #16a34a; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
-                <p style="margin: 0; color: #4ade80;"><strong>What's new:</strong></p>
+                <p style="margin: 0; color: #4ade80;"><strong>What's New:</strong></p>
                 <ul style="margin: 10px 0 0 20px; color: #4ade80;">
-                    <li><strong>Persistent RDP Files</strong> - Connection files now stored in AppData\Roaming\WinRDP\Connections</li>
-                    <li><strong>No More Security Warnings</strong> - Warning only appears on first connection to each host</li>
-                    <li><strong>Seamless Reconnections</strong> - Each host reuses its trusted RDP file for future connections</li>
-                    <li><strong>Windows Best Practices</strong> - Follows Microsoft recommendations for application data storage</li>
+                    <li><strong>🔒 Persistent RDP Files</strong> - Stored in AppData\Roaming\WinRDP\Connections, eliminates repetitive security warnings</li>
+                    <li><strong>⏱️ Auto-Close Countdown Timer</strong> - 5-second smart startup that auto-closes when credentials are saved</li>
+                    <li><strong>🕒 Recent Connections Menu</strong> - Access your 5 most recent servers directly from the system tray</li>
+                    <li><strong>📊 Last Connected Timestamps</strong> - See when you last connected to each server (ISO 8601 format)</li>
+                    <li><strong>🔍 Real-Time Search & Filter</strong> - Instant filtering as you type, searches hostname and description</li>
+                    <li><strong>↕️ Column Sorting</strong> - Click headers to sort by hostname, description, or last connected</li>
+                    <li><strong>📈 Dynamic Status Labels</strong> - Shows "X of Y hosts" when filtering, "X hosts" normally</li>
+                    <li><strong>✏️ Edit Credentials Button</strong> - Change credentials anytime without restarting the app</li>
+                    <li><strong>🔐 Per-Host Credentials</strong> - Two-tier system: per-host credentials with automatic global fallback</li>
                 </ul>
             </div>
             <p style="margin-top: 15px; font-size: 0.95em; color: #999;">
-                Previously, RDP files were created temporarily and deleted after each connection, causing Windows to show the security warning every time. Now, RDP files persist in a dedicated directory and are reused, making subsequent connections completely seamless.
+                v1.2.0 focuses on productivity and polish. The persistent RDP files mean no more clicking through security warnings. The auto-close timer gets you to your servers faster. Recent connections in the tray menu eliminate 3 clicks for your most-used servers. Every UI element has been refined for a professional, keyboard-friendly experience.
             </p>
         </div>
         
@@ -424,74 +433,154 @@
                 <ul>
                     <li>Toggle hotkey (Ctrl+Shift+R)</li>
                     <li>AD/network discovery</li>
-                    <li>Edit credentials anytime</li>
+                    <li>Auto-close countdown timer</li>
+                    <li>Recent connections menu</li>
+                    <li>Real-time search & filter</li>
+                    <li>Column sorting</li>
                     <li>Dark mode support</li>
-                    <li>Search & filter</li>
                     <li>Professional UI</li>
                 </ul>
             </div>
         </div>
         
         <div class="section">
-            <h2>🎓 Educational Focus</h2>
-            <p>WinRDP is designed as a complete learning resource for Windows API programming in C. Whether you're new to Windows development or want to see real-world C programming, this project demonstrates:</p>
+            <h2>🎓 Educational Focus - Learn Windows API Programming</h2>
+            <p style="margin-bottom: 20px;">WinRDP includes a comprehensive <strong>30-chapter programming book</strong> (~25,000 lines) that teaches C and Windows API programming from absolute basics to advanced techniques. Every feature in WinRDP is explained in detail.</p>
             
-            <div class="tech-stack">
-                <a href="https://github.com/Swatto86/WinRDP/blob/main/C_PROGRAMMING_BOOK.md#part-i-c-fundamentals" class="tech-tag primary">C Programming</a>
-                <a href="https://github.com/Swatto86/WinRDP/blob/main/C_PROGRAMMING_BOOK.md#part-iii-windows-programming-basics" class="tech-tag">Windows API Guide</a>
-                <a href="https://github.com/Swatto86/WinRDP/blob/main/C_PROGRAMMING_BOOK.md#chapter-9-dynamic-memory-management" class="tech-tag">Memory Management</a>
-                <a href="https://github.com/Swatto86/WinRDP/blob/main/C_PROGRAMMING_BOOK.md#chapter-27-dark-mode-support" class="tech-tag">Dark Mode Support</a>
+            <div style="background: #2d2a1e; border-left: 4px solid #f59e0b; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <h4 style="color: #f59e0b; margin: 0 0 15px 0;">📚 Complete Learning Path</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <div>
+                        <strong style="color: #fbbf24;">Part I: C Fundamentals</strong>
+                        <ul style="margin: 5px 0 0 20px; font-size: 0.95em; line-height: 1.6;">
+                            <li>Variables & Data Types</li>
+                            <li>Control Flow & Functions</li>
+                            <li>Pointers & Memory</li>
+                            <li>Strings & Structures</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <strong style="color: #fbbf24;">Part II: Advanced C</strong>
+                        <ul style="margin: 5px 0 0 20px; font-size: 0.95em; line-height: 1.6;">
+                            <li>Dynamic Memory</li>
+                            <li>File I/O Operations</li>
+                            <li>Function Pointers</li>
+                            <li>Multi-File Programs</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <strong style="color: #fbbf24;">Part III: Windows API</strong>
+                        <ul style="margin: 5px 0 0 20px; font-size: 0.95em; line-height: 1.6;">
+                            <li>Message System</li>
+                            <li>Dialog Boxes</li>
+                            <li>Controls & UI</li>
+                            <li>Event Handling</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <strong style="color: #fbbf24;">Part IV: WinRDP Core</strong>
+                        <ul style="margin: 5px 0 0 20px; font-size: 0.95em; line-height: 1.6;">
+                            <li>CSV Management</li>
+                            <li>Credential Manager</li>
+                            <li>ListView Controls</li>
+                            <li>RDP Integration</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <strong style="color: #fbbf24;">Part V: Advanced Features</strong>
+                        <ul style="margin: 5px 0 0 20px; font-size: 0.95em; line-height: 1.6;">
+                            <li>Registry Operations</li>
+                            <li>Global Hotkeys</li>
+                            <li>Dark Mode Support</li>
+                            <li>Network Discovery</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
             
-            <p style="margin-top: 20px;">
-                <strong>Complete with:</strong> Extensive documentation covering Message Handling, Dialog Boxes, 
-                System Integration, Credential Manager, Registry API, Network Enumeration, and more. 
-                Perfect for understanding Windows programming fundamentals.
+            <div class="tech-stack">
+                <a href="https://github.com/Swatto86/WinRDP/blob/main/C_PROGRAMMING_BOOK.md#part-i-c-fundamentals" class="tech-tag primary">C Fundamentals</a>
+                <a href="https://github.com/Swatto86/WinRDP/blob/main/C_PROGRAMMING_BOOK.md#chapter-9-dynamic-memory-management" class="tech-tag">Memory Management</a>
+                <a href="https://github.com/Swatto86/WinRDP/blob/main/C_PROGRAMMING_BOOK.md#chapter-15-windows-message-system" class="tech-tag">Message System</a>
+                <a href="https://github.com/Swatto86/WinRDP/blob/main/C_PROGRAMMING_BOOK.md#chapter-20-windows-credential-manager" class="tech-tag">Credential Manager</a>
+                <a href="https://github.com/Swatto86/WinRDP/blob/main/C_PROGRAMMING_BOOK.md#chapter-21-main-application-window" class="tech-tag">Timers & Dialogs</a>
+                <a href="https://github.com/Swatto86/WinRDP/blob/main/C_PROGRAMMING_BOOK.md#chapter-22-listview-control-for-host-display" class="tech-tag">ListView Controls</a>
+                <a href="https://github.com/Swatto86/WinRDP/blob/main/C_PROGRAMMING_BOOK.md#chapter-26-global-hotkeys" class="tech-tag">Global Hotkeys</a>
+                <a href="https://github.com/Swatto86/WinRDP/blob/main/C_PROGRAMMING_BOOK.md#chapter-27-dark-mode-support" class="tech-tag">Dark Mode</a>
+                <a href="https://github.com/Swatto86/WinRDP/blob/main/C_PROGRAMMING_BOOK.md#chapter-28-network-computer-discovery" class="tech-tag">Network APIs</a>
+            </div>
+            
+            <p style="margin-top: 20px; padding: 15px; background: #1e3040; border-radius: 8px; border-left: 4px solid #0078d4;">
+                <strong>Perfect for learning:</strong> Each chapter builds on the previous, teaching you exactly what you need when you need it. From "Hello World" to a complete production application with professional features like dark mode, credential management, and network discovery.
             </p>
         </div>
         
         <div class="section">
-            <h2>🚀 Complete Feature Set</h2>
+            <h2>🚀 Complete Feature Set (35+ Features)</h2>
             <div class="info-grid">
+                <div>
+                    <h3 style="color: #0078d4; margin-bottom: 15px;">🌟 New in v1.2.0</h3>
+                    <ul>
+                        <li>Persistent RDP files (no warnings)</li>
+                        <li>Auto-close countdown timer (5 sec)</li>
+                        <li>Recent connections menu (5 recent)</li>
+                        <li>Last connected timestamps</li>
+                        <li>Real-time search & filter</li>
+                        <li>Column sorting (click headers)</li>
+                        <li>Dynamic status labels</li>
+                        <li>Edit credentials button</li>
+                        <li>Per-host credential UI</li>
+                        <li>Absolute path resolution</li>
+                    </ul>
+                </div>
                 <div>
                     <h3 style="color: #0078d4; margin-bottom: 15px;">Connection Management</h3>
                     <ul>
-                        <li>Recent connections in tray menu</li>
                         <li>Store unlimited RDP servers</li>
-                        <li>Quick connect (double-click)</li>
-                        <li>Real-time search & filter</li>
-                        <li>Last connected timestamps</li>
-                        <li>Sortable column headers</li>
-                        <li>Host count status labels</li>
-                        <li>CSV-based storage</li>
+                        <li>Quick connect (double-click/Enter)</li>
+                        <li>CSV-based storage (UTF-8)</li>
                         <li>Host descriptions</li>
                         <li>Automatic RDP file generation</li>
+                        <li>Persistent RDP storage</li>
+                        <li>Hostname sanitization</li>
+                        <li>ISO 8601 timestamps</li>
+                        <li>Recent connections tracking</li>
+                        <li>Bulk host operations</li>
                     </ul>
                 </div>
                 <div>
                     <h3 style="color: #0078d4; margin-bottom: 15px;">Credential Management</h3>
                     <ul>
+                        <li>Two-tier credential system</li>
                         <li>Global default credentials</li>
                         <li>Per-host credential override</li>
-                        <li>Edit credentials button</li>
                         <li>Windows Credential Manager</li>
-                        <li>Encrypted storage</li>
-                        <li>Smart auto-close timer</li>
+                        <li>Encrypted storage (Windows)</li>
+                        <li>Credential enumeration</li>
+                        <li>Smart fallback logic</li>
+                        <li>Edit mode vs normal mode</li>
+                        <li>Bulk credential delete</li>
                     </ul>
                 </div>
                 <div>
                     <h3 style="color: #0078d4; margin-bottom: 15px;">Advanced Features</h3>
                     <ul>
                         <li>Toggle hotkey (Ctrl+Shift+R)</li>
+                        <li>Secret bulk delete (Ctrl+Shift+Alt+D)</li>
                         <li>Active Directory scanning</li>
                         <li>Network computer discovery</li>
-                        <li>Bulk delete (Ctrl+Shift+Alt+D)</li>
-                        <li>Dark mode support</li>
+                        <li>Computer type filters (WS/Srv/DC)</li>
+                        <li>Dark mode support (auto-detect)</li>
                         <li>System tray integration</li>
+                        <li>Context menu with recent hosts</li>
                         <li>Autostart with Windows</li>
+                        <li>Single instance enforcement</li>
                     </ul>
                 </div>
             </div>
+            <p style="margin-top: 20px; padding: 15px; background: #2d1e2a; border-radius: 8px; border-left: 4px solid #a855f7; color: #e9d5ff;">
+                <strong>💡 Productivity Tips:</strong> Use <code style="background: #1e1e1e; padding: 2px 8px; border-radius: 4px;">Ctrl+Shift+R</code> to toggle WinRDP from anywhere. Recent connections menu in the tray gives one-click access to your most-used servers. The search box filters as you type. Click column headers to sort. Double-click or press Enter on a host to connect instantly.
+            </p>
         </div>
         
         <div class="github-section">
@@ -508,32 +597,50 @@
         </div>
         
         <div class="section">
-            <h2>📖 Comprehensive Documentation</h2>
-            <p style="margin-bottom: 20px;">Complete learning resources included in the repository:</p>
+            <h2>📖 Comprehensive Documentation (25,000+ Lines)</h2>
+            <p style="margin-bottom: 20px;">Complete learning resources included in the repository - from absolute beginner to advanced Windows programming:</p>
             
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 15px;">
                 <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; border-left: 4px solid #0078d4;">
                     <h4 style="color: #0078d4; margin: 0 0 10px 0;">📘 User Documentation</h4>
                     <ul style="margin: 0; line-height: 1.8;">
-                        <li><strong>README.md</strong> - Overview & quick start</li>
-                        <li><strong>CHANGELOG.md</strong> - Version history</li>
-                        <li><strong>BUILD.md</strong> - Build instructions</li>
+                        <li><strong>README.md</strong> - Overview & quick start guide</li>
+                        <li><strong>CHANGELOG.md</strong> - Detailed version history</li>
+                        <li><strong>BUILD.md</strong> - Complete build instructions</li>
+                        <li><strong>GETTING_STARTED_GUIDE.md</strong> - User tutorials</li>
                     </ul>
                 </div>
                 
                 <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; border-left: 4px solid #16a34a;">
                     <h4 style="color: #16a34a; margin: 0 0 10px 0;">🎓 Learning Resources</h4>
                     <ul style="margin: 0; line-height: 1.8;">
-                        <li><strong>C_PROGRAMMING_BOOK.md</strong> - 34 chapters</li>
-                        <li><strong>Commented Source Code</strong> - Every file</li>
-                        <li><strong>WinAPI Examples</strong> - Real-world usage</li>
+                        <li><strong>C_PROGRAMMING_BOOK.md</strong> - 30 chapters, 25K+ lines</li>
+                        <li><strong>Commented Source Code</strong> - Every function explained</li>
+                        <li><strong>Real-World Examples</strong> - Production patterns</li>
+                        <li><strong>Best Practices</strong> - Error handling, memory safety</li>
                     </ul>
                 </div>
             </div>
             
-            <p style="margin-top: 20px; padding: 15px; background: #2d2a1e; border-radius: 8px; border-left: 4px solid #f59e0b;">
-                <strong>📚 Topics Covered:</strong> C Fundamentals, Pointers & Memory, Windows API, Dialog Boxes, System Tray, 
-                Credential Manager, Registry Operations, Network APIs, Dark Mode, Global Hotkeys, ListView Controls, and more.
+            <div style="margin-top: 20px; padding: 20px; background: #2d2a1e; border-radius: 8px; border-left: 4px solid #f59e0b;">
+                <h4 style="color: #f59e0b; margin: 0 0 15px 0;">📚 Topics Covered in the Book</h4>
+                <div style="columns: 2; column-gap: 30px; line-height: 1.8;">
+                    <strong style="color: #fbbf24;">C Programming:</strong><br>
+                    Variables, Pointers, Memory Management, Structures, File I/O, Function Pointers<br><br>
+                    
+                    <strong style="color: #fbbf24;">Windows API:</strong><br>
+                    Message System, Window Procedures, Dialog Boxes, Controls, Resources<br><br>
+                    
+                    <strong style="color: #fbbf24;">WinRDP Features:</strong><br>
+                    CSV Management, Credential Manager, ListView Controls, RDP Integration, Timers, Static Variables<br><br>
+                    
+                    <strong style="color: #fbbf24;">Advanced Topics:</strong><br>
+                    Registry Operations, Global Hotkeys, Dark Mode, Network Discovery, System Tray, Sorting Algorithms
+                </div>
+            </div>
+            
+            <p style="margin-top: 20px; padding: 15px; background: #1e3040; border-radius: 8px; border-left: 4px solid #0078d4;">
+                <strong>🎯 Learning Path:</strong> Start with Chapter 1 "Introduction to C Programming" and work through to Chapter 30 "System Testing". Each chapter includes working code examples, exercises, common mistakes, and best practices. By the end, you'll have built WinRDP from scratch and understand every line of code.
             </p>
         </div>
     </div>
