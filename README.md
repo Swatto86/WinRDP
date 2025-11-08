@@ -44,6 +44,7 @@ This project demonstrates:
 - **Secure Storage** - Windows Credential Manager integration
   - All passwords encrypted by Windows
   - Per-host and global credentials stored separately
+  - Host data file encrypted using Windows DPAPI (v1.3.0+)
 - **Quick Connect** - Double-click or single-click connect to servers
 - **Search & Filter** - Real-time filtering of server list
 - **System Tray** - Minimize to tray, quick access from notification area
@@ -331,8 +332,13 @@ DwmSetWindowAttribute(hwnd, 20, &darkMode, sizeof(darkMode));
 
 ## 🔐 Security Notes
 
-- Credentials are stored using Windows Credential Manager (encrypted)
-- RDP files are stored persistently in %APPDATA%\Roaming\WinRDP\Connections
+- **Credentials** are stored using Windows Credential Manager (encrypted)
+- **Host data** (hosts.csv) is encrypted using Windows DPAPI (v1.3.0+)
+  - User-specific encryption - only the Windows user who created the file can decrypt it
+  - Automatic encryption/decryption on save/load
+  - Backward compatible with unencrypted files from older versions
+  - No manual key management required
+- **RDP files** are stored persistently in %APPDATA%\Roaming\WinRDP\Connections
   - Prevents security warnings on subsequent connections
   - User-specific storage (each Windows user has their own)
   - Can be manually deleted if needed
@@ -388,7 +394,7 @@ Want to extend your learning? Try adding:
 9. ✅ **Per-Host Credentials** - Individual credentials per server (IMPLEMENTED!)
 10. **Multi-monitor Support** - Choose which monitor for RDP
 11. **Port Scanning** - Check if port 3389 is open
-12. **Encryption** - Additional encryption layer for CSV file
+12. ✅ **Encryption** - CSV file encrypted with Windows DPAPI (IMPLEMENTED v1.3.0!)
 13. **Connection Status** - Show online/offline indicators
 
 ## 🙏 Acknowledgments

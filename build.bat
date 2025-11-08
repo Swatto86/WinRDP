@@ -58,7 +58,7 @@ if %ERRORLEVEL% NEQ 0 (
 REM Link
 echo.
 echo Linking...
-gcc -mwindows -municode -o build\WinRDP.exe build\obj\*.o -lcomctl32 -lole32 -lshell32 -ladvapi32 -lcredui -lcomdlg32 -ldwmapi -luxtheme -lnetapi32
+gcc -mwindows -municode -o build\WinRDP.exe build\obj\*.o -lcomctl32 -lole32 -lshell32 -ladvapi32 -lcredui -lcomdlg32 -ldwmapi -luxtheme -lnetapi32 -lcrypt32
 if %ERRORLEVEL% NEQ 0 (
     echo ERROR: Linking failed
     pause
@@ -87,7 +87,7 @@ if %ERRORLEVEL% NEQ 0 (
 
 echo Linking...
 link /OUT:..\build\WinRDP.exe /SUBSYSTEM:WINDOWS *.obj resources.res ^
-     user32.lib gdi32.lib shell32.lib comctl32.lib advapi32.lib credui.lib comdlg32.lib ole32.lib dwmapi.lib uxtheme.lib netapi32.lib
+     user32.lib gdi32.lib shell32.lib comctl32.lib advapi32.lib credui.lib comdlg32.lib ole32.lib dwmapi.lib uxtheme.lib netapi32.lib crypt32.lib
 
 if %ERRORLEVEL% NEQ 0 (
     echo ERROR: Linking failed

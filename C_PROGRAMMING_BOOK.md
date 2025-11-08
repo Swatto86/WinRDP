@@ -16038,7 +16038,7 @@ You've learned:
 **Next chapter:** ListView controls for displaying host lists!
 
 
-# Chapter 22: ListView Control for Host Display
+# Chapter 23: ListView Control for Host Display
 
 > **📝 What's New in WinRDP v1.2.0**
 > 
@@ -17261,7 +17261,7 @@ You've learned:
 
 
 
-# Chapter 23: RDP Connection Logic
+# Chapter 24: RDP Connection Logic
 
 > **📝 What's New in WinRDP v1.2.0**
 > 
@@ -18879,7 +18879,7 @@ Based on the pattern established in the existing chapters:
 
 ---
 
-# Chapter 24: System Tray Integration
+# Chapter 25: System Tray Integration
 
 **What You'll Learn:**
 - Understanding the Windows system tray (notification area)
@@ -19703,7 +19703,7 @@ In this chapter, you learned:
 
 # Part V: Advanced Features
 
-# Chapter 25: Registry Operations and Autostart
+# Chapter 26: Registry Operations and Autostart
 
 **What You'll Learn:**
 - Understanding the Windows Registry structure
@@ -20661,7 +20661,7 @@ In this chapter, you learned:
 
 ---
 
-# Chapter 26: Global Hotkeys
+# Chapter 27: Global Hotkeys
 
 **What You'll Learn:**
 - Understanding Windows hotkey system
@@ -21451,7 +21451,7 @@ In this chapter, you learned:
 
 ---
 
-# Chapter 27: Dark Mode Support
+# Chapter 28: Dark Mode Support
 
 **What You'll Learn:**
 - Detecting Windows dark mode settings
@@ -21838,7 +21838,7 @@ In this chapter, you learned:
 
 ---
 
-# Chapter 28: Network Computer Discovery
+# Chapter 29: Network Computer Discovery
 
 **What You'll Learn:**
 - Using NetAPI32 for network enumeration
@@ -22017,7 +22017,7 @@ In this chapter, you learned:
 
 ---
 
-# Chapter 29: Building and Distribution
+# Chapter 30: Building and Distribution
 
 **What You'll Learn:**
 - Creating build scripts
@@ -22121,7 +22121,7 @@ makensis installer.nsi
 
 # Part VI: Testing and Quality Assurance
 
-# Chapter 30: System Testing and Integration
+# Chapter 31: System Testing and Integration
 
 ## Introduction
 

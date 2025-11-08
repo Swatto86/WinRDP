@@ -2,6 +2,30 @@
 
 All notable changes to WinRDP will be documented in this file.
 
+## [1.3.0] - 2025-11-08
+
+### Added
+- **CSV File Encryption** - Host data is now encrypted using Windows DPAPI
+  - Automatic encryption of hosts.csv file on save
+  - Transparent decryption on load
+  - User-specific encryption - only the Windows user who created the file can decrypt it
+  - No manual key management required
+  - Backward compatible - can still read unencrypted files from previous versions
+  - File format includes magic number and version for future extensibility
+  - Uses Windows Data Protection API (DPAPI) for secure, OS-integrated encryption
+
+### Changed
+- Hosts CSV file is now stored in encrypted format by default
+- Updated application version to 1.3.0
+- Added crypt32.lib dependency for encryption support
+
+### Technical Details
+- New encryption module (encryption.c/encryption.h) using CryptProtectData/CryptUnprotectData
+- Modified LoadHosts() to detect and decrypt encrypted files
+- Modified SaveHosts() to encrypt data before writing
+- Encrypted file format: [MAGIC][VERSION][ENCRYPTED_DATA]
+- Application-specific entropy for additional security layer
+
 ## [Unreleased]
 
 ### Added

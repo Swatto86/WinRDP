@@ -2,12 +2,18 @@
  * Host Management Module
  * 
  * This module manages the list of RDP servers/hosts.
- * Hosts are stored in a simple CSV file format:
+ * Hosts are stored in an encrypted CSV file format:
  *   hostname,description,lastConnected
  * 
- * We use standard C file I/O functions for reading and writing.
+ * As of version 1.3.0, the CSV data is encrypted using Windows DPAPI
+ * (Data Protection API) for security. The encryption is user-specific,
+ * meaning only the Windows user who created the file can decrypt it.
+ * 
+ * We use standard C file I/O functions for reading and writing,
+ * with encryption/decryption handled transparently by the encryption module.
  * In a real production app, you might use a database or JSON,
- * but CSV is simple and human-readable for learning purposes.
+ * but encrypted CSV provides a good balance of simplicity and security
+ * for learning purposes.
  */
 
 #include <windows.h>
@@ -16,6 +22,7 @@
 #include <string.h>
 #include "config.h"
 #include "hosts.h"
+#include "encryption.h"
 
 // Internal helper functions
 static wchar_t* trim_whitespace(wchar_t* str);
@@ -69,6 +76,10 @@ BOOL LoadHosts(Host** hosts, int* count)
     FILE* file = NULL;
     errno_t err;
     wchar_t hostsFilePath[MAX_PATH];
+    BYTE* fileData = NULL;
+    BYTE* csvData = NULL;
+    DWORD fileSize = 0;
+    BOOL isEncrypted = FALSE;
     
     // Initialize output parameters
     // Always set output pointers to known state
@@ -89,13 +100,103 @@ BOOL LoadHosts(Host** hosts, int* count)
         return TRUE;
     }
     
-    // Skip UTF-8 BOM if present
-    unsigned char bom[3];
-    fread(bom, 1, 3, file);
-    if (!(bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF))
+    // Get file size
+    fseek(file, 0, SEEK_END);
+    fileSize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    
+    if (fileSize == 0)
     {
-        // No BOM, rewind
-        fseek(file, 0, SEEK_SET);
+        // Empty file
+        fclose(file);
+        return TRUE;
+    }
+    
+    // Read entire file into memory
+    fileData = (BYTE*)malloc(fileSize);
+    if (fileData == NULL)
+    {
+        fclose(file);
+        return FALSE;
+    }
+    
+    if (fread(fileData, 1, fileSize, file) != fileSize)
+    {
+        free(fileData);
+        fclose(file);
+        return FALSE;
+    }
+    
+    fclose(file);
+    
+    /*
+     * ENCRYPTION: Check if file is encrypted
+     * 
+     * Encrypted files have the following structure:
+     *   [4 bytes] Magic number (ENCRYPTED_FILE_MAGIC = "WRDP")
+     *   [4 bytes] Encryption version
+     *   [remaining] Encrypted CSV data
+     * 
+     * If magic number matches, decrypt the data.
+     * If not, treat as plain CSV (backward compatibility).
+     */
+    if (fileSize >= 8)
+    {
+        DWORD magic = *(DWORD*)fileData;
+        if (magic == ENCRYPTED_FILE_MAGIC)
+        {
+            isEncrypted = TRUE;
+            
+            // Skip the 8-byte header (magic + version)
+            BYTE* encryptedData = fileData + 8;
+            DWORD encryptedSize = fileSize - 8;
+            
+            // Decrypt the data
+            DWORD decryptedSize = 0;
+            if (!DecryptData(encryptedData, encryptedSize, &csvData, &decryptedSize))
+            {
+                // Decryption failed - might be corrupted or wrong user
+                free(fileData);
+                MessageBoxW(NULL, 
+                           L"Failed to decrypt hosts file. The file may be corrupted or encrypted by a different user.",
+                           L"Decryption Error", MB_OK | MB_ICONERROR);
+                return FALSE;
+            }
+            
+            // Free the original file data, we have decrypted data now
+            free(fileData);
+            fileData = NULL;
+            
+            // csvData now points to decrypted data (must free with LocalFree)
+            fileSize = decryptedSize;
+        }
+        else
+        {
+            // Not encrypted, use file data as-is
+            csvData = fileData;
+        }
+    }
+    else
+    {
+        // Too small to be encrypted, use as-is
+        csvData = fileData;
+    }
+    
+    /*
+     * PARSING: Now parse the CSV data (encrypted or plain)
+     * 
+     * At this point, csvData contains the plain CSV text.
+     * We need to parse it line by line.
+     */
+    
+    // Skip UTF-8 BOM if present
+    BYTE* dataPtr = csvData;
+    DWORD dataSize = fileSize;
+    
+    if (dataSize >= 3 && csvData[0] == 0xEF && csvData[1] == 0xBB && csvData[2] == 0xBF)
+    {
+        dataPtr += 3;
+        dataSize -= 3;
     }
     
     /*
@@ -119,89 +220,130 @@ BOOL LoadHosts(Host** hosts, int* count)
      */
     if (*hosts == NULL)
     {
-        fclose(file);  // Don't leak file handle!
+        if (isEncrypted)
+            LocalFree(csvData);
+        else
+            free(csvData);
         return FALSE;
     }
     
-    char line[1024];
+    // Parse line by line from memory buffer
     BOOL firstLine = TRUE;
+    char* lineStart = (char*)dataPtr;
+    char* dataEnd = (char*)(dataPtr + dataSize);
     
-    // Read file line by line
-    while (fgets(line, 1024, file) != NULL)
+    while (lineStart < dataEnd)
     {
-        // Skip header line (first line with "hostname,description")
-        if (firstLine)
+        // Find end of line
+        char* lineEnd = lineStart;
+        while (lineEnd < dataEnd && *lineEnd != '\r' && *lineEnd != '\n')
+            lineEnd++;
+        
+        // Copy line to temporary buffer
+        size_t lineLen = lineEnd - lineStart;
+        if (lineLen > 0 && lineLen < 1024)
         {
-            firstLine = FALSE;
-            continue;
-        }
-        
-        // Convert UTF-8 line to wide character
-        wchar_t wline[1024];
-        MultiByteToWideChar(CP_UTF8, 0, line, -1, wline, 1024);
-        
-        // Skip empty lines
-        if (wcslen(trim_whitespace(wline)) == 0)
-            continue;
-        
-        /*
-         * MEMORY REALLOCATION: Growing the array
-         * 
-         * When array is full, we need more space. Strategy:
-         * 1. Double the capacity (efficient: O(log n) reallocations for n items)
-         * 2. Use realloc to resize
-         * 3. CRITICAL: Use temp variable! realloc returns NULL on failure
-         *    but original pointer is still valid
-         * 4. If realloc succeeds, update pointer
-         * 5. If fails, clean up and return error
-         * 
-         * Alternative strategies:
-         * - Grow by fixed amount (simpler, more allocations)
-         * - Grow by 1.5x (less waste, more allocations)
-         * - Double (our choice: balance of speed vs memory)
-         */
-        if (*count >= capacity)
-        {
-            capacity *= 2;  // Double the size
+            char line[1024];
+            memcpy(line, lineStart, lineLen);
+            line[lineLen] = '\0';
             
-            // SAFE REALLOC PATTERN: Use temporary variable
-            Host* newHosts = (Host*)realloc(*hosts, capacity * sizeof(Host));
-            
-            if (newHosts == NULL)
+            // Skip header line (first line with "hostname,description")
+            if (!firstLine)
             {
-                // Realloc failed! But *hosts is still valid
-                // Must clean up before returning
-                FreeHosts(*hosts, *count);
-                fclose(file);
-                return FALSE;
+                // Convert UTF-8 line to wide character
+                wchar_t wline[1024];
+                MultiByteToWideChar(CP_UTF8, 0, line, -1, wline, 1024);
+                
+                // Skip empty lines
+                if (wcslen(trim_whitespace(wline)) > 0)
+                {
+                    /*
+                     * MEMORY REALLOCATION: Growing the array
+                     * 
+                     * When array is full, we need more space. Strategy:
+                     * 1. Double the capacity (efficient: O(log n) reallocations for n items)
+                     * 2. Use realloc to resize
+                     * 3. CRITICAL: Use temp variable! realloc returns NULL on failure
+                     *    but original pointer is still valid
+                     * 4. If realloc succeeds, update pointer
+                     * 5. If fails, clean up and return error
+                     */
+                    if (*count >= capacity)
+                    {
+                        capacity *= 2;  // Double the size
+                        
+                        // SAFE REALLOC PATTERN: Use temporary variable
+                        Host* newHosts = (Host*)realloc(*hosts, capacity * sizeof(Host));
+                        
+                        if (newHosts == NULL)
+                        {
+                            // Realloc failed! But *hosts is still valid
+                            // Must clean up before returning
+                            FreeHosts(*hosts, *count);
+                            if (isEncrypted)
+                                LocalFree(csvData);
+                            else
+                                free(csvData);
+                            return FALSE;
+                        }
+                        
+                        // Success! Update pointer
+                        // realloc may have moved memory to new location
+                        *hosts = newHosts;
+                    }
+                    
+                    // Parse the CSV line and add to array
+                    if (parse_csv_line(wline, &(*hosts)[*count]))
+                    {
+                        (*count)++;
+                    }
+                }
             }
-            
-            // Success! Update pointer
-            // realloc may have moved memory to new location
-            *hosts = newHosts;
+            else
+            {
+                firstLine = FALSE;
+            }
         }
         
-        // Parse the CSV line and add to array
-        if (parse_csv_line(wline, &(*hosts)[*count]))
-        {
-            (*count)++;
-        }
+        // Move to next line
+        lineStart = lineEnd;
+        // Skip \r\n or \n
+        if (lineStart < dataEnd && *lineStart == '\r')
+            lineStart++;
+        if (lineStart < dataEnd && *lineStart == '\n')
+            lineStart++;
     }
     
-    fclose(file);
+    // Clean up
+    if (isEncrypted)
+        LocalFree(csvData);
+    else
+        free(csvData);
+    
     return TRUE;
 }
 
 /*
- * SaveHosts - Save all hosts to the CSV file
+ * SaveHosts - Save all hosts to the CSV file (with encryption)
  * 
- * This overwrites the entire file with the new host list.
+ * This function creates CSV content in memory, encrypts it using DPAPI,
+ * and writes the encrypted data to the file.
+ * 
+ * The file format is:
+ *   [4 bytes] Magic number (ENCRYPTED_FILE_MAGIC)
+ *   [4 bytes] Encryption version
+ *   [remaining] Encrypted CSV data
  */
 BOOL SaveHosts(const Host* hosts, int count)
 {
     FILE* file = NULL;
     errno_t err;
     wchar_t hostsFilePath[MAX_PATH];
+    BYTE* csvBuffer = NULL;
+    DWORD csvSize = 0;
+    BYTE* encryptedData = NULL;
+    DWORD encryptedSize = 0;
+    BOOL result = FALSE;
     
     // Get the full path to hosts.csv (critical for autostart scenarios)
     if (!get_hosts_file_path(hostsFilePath, MAX_PATH))
@@ -209,20 +351,36 @@ BOOL SaveHosts(const Host* hosts, int count)
         return FALSE;
     }
     
-    // Open file for writing (overwrites existing file) in binary mode
-    err = _wfopen_s(&file, hostsFilePath, L"wb");
-    if (err != 0 || file == NULL)
+    /*
+     * STEP 1: Build CSV content in memory
+     * 
+     * We build the entire CSV in a memory buffer first, then encrypt it.
+     * This is more efficient than encrypting line-by-line.
+     */
+    
+    // Allocate a large buffer for CSV content (128KB should be plenty)
+    const DWORD BUFFER_SIZE = 128 * 1024;
+    csvBuffer = (BYTE*)malloc(BUFFER_SIZE);
+    if (csvBuffer == NULL)
     {
         return FALSE;
     }
     
+    char* csvPtr = (char*)csvBuffer;
+    DWORD remainingSize = BUFFER_SIZE;
+    
     // Write UTF-8 BOM
     unsigned char bom[3] = {0xEF, 0xBB, 0xBF};
-    fwrite(bom, 1, 3, file);
+    memcpy(csvPtr, bom, 3);
+    csvPtr += 3;
+    remainingSize -= 3;
     
     // Write CSV header
     const char* header = "hostname,description,lastConnected\r\n";
-    fwrite(header, 1, strlen(header), file);
+    size_t headerLen = strlen(header);
+    memcpy(csvPtr, header, headerLen);
+    csvPtr += headerLen;
+    remainingSize -= (DWORD)headerLen;
     
     // Write each host
     for (int i = 0; i < count; i++)
@@ -230,55 +388,132 @@ BOOL SaveHosts(const Host* hosts, int count)
         char utf8_hostname[MAX_HOSTNAME_LEN * 3];
         char utf8_description[MAX_DESCRIPTION_LEN * 3];
         char utf8_lastConnected[200];
+        char line[4096];
         
         // Convert wide strings to UTF-8
         WideCharToMultiByte(CP_UTF8, 0, hosts[i].hostname, -1, utf8_hostname, sizeof(utf8_hostname), NULL, NULL);
         WideCharToMultiByte(CP_UTF8, 0, hosts[i].description, -1, utf8_description, sizeof(utf8_description), NULL, NULL);
         WideCharToMultiByte(CP_UTF8, 0, hosts[i].lastConnected, -1, utf8_lastConnected, sizeof(utf8_lastConnected), NULL, NULL);
         
-        // Write hostname
+        // Build the CSV line
+        int lineLen = 0;
+        
+        // Add hostname (with quotes if needed)
         BOOL hostnameNeedsQuotes = (strchr(utf8_hostname, ',') != NULL);
         if (hostnameNeedsQuotes)
         {
-            fwrite("\"", 1, 1, file);
-            fwrite(utf8_hostname, 1, strlen(utf8_hostname), file);
-            fwrite("\"", 1, 1, file);
+            lineLen += sprintf_s(line + lineLen, sizeof(line) - lineLen, "\"%s\"", utf8_hostname);
         }
         else
         {
-            fwrite(utf8_hostname, 1, strlen(utf8_hostname), file);
+            lineLen += sprintf_s(line + lineLen, sizeof(line) - lineLen, "%s", utf8_hostname);
         }
         
-        // Write comma
-        fwrite(",", 1, 1, file);
+        // Add comma
+        lineLen += sprintf_s(line + lineLen, sizeof(line) - lineLen, ",");
         
-        // Write description
+        // Add description (with quotes if needed)
         BOOL descNeedsQuotes = (strchr(utf8_description, ',') != NULL);
         if (descNeedsQuotes)
         {
-            fwrite("\"", 1, 1, file);
-            fwrite(utf8_description, 1, strlen(utf8_description), file);
-            fwrite("\"", 1, 1, file);
+            lineLen += sprintf_s(line + lineLen, sizeof(line) - lineLen, "\"%s\"", utf8_description);
         }
         else
         {
-            fwrite(utf8_description, 1, strlen(utf8_description), file);
+            lineLen += sprintf_s(line + lineLen, sizeof(line) - lineLen, "%s", utf8_description);
         }
         
-        // Write comma
-        fwrite(",", 1, 1, file);
+        // Add comma
+        lineLen += sprintf_s(line + lineLen, sizeof(line) - lineLen, ",");
         
-        // Write lastConnected
-        fwrite(utf8_lastConnected, 1, strlen(utf8_lastConnected), file);
+        // Add lastConnected
+        lineLen += sprintf_s(line + lineLen, sizeof(line) - lineLen, "%s", utf8_lastConnected);
         
-        // Write newline
-        fwrite("\r\n", 1, 2, file);
+        // Add newline
+        lineLen += sprintf_s(line + lineLen, sizeof(line) - lineLen, "\r\n");
         
-        // Flush after each write
-        fflush(file);
+        // Copy to buffer
+        if ((DWORD)lineLen < remainingSize)
+        {
+            memcpy(csvPtr, line, lineLen);
+            csvPtr += lineLen;
+            remainingSize -= lineLen;
+        }
+        else
+        {
+            // Buffer too small
+            free(csvBuffer);
+            MessageBoxW(NULL, L"CSV data too large to save.", L"Error", MB_OK | MB_ICONERROR);
+            return FALSE;
+        }
     }
     
+    // Calculate actual CSV size
+    csvSize = (DWORD)(csvPtr - (char*)csvBuffer);
+    
+    /*
+     * STEP 2: Encrypt the CSV data
+     * 
+     * Use Windows DPAPI to encrypt the CSV buffer.
+     * The encrypted data can only be decrypted by the same Windows user.
+     */
+    if (!EncryptData(csvBuffer, csvSize, &encryptedData, &encryptedSize))
+    {
+        free(csvBuffer);
+        MessageBoxW(NULL, L"Failed to encrypt hosts data.", L"Encryption Error", MB_OK | MB_ICONERROR);
+        return FALSE;
+    }
+    
+    // Free the plaintext CSV buffer (we have encrypted version now)
+    free(csvBuffer);
+    csvBuffer = NULL;
+    
+    /*
+     * STEP 3: Write encrypted data to file
+     * 
+     * File format:
+     *   [4 bytes] Magic number - identifies this as an encrypted WinRDP file
+     *   [4 bytes] Version - allows for future format changes
+     *   [remaining] Encrypted data
+     */
+    
+    // Open file for writing (overwrites existing file) in binary mode
+    err = _wfopen_s(&file, hostsFilePath, L"wb");
+    if (err != 0 || file == NULL)
+    {
+        LocalFree(encryptedData);
+        return FALSE;
+    }
+    
+    // Write magic number
+    DWORD magic = ENCRYPTED_FILE_MAGIC;
+    if (fwrite(&magic, sizeof(DWORD), 1, file) != 1)
+    {
+        fclose(file);
+        LocalFree(encryptedData);
+        return FALSE;
+    }
+    
+    // Write version
+    DWORD version = ENCRYPTION_VERSION;
+    if (fwrite(&version, sizeof(DWORD), 1, file) != 1)
+    {
+        fclose(file);
+        LocalFree(encryptedData);
+        return FALSE;
+    }
+    
+    // Write encrypted data
+    if (fwrite(encryptedData, 1, encryptedSize, file) != encryptedSize)
+    {
+        fclose(file);
+        LocalFree(encryptedData);
+        return FALSE;
+    }
+    
+    // Success!
     fclose(file);
+    LocalFree(encryptedData);
     return TRUE;
 }
 

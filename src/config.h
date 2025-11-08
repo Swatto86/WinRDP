@@ -9,7 +9,7 @@
 
 // Application information
 #define APP_NAME                L"WinRDP"
-#define APP_VERSION             L"1.2.0"
+#define APP_VERSION             L"1.3.0"
 #define APP_CLASS_NAME          L"WinRDPWindowClass"
 #define APP_WINDOW_TITLE        L"WinRDP Manager"
 
@@ -19,6 +19,10 @@
 
 // File paths
 #define HOSTS_FILE_NAME         L"hosts.csv"
+
+// Encryption settings
+#define ENCRYPTED_FILE_MAGIC    0x57524450  // "WRDP" in hex - identifies encrypted files
+#define ENCRYPTION_VERSION      1           // Version of encryption format
 
 // Registry settings for autostart
 #define REG_RUN_KEY             L"Software\\Microsoft\\Windows\\CurrentVersion\\Run"
