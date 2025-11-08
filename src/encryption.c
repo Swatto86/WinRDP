@@ -4,21 +4,27 @@
  * This module implements encryption/decryption using Windows Data Protection API (DPAPI).
  * 
  * DPAPI Overview:
- *   - CryptProtectData() encrypts data using keys derived from user credentials
- *   - CryptUnprotectData() decrypts data encrypted by the same user
+ *   - CryptProtectData() encrypts data using keys derived from machine credentials
+ *   - CryptUnprotectData() decrypts data encrypted on the same machine
  *   - No explicit key management needed
  *   - Keys are managed by Windows LSA (Local Security Authority)
- *   - Data can only be decrypted by the same user on the same machine
+ *   - Data can be decrypted by any user on the same machine
  * 
  * Security Properties:
- *   - User-specific: Only the encrypting user can decrypt
+ *   - Machine-specific: Any user/process on this machine can decrypt
  *   - Machine-bound: Data encrypted on one machine can't be decrypted on another
- *   - Integrates with Windows security: Uses user's login credentials
+ *   - Integrates with Windows security: Uses machine's encryption keys
+ *   - Supports autostart scenarios: SYSTEM account can decrypt user-encrypted data
  * 
  * Use Cases:
  *   - Protecting sensitive application data (like our CSV file)
  *   - Storing configuration with sensitive information
  *   - Local credential storage
+ *   - Applications that run under SYSTEM (autostart, services)
+ * 
+ * Version History:
+ *   - v1.0-1.3: Used user-specific encryption (CRYPTPROTECT_LOCAL_MACHINE not set)
+ *   - v1.4+: Changed to machine-level encryption to support autostart scenarios
  */
 
 #include <windows.h>
@@ -95,10 +101,14 @@ BOOL EncryptData(const BYTE* plaintext, DWORD plaintextSize,
      *   3. Optional entropy (extra secret, NULL if not used)
      *   4. Reserved (must be NULL)
      *   5. Prompt struct (NULL = no UI prompt)
-     *   6. Flags (0 = current user, CRYPTPROTECT_LOCAL_MACHINE for all users)
+     *   6. Flags (CRYPTPROTECT_LOCAL_MACHINE = machine-level encryption)
      *   7. Output data blob (receives encrypted data)
      * 
      * The function allocates memory for dataOut.pbData using LocalAlloc
+     * 
+     * CRYPTPROTECT_LOCAL_MACHINE allows any user/process on this machine to decrypt,
+     * including SYSTEM account (needed for autostart scenarios). This is less secure
+     * than user-specific encryption, but necessary for services and autostart apps.
      */
     if (!CryptProtectData(
             &dataIn,                    // Data to encrypt
@@ -106,7 +116,7 @@ BOOL EncryptData(const BYTE* plaintext, DWORD plaintextSize,
             &entropy,                   // Optional entropy
             NULL,                       // Reserved
             NULL,                       // Prompt struct
-            0,                          // Flags (0 = current user only)
+            CRYPTPROTECT_LOCAL_MACHINE, // Flags (machine-level encryption)
             &dataOut))                  // Output
     {
         DWORD error = GetLastError();
@@ -138,17 +148,18 @@ BOOL EncryptData(const BYTE* plaintext, DWORD plaintextSize,
  * 1. Symmetry with Encryption:
  *    - Same DATA_BLOB structure used
  *    - Must use same entropy that was used for encryption
- *    - Must be called by same user who encrypted
+ *    - Must use same flags (CRYPTPROTECT_LOCAL_MACHINE) for machine-level data
  * 
  * 2. CryptUnprotectData Function:
  *    - Reverses CryptProtectData
- *    - Automatically handles user verification
+ *    - Automatically handles verification based on encryption mode
  *    - Returns original plaintext
  * 
  * 3. Security:
- *    - Will fail if called by different user
+ *    - Machine-level: Any user/process on this machine can decrypt
  *    - Will fail if entropy doesn't match
  *    - Will fail if data is corrupted
+ *    - Will fail if encrypted on different machine
  * 
  * 4. Description:
  *    - Can optionally retrieve description string
@@ -191,10 +202,13 @@ BOOL DecryptData(const BYTE* ciphertext, DWORD ciphertextSize,
      *   3. Optional entropy (must match encryption entropy)
      *   4. Reserved (must be NULL)
      *   5. Prompt struct (NULL = no UI prompt)
-     *   6. Flags (0 for standard decryption)
+     *   6. Flags (CRYPTPROTECT_LOCAL_MACHINE for machine-level decryption)
      *   7. Output data blob (receives decrypted data)
      * 
      * The function allocates memory for dataOut.pbData using LocalAlloc
+     * 
+     * Note: The flags parameter should match what was used during encryption.
+     * Since we use CRYPTPROTECT_LOCAL_MACHINE for encryption, we use it here too.
      */
     if (!CryptUnprotectData(
             &dataIn,                    // Encrypted data
@@ -202,7 +216,7 @@ BOOL DecryptData(const BYTE* ciphertext, DWORD ciphertextSize,
             &entropy,                   // Optional entropy (must match!)
             NULL,                       // Reserved
             NULL,                       // Prompt struct
-            0,                          // Flags
+            CRYPTPROTECT_LOCAL_MACHINE, // Flags (must match encryption)
             &dataOut))                  // Output
     {
         /*

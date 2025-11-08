@@ -44,7 +44,7 @@ This project demonstrates:
 - **Secure Storage** - Windows Credential Manager integration
   - All passwords encrypted by Windows
   - Per-host and global credentials stored separately
-  - Host data file encrypted using Windows DPAPI (v1.3.0+)
+  - Host data file encrypted using Windows DPAPI (v1.3.0+, machine-level encryption v1.4.0+)
 - **Quick Connect** - Double-click or single-click connect to servers
 - **Search & Filter** - Real-time filtering of server list
 - **System Tray** - Minimize to tray, quick access from notification area
@@ -334,7 +334,9 @@ DwmSetWindowAttribute(hwnd, 20, &darkMode, sizeof(darkMode));
 
 - **Credentials** are stored using Windows Credential Manager (encrypted)
 - **Host data** (hosts.csv) is encrypted using Windows DPAPI (v1.3.0+)
-  - User-specific encryption - only the Windows user who created the file can decrypt it
+  - Machine-level encryption (v1.4.0+) - any user/process on same machine can decrypt
+  - Supports autostart scenarios where application runs under SYSTEM account
+  - Data remains machine-bound - cannot be decrypted on different computers
   - Automatic encryption/decryption on save/load
   - Backward compatible with unencrypted files from older versions
   - No manual key management required
