@@ -312,9 +312,10 @@
         "name": "Swatto",
         "url": "https://swatto.co.uk"
       },
-      "softwareVersion": "1.2.0",
+      "softwareVersion": "1.4.0",
       "screenshot": "https://swatto.co.uk/",
       "featureList": [
+        "Encrypted CSV storage using Windows DPAPI (machine-level)",
         "Persistent RDP files eliminate security warnings",
         "Recent connections in tray menu (5 most recent)",
         "Last connected timestamps with ISO 8601 format",
@@ -332,6 +333,7 @@
         "Dark mode support (follows Windows theme)",
         "System tray integration with context menu",
         "Autostart with Windows (registry-based)",
+        "SYSTEM account compatible (works with autostart)",
         "Single instance enforcement (mutex-based)",
         "ListView column sorting with comparison callbacks",
         "Absolute path resolution (works with autostart)"
@@ -355,16 +357,17 @@
     <div class="container">
         <div class="section">
             <h2>💼 How WinRDP Saves Time for System Administrators</h2>
-            <p style="margin-bottom: 20px; font-size: 1.1em; color: #555;">
+            <p style="margin-bottom: 20px; font-size: 1.1em; color: #ccc;">
                 <strong>Stop wasting time on repetitive RDP logins.</strong> WinRDP makes connecting to multiple servers seamless:
             </p>
             <ul style="line-height: 2.2; font-size: 1.05em;">
-                <li>✓ <strong>Automatic credential storage</strong> in Windows Credential Manager - set once, never enter passwords again</li>
+                <li>✓ <strong>Encrypted storage</strong> - host data encrypted with Windows DPAPI, credentials in Windows Credential Manager</li>
+                <li>✓ <strong>Automatic credential storage</strong> - set once, never enter passwords again</li>
                 <li>✓ <strong>Seamless connections</strong> - one-click RDP launches without any login prompts</li>
                 <li>✓ <strong>Smart credential fallback</strong> - global default credentials with per-server overrides when needed</li>
-                <li>✓ <strong>Centralized server management</strong> - all your hosts organized in one list</li>
+                <li>✓ <strong>Centralized server management</strong> - all your hosts organized in one encrypted list</li>
                 <li>✓ <strong>Toggle hotkey</strong> - Ctrl+Shift+R shows/hides WinRDP from anywhere</li>
-                <li>✓ <strong>Edit credentials anytime</strong> - switch between accounts without restarting</li>
+                <li>✓ <strong>Autostart compatible</strong> - works when launched by Windows Task Scheduler or SYSTEM account</li>
             </ul>
             <p style="margin-top: 20px; padding: 15px; background: #1e3040; border-radius: 8px; border-left: 4px solid #0078d4;">
                 <strong>Result:</strong> Connect to any server in seconds instead of minutes. No more retyping credentials, memorizing hostnames, or fumbling with sticky notes.
@@ -374,36 +377,44 @@
         <div class="download-section">
             <h2 style="margin: 0 0 20px 0; color: #e0e0e0;">📥 Download</h2>
             <p style="font-size: 1.1em; margin-bottom: 20px;">Click to download the installer</p>
-            <a href="https://github.com/Swatto86/WinRDP/releases/download/1.2.0/WinRDP-Setup-1.2.0.exe" class="download-button">
-                Download WinRDP v1.2.0
+            <a href="https://github.com/Swatto86/WinRDP/releases/download/1.4.0/WinRDP-Setup-1.4.0.exe" class="download-button">
+                Download WinRDP v1.4.0
             </a>
             <div class="version-info">
                 Windows 7+ (64-bit) • ~140 KB installer • NSIS-powered<br>
-                <span style="color: #16a34a; font-weight: 600;">✨ New: Persistent RDP files eliminate security warnings</span>
+                <span style="color: #16a34a; font-weight: 600;">✨ New: Encrypted CSV storage + Autostart fix</span>
             </div>
         </div>
         
         <div class="section">
-            <h2>✨ Version 1.2.0 - Polish & Productivity Release</h2>
+            <h2>✨ Version 1.4.0 - Security & Reliability Release</h2>
             <p style="margin-bottom: 15px; font-size: 1.05em; color: #ccc;">
-                <strong>Major UX improvements</strong> that make WinRDP faster and more polished than ever.
+                <strong>Critical bug fixes</strong> for encryption and autostart compatibility.
             </p>
+            <div style="background: #3a1e1e; border-left: 4px solid #ef4444; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+                <p style="margin: 0; color: #fca5a5;"><strong>🔧 Critical Fixes (v1.4.0):</strong></p>
+                <ul style="margin: 10px 0 0 20px; color: #fca5a5;">
+                    <li><strong>🔒 DPAPI Encryption Fix</strong> - Changed to machine-level encryption for autostart compatibility</li>
+                    <li><strong>🖥️ SYSTEM Account Support</strong> - Application now works when launched by Windows Task Scheduler</li>
+                    <li><strong>📝 Example Hosts</strong> - Installer now includes 3 example servers for immediate testing</li>
+                    <li><strong>🔐 CSV File Encryption</strong> - Host data encrypted using Windows DPAPI (v1.3.0+, machine-level v1.4.0)</li>
+                </ul>
+            </div>
             <div style="background: #1e3a1e; border-left: 4px solid #16a34a; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
-                <p style="margin: 0; color: #4ade80;"><strong>What's New:</strong></p>
+                <p style="margin: 0; color: #4ade80;"><strong>Previous Release Highlights (v1.2.0):</strong></p>
                 <ul style="margin: 10px 0 0 20px; color: #4ade80;">
-                    <li><strong>🔒 Persistent RDP Files</strong> - Stored in AppData\Roaming\WinRDP\Connections, eliminates repetitive security warnings</li>
-                    <li><strong>⏱️ Auto-Close Countdown Timer</strong> - 5-second smart startup that auto-closes when credentials are saved</li>
-                    <li><strong>🕒 Recent Connections Menu</strong> - Access your 5 most recent servers directly from the system tray</li>
-                    <li><strong>📊 Last Connected Timestamps</strong> - See when you last connected to each server (ISO 8601 format)</li>
-                    <li><strong>🔍 Real-Time Search & Filter</strong> - Instant filtering as you type, searches hostname and description</li>
-                    <li><strong>↕️ Column Sorting</strong> - Click headers to sort by hostname, description, or last connected</li>
-                    <li><strong>📈 Dynamic Status Labels</strong> - Shows "X of Y hosts" when filtering, "X hosts" normally</li>
-                    <li><strong>✏️ Edit Credentials Button</strong> - Change credentials anytime without restarting the app</li>
-                    <li><strong>🔐 Per-Host Credentials</strong> - Two-tier system: per-host credentials with automatic global fallback</li>
+                    <li><strong>🔒 Persistent RDP Files</strong> - Stored in AppData\Roaming\WinRDP\Connections</li>
+                    <li><strong>⏱️ Auto-Close Countdown Timer</strong> - 5-second smart startup</li>
+                    <li><strong>🕒 Recent Connections Menu</strong> - 5 most recent servers in system tray</li>
+                    <li><strong>📊 Last Connected Timestamps</strong> - ISO 8601 format tracking</li>
+                    <li><strong>🔍 Real-Time Search & Filter</strong> - Instant filtering as you type</li>
+                    <li><strong>↕️ Column Sorting</strong> - Click headers to sort</li>
+                    <li><strong>✏️ Edit Credentials Button</strong> - Change credentials anytime</li>
+                    <li><strong>🔐 Per-Host Credentials</strong> - Two-tier credential system</li>
                 </ul>
             </div>
             <p style="margin-top: 15px; font-size: 0.95em; color: #999;">
-                v1.2.0 focuses on productivity and polish. The persistent RDP files mean no more clicking through security warnings. The auto-close timer gets you to your servers faster. Recent connections in the tray menu eliminate 3 clicks for your most-used servers. Every UI element has been refined for a professional, keyboard-friendly experience.
+                v1.4.0 resolves critical issues with autostart and encryption. The machine-level DPAPI encryption allows the application to run under SYSTEM account (needed for autostart scenarios). CSV files are now encrypted at rest for security while maintaining cross-account compatibility on the same machine. Example hosts are included for first-time users.
             </p>
         </div>
         
@@ -411,8 +422,9 @@
             <div class="info-card">
                 <h3>🔐 Secure</h3>
                 <ul>
+                    <li>Encrypted CSV (DPAPI)</li>
                     <li>Windows Credential Manager</li>
-                    <li>Encrypted password storage</li>
+                    <li>Machine-bound encryption</li>
                     <li>Per-host credentials</li>
                     <li>No data transmission</li>
                 </ul>
@@ -431,6 +443,7 @@
             <div class="info-card">
                 <h3>🎯 Powerful</h3>
                 <ul>
+                    <li>SYSTEM account compatible</li>
                     <li>Toggle hotkey (Ctrl+Shift+R)</li>
                     <li>AD/network discovery</li>
                     <li>Auto-close countdown timer</li>
@@ -438,7 +451,6 @@
                     <li>Real-time search & filter</li>
                     <li>Column sorting</li>
                     <li>Dark mode support</li>
-                    <li>Professional UI</li>
                 </ul>
             </div>
         </div>
@@ -519,18 +531,18 @@
             <h2>🚀 Complete Feature Set (35+ Features)</h2>
             <div class="info-grid">
                 <div>
-                    <h3 style="color: #0078d4; margin-bottom: 15px;">🌟 New in v1.2.0</h3>
+                    <h3 style="color: #0078d4; margin-bottom: 15px;">🌟 New in v1.4.0</h3>
                     <ul>
+                        <li>CSV file encryption (DPAPI)</li>
+                        <li>Machine-level encryption</li>
+                        <li>SYSTEM account support</li>
+                        <li>Autostart compatibility fix</li>
+                        <li>Example hosts included</li>
+                        <li>Backward compatible decryption</li>
                         <li>Persistent RDP files (no warnings)</li>
                         <li>Auto-close countdown timer (5 sec)</li>
-                        <li>Recent connections menu (5 recent)</li>
-                        <li>Last connected timestamps</li>
+                        <li>Recent connections menu</li>
                         <li>Real-time search & filter</li>
-                        <li>Column sorting (click headers)</li>
-                        <li>Dynamic status labels</li>
-                        <li>Edit credentials button</li>
-                        <li>Per-host credential UI</li>
-                        <li>Absolute path resolution</li>
                     </ul>
                 </div>
                 <div>
@@ -549,16 +561,17 @@
                     </ul>
                 </div>
                 <div>
-                    <h3 style="color: #0078d4; margin-bottom: 15px;">Credential Management</h3>
+                    <h3 style="color: #0078d4; margin-bottom: 15px;">Security Features</h3>
                     <ul>
+                        <li>CSV encryption (DPAPI)</li>
+                        <li>Machine-bound encryption</li>
+                        <li>Application-specific entropy</li>
                         <li>Two-tier credential system</li>
                         <li>Global default credentials</li>
                         <li>Per-host credential override</li>
                         <li>Windows Credential Manager</li>
-                        <li>Encrypted storage (Windows)</li>
-                        <li>Credential enumeration</li>
+                        <li>Encrypted password storage</li>
                         <li>Smart fallback logic</li>
-                        <li>Edit mode vs normal mode</li>
                         <li>Bulk credential delete</li>
                     </ul>
                 </div>
