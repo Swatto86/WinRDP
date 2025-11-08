@@ -205,17 +205,15 @@ BOOL DecryptData(const BYTE* ciphertext, DWORD ciphertextSize,
             0,                          // Flags
             &dataOut))                  // Output
     {
-        DWORD error = GetLastError();
-        
         /*
          * Common error codes:
          *   ERROR_INVALID_DATA - Data is corrupted or not encrypted with DPAPI
          *   ERROR_INVALID_PARAMETER - Bad parameters
          *   NTE_BAD_DATA - Wrong user or wrong entropy
+         * 
+         * We don't show error dialog here - might be legitimate (file not encrypted yet)
+         * Let the caller handle it appropriately
          */
-        
-        // Don't show error dialog here - might be legitimate (file not encrypted yet)
-        // Let the caller handle it
         return FALSE;
     }
     

@@ -343,7 +343,6 @@ BOOL SaveHosts(const Host* hosts, int count)
     DWORD csvSize = 0;
     BYTE* encryptedData = NULL;
     DWORD encryptedSize = 0;
-    BOOL result = FALSE;
     
     // Get the full path to hosts.csv (critical for autostart scenarios)
     if (!get_hosts_file_path(hostsFilePath, MAX_PATH))
@@ -722,7 +721,7 @@ void FreeHosts(Host* hosts, int count)
 /*
  * DeleteAllHosts - Delete all hosts from the CSV file
  * 
- * This function creates an empty CSV file with just the header,
+ * This function creates an empty encrypted CSV file with just the header,
  * effectively deleting all hosts in one operation.
  * 
  * Returns:
@@ -730,33 +729,9 @@ void FreeHosts(Host* hosts, int count)
  */
 BOOL DeleteAllHosts(void)
 {
-    FILE* file = NULL;
-    errno_t err;
-    wchar_t hostsFilePath[MAX_PATH];
-    
-    // Get the full path to hosts.csv (critical for autostart scenarios)
-    if (!get_hosts_file_path(hostsFilePath, MAX_PATH))
-    {
-        return FALSE;
-    }
-    
-    // Open file for writing (overwrites existing file) in binary mode
-    err = _wfopen_s(&file, hostsFilePath, L"wb");
-    if (err != 0 || file == NULL)
-    {
-        return FALSE;
-    }
-    
-    // Write UTF-8 BOM
-    unsigned char bom[3] = {0xEF, 0xBB, 0xBF};
-    fwrite(bom, 1, 3, file);
-    
-    // Write CSV header only (no hosts)
-    const char* header = "hostname,description\r\n";
-    fwrite(header, 1, strlen(header), file);
-    
-    fclose(file);
-    return TRUE;
+    // Simply save an empty host list using the standard encrypted format
+    // This ensures consistency with SaveHosts() and maintains encryption
+    return SaveHosts(NULL, 0);
 }
 
 /*
