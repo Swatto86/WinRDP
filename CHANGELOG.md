@@ -13,6 +13,10 @@ All notable changes to WinRDP will be documented in this file.
   - Still maintains machine-bound security - encrypted data only decryptable on same computer
   - Fixes issue where CSV file couldn't be read when launched by Windows Task Scheduler or as service
   - **Important**: Files encrypted with v1.3.0 need to be re-encrypted (open and save) to work with autostart
+- **Empty Example Hosts** - Fixed example hosts.csv showing no servers on first launch
+  - Added 3 example server entries to hosts.csv
+  - Users now see example servers immediately after installation
+  - Examples can be modified or deleted through the application UI
 
 ### Security Note
 - Machine-level encryption is less secure than user-specific encryption, but necessary for:
