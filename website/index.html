@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WinRDP - Windows RDP Manager</title>
-    <meta name="description" content="Lightweight RDP connection manager written in pure C using Windows API.">
+    <meta name="description" content="A simple RDP connection manager for Windows. Written in C using Windows API. Open source and free.">
     <meta name="keywords" content="RDP manager, Windows RDP, remote desktop, C programming, Windows API, RDP connection, WinRDP, Swatto">
     <meta name="author" content="Swatto">
     <meta name="robots" content="index, follow">
@@ -18,14 +18,14 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://swatto.co.uk/">
     <meta property="og:title" content="WinRDP - Windows RDP Manager">
-    <meta property="og:description" content="Lightweight RDP connection manager written in pure C using Windows API.">
+    <meta property="og:description" content="A simple RDP connection manager for Windows. Written in C using Windows API. Open source and free.">
     <meta property="og:site_name" content="Swatto">
     
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:url" content="https://swatto.co.uk/">
     <meta name="twitter:title" content="WinRDP - Windows RDP Manager">
-    <meta name="twitter:description" content="Lightweight RDP connection manager written in pure C using Windows API.">
+    <meta name="twitter:description" content="A simple RDP connection manager for Windows. Written in C using Windows API. Open source and free.">
     <style>
         * {
             margin: 0;
@@ -305,7 +305,7 @@
         "price": "0",
         "priceCurrency": "USD"
       },
-      "description": "Lightweight RDP connection manager written in pure C using Windows API. Educational Windows API project with complete documentation.",
+      "description": "A simple RDP connection manager for Windows. Written in C using Windows API. Open source with complete documentation.",
       "url": "https://swatto.co.uk/",
       "author": {
         "@type": "Person",
@@ -333,10 +333,10 @@
         "Dark mode support (follows Windows theme)",
         "System tray integration with context menu",
         "Autostart with Windows (registry-based)",
-        "SYSTEM account compatible (works with autostart)",
+        "Machine-level DPAPI encryption for autostart",
         "Single instance enforcement (mutex-based)",
         "ListView column sorting with comparison callbacks",
-        "Absolute path resolution (works with autostart)"
+        "Absolute path resolution for autostart"
       ],
       "programmingLanguage": "C",
       "license": "https://github.com/Swatto86/WinRDP/blob/main/LICENSE"
@@ -347,74 +347,74 @@
     <header>
         <div class="container">
             <h1>🖥️ WinRDP</h1>
-            <p>Lightweight Windows RDP Connection Manager</p>
+            <p>A simple RDP connection manager for Windows</p>
             <div class="tagline">
-                Pure C • Windows API • Educational
+                Written in C • Uses Windows API • Open source
             </div>
         </div>
     </header>
     
     <div class="container">
         <div class="section">
-            <h2>💼 How WinRDP Saves Time for System Administrators</h2>
+            <h2>💼 Why I Built This</h2>
             <p style="margin-bottom: 20px; font-size: 1.1em; color: #ccc;">
-                <strong>Stop wasting time on repetitive RDP logins.</strong> WinRDP makes connecting to multiple servers seamless:
+                I got tired of typing passwords over and over when connecting to multiple servers. So I built WinRDP to make my life easier:
             </p>
             <ul style="line-height: 2.2; font-size: 1.05em;">
-                <li>✓ <strong>Encrypted storage</strong> - host data encrypted with Windows DPAPI, credentials in Windows Credential Manager</li>
-                <li>✓ <strong>Automatic credential storage</strong> - set once, never enter passwords again</li>
-                <li>✓ <strong>Seamless connections</strong> - one-click RDP launches without any login prompts</li>
-                <li>✓ <strong>Smart credential fallback</strong> - global default credentials with per-server overrides when needed</li>
-                <li>✓ <strong>Centralized server management</strong> - all your hosts organized in one encrypted list</li>
-                <li>✓ <strong>Toggle hotkey</strong> - Ctrl+Shift+R shows/hides WinRDP from anywhere</li>
-                <li>✓ <strong>Autostart compatible</strong> - works when launched by Windows Task Scheduler or SYSTEM account</li>
+                <li>✓ <strong>Encrypted storage</strong> - your host data is encrypted with Windows DPAPI, credentials go in Windows Credential Manager</li>
+                <li>✓ <strong>Set it and forget it</strong> - save your credentials once, never type them again</li>
+                <li>✓ <strong>One-click connections</strong> - double-click a host and you're connected, no prompts</li>
+                <li>✓ <strong>Smart defaults</strong> - use the same credentials everywhere, or override for specific servers</li>
+                <li>✓ <strong>Everything in one place</strong> - all your servers in a simple, searchable list</li>
+                <li>✓ <strong>Quick access anywhere</strong> - hit Ctrl+Shift+R to pop up WinRDP from whatever you're doing</li>
+                <li>✓ <strong>Always ready</strong> - starts with Windows so it's there when you need it</li>
             </ul>
             <p style="margin-top: 20px; padding: 15px; background: #1e3040; border-radius: 8px; border-left: 4px solid #0078d4;">
-                <strong>Result:</strong> Connect to any server in seconds instead of minutes. No more retyping credentials, memorizing hostnames, or fumbling with sticky notes.
+                <strong>The result?</strong> I can connect to any of my servers in seconds. No more hunting for passwords, no more typing hostnames, no more sticky notes on my monitor.
             </p>
         </div>
         
         <div class="download-section">
             <h2 style="margin: 0 0 20px 0; color: #e0e0e0;">📥 Download</h2>
-            <p style="font-size: 1.1em; margin-bottom: 20px;">Click to download the installer</p>
+            <p style="font-size: 1.1em; margin-bottom: 20px;">Grab the latest version</p>
             <a href="https://github.com/Swatto86/WinRDP/releases/download/1.4.0/WinRDP-Setup-1.4.0.exe" class="download-button">
                 Download WinRDP v1.4.0
             </a>
             <div class="version-info">
-                Windows 7+ (64-bit) • ~140 KB installer • NSIS-powered<br>
-                <span style="color: #16a34a; font-weight: 600;">✨ New: Encrypted CSV storage + Autostart fix</span>
+                Windows 7+ (64-bit) • ~140 KB installer<br>
+                <span style="color: #16a34a; font-weight: 600;">✨ Latest: Encrypted CSV storage + autostart fixes</span>
             </div>
         </div>
         
         <div class="section">
-            <h2>✨ Version 1.4.0 - Security & Reliability Release</h2>
+            <h2>✨ What's New in v1.4.0</h2>
             <p style="margin-bottom: 15px; font-size: 1.05em; color: #ccc;">
-                <strong>Critical bug fixes</strong> for encryption and autostart compatibility.
+                Fixed some important bugs that were causing issues with encryption and autostart.
             </p>
             <div style="background: #3a1e1e; border-left: 4px solid #ef4444; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
-                <p style="margin: 0; color: #fca5a5;"><strong>🔧 Critical Fixes (v1.4.0):</strong></p>
+                <p style="margin: 0; color: #fca5a5;"><strong>🔧 Bug Fixes (v1.4.0):</strong></p>
                 <ul style="margin: 10px 0 0 20px; color: #fca5a5;">
-                    <li><strong>🔒 DPAPI Encryption Fix</strong> - Changed to machine-level encryption for autostart compatibility</li>
-                    <li><strong>🖥️ SYSTEM Account Support</strong> - Application now works when launched by Windows Task Scheduler</li>
-                    <li><strong>📝 Example Hosts</strong> - Installer now includes 3 example servers for immediate testing</li>
-                    <li><strong>🔐 CSV File Encryption</strong> - Host data encrypted using Windows DPAPI (v1.3.0+, machine-level v1.4.0)</li>
+                    <li><strong>🔒 Fixed encryption</strong> - switched to machine-level DPAPI so autostart actually works</li>
+                    <li><strong>🖥️ Autostart works now</strong> - no more blank window on startup</li>
+                    <li><strong>📝 Added examples</strong> - installer includes 3 example servers so you can try it right away</li>
+                    <li><strong>🔐 CSV encryption</strong> - your host list is now encrypted on disk</li>
                 </ul>
             </div>
             <div style="background: #1e3a1e; border-left: 4px solid #16a34a; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
-                <p style="margin: 0; color: #4ade80;"><strong>Previous Release Highlights (v1.2.0):</strong></p>
+                <p style="margin: 0; color: #4ade80;"><strong>Recent additions (v1.2.0):</strong></p>
                 <ul style="margin: 10px 0 0 20px; color: #4ade80;">
-                    <li><strong>🔒 Persistent RDP Files</strong> - Stored in AppData\Roaming\WinRDP\Connections</li>
-                    <li><strong>⏱️ Auto-Close Countdown Timer</strong> - 5-second smart startup</li>
-                    <li><strong>🕒 Recent Connections Menu</strong> - 5 most recent servers in system tray</li>
-                    <li><strong>📊 Last Connected Timestamps</strong> - ISO 8601 format tracking</li>
-                    <li><strong>🔍 Real-Time Search & Filter</strong> - Instant filtering as you type</li>
-                    <li><strong>↕️ Column Sorting</strong> - Click headers to sort</li>
-                    <li><strong>✏️ Edit Credentials Button</strong> - Change credentials anytime</li>
-                    <li><strong>🔐 Per-Host Credentials</strong> - Two-tier credential system</li>
+                    <li><strong>🔒 Persistent RDP files</strong> - no more security warnings every time you connect</li>
+                    <li><strong>⏱️ Auto-close timer</strong> - window hides after 5 seconds if you don't use it</li>
+                    <li><strong>🕒 Recent connections</strong> - right-click the tray icon to see your last 5 connections</li>
+                    <li><strong>📊 Connection history</strong> - tracks when you last connected to each server</li>
+                    <li><strong>🔍 Search box</strong> - filters your server list as you type</li>
+                    <li><strong>↕️ Sortable columns</strong> - click the column headers to sort</li>
+                    <li><strong>✏️ Edit credentials</strong> - added a button to change credentials without restarting</li>
+                    <li><strong>🔐 Per-host credentials</strong> - override the default credentials for specific servers</li>
                 </ul>
             </div>
             <p style="margin-top: 15px; font-size: 0.95em; color: #999;">
-                v1.4.0 resolves critical issues with autostart and encryption. The machine-level DPAPI encryption allows the application to run under SYSTEM account (needed for autostart scenarios). CSV files are now encrypted at rest for security while maintaining cross-account compatibility on the same machine. Example hosts are included for first-time users.
+                The v1.4.0 fixes were important - the previous encryption method broke when Windows started the app automatically. Now it uses machine-level encryption which works reliably at startup. I also threw in some example hosts so new users have something to look at right away.
             </p>
         </div>
         
@@ -443,7 +443,7 @@
             <div class="info-card">
                 <h3>🎯 Powerful</h3>
                 <ul>
-                    <li>SYSTEM account compatible</li>
+                    <li>Autostart with Windows</li>
                     <li>Toggle hotkey (Ctrl+Shift+R)</li>
                     <li>AD/network discovery</li>
                     <li>Auto-close countdown timer</li>
@@ -456,8 +456,8 @@
         </div>
         
         <div class="section">
-            <h2>🎓 Educational Focus - Learn Windows API Programming</h2>
-            <p style="margin-bottom: 20px;">WinRDP includes a comprehensive <strong>30-chapter programming book</strong> (~25,000 lines) that teaches C and Windows API programming from absolute basics to advanced techniques. Every feature in WinRDP is explained in detail.</p>
+            <h2>🎓 Learning Resource - The Book I Wish I'd Had</h2>
+            <p style="margin-bottom: 20px;">I wrote a <strong>30-chapter book</strong> (~25,000 lines) while building this, explaining everything from C basics to Windows API programming. It's the guide I wish existed when I started learning this stuff. Every feature in WinRDP is broken down and explained.</p>
             
             <div style="background: #2d2a1e; border-left: 4px solid #f59e0b; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
                 <h4 style="color: #f59e0b; margin: 0 0 15px 0;">📚 Complete Learning Path</h4>
@@ -523,30 +523,30 @@
             </div>
             
             <p style="margin-top: 20px; padding: 15px; background: #1e3040; border-radius: 8px; border-left: 4px solid #0078d4;">
-                <strong>Perfect for learning:</strong> Each chapter builds on the previous, teaching you exactly what you need when you need it. From "Hello World" to a complete production application with professional features like dark mode, credential management, and network discovery.
+                <strong>How it works:</strong> Each chapter builds on the last one, teaching you what you need right when you need it. You go from "Hello World" to building a real application with dark mode, credential management, and network discovery. No fluff, just practical stuff that actually works.
             </p>
         </div>
         
         <div class="section">
-            <h2>🚀 Complete Feature Set (35+ Features)</h2>
+            <h2>🚀 What It Does</h2>
             <div class="info-grid">
                 <div>
-                    <h3 style="color: #0078d4; margin-bottom: 15px;">🌟 New in v1.4.0</h3>
+                    <h3 style="color: #0078d4; margin-bottom: 15px;">🌟 Latest Updates</h3>
                     <ul>
                         <li>CSV file encryption (DPAPI)</li>
                         <li>Machine-level encryption</li>
-                        <li>SYSTEM account support</li>
-                        <li>Autostart compatibility fix</li>
-                        <li>Example hosts included</li>
-                        <li>Backward compatible decryption</li>
-                        <li>Persistent RDP files (no warnings)</li>
-                        <li>Auto-close countdown timer (5 sec)</li>
+                        <li>Better autostart reliability</li>
+                        <li>Fixed autostart issues</li>
+                        <li>Includes example hosts</li>
+                        <li>Backward compatible</li>
+                        <li>Persistent RDP files</li>
+                        <li>Auto-close timer (5 sec)</li>
                         <li>Recent connections menu</li>
-                        <li>Real-time search & filter</li>
+                        <li>Live search & filter</li>
                     </ul>
                 </div>
                 <div>
-                    <h3 style="color: #0078d4; margin-bottom: 15px;">Connection Management</h3>
+                    <h3 style="color: #0078d4; margin-bottom: 15px;">Managing Connections</h3>
                     <ul>
                         <li>Store unlimited RDP servers</li>
                         <li>Quick connect (double-click/Enter)</li>
@@ -561,22 +561,22 @@
                     </ul>
                 </div>
                 <div>
-                    <h3 style="color: #0078d4; margin-bottom: 15px;">Security Features</h3>
+                    <h3 style="color: #0078d4; margin-bottom: 15px;">Security</h3>
                     <ul>
                         <li>CSV encryption (DPAPI)</li>
                         <li>Machine-bound encryption</li>
-                        <li>Application-specific entropy</li>
-                        <li>Two-tier credential system</li>
-                        <li>Global default credentials</li>
-                        <li>Per-host credential override</li>
+                        <li>App-specific encryption</li>
+                        <li>Two-tier credentials</li>
+                        <li>Global defaults</li>
+                        <li>Per-host overrides</li>
                         <li>Windows Credential Manager</li>
-                        <li>Encrypted password storage</li>
-                        <li>Smart fallback logic</li>
-                        <li>Bulk credential delete</li>
+                        <li>Encrypted passwords</li>
+                        <li>Smart fallback</li>
+                        <li>Bulk delete option</li>
                     </ul>
                 </div>
                 <div>
-                    <h3 style="color: #0078d4; margin-bottom: 15px;">Advanced Features</h3>
+                    <h3 style="color: #0078d4; margin-bottom: 15px;">Extra Features</h3>
                     <ul>
                         <li>Toggle hotkey (Ctrl+Shift+R)</li>
                         <li>Secret bulk delete (Ctrl+Shift+Alt+D)</li>
@@ -592,26 +592,26 @@
                 </div>
             </div>
             <p style="margin-top: 20px; padding: 15px; background: #2d1e2a; border-radius: 8px; border-left: 4px solid #a855f7; color: #e9d5ff;">
-                <strong>💡 Productivity Tips:</strong> Use <code style="background: #1e1e1e; padding: 2px 8px; border-radius: 4px;">Ctrl+Shift+R</code> to toggle WinRDP from anywhere. Recent connections menu in the tray gives one-click access to your most-used servers. The search box filters as you type. Click column headers to sort. Double-click or press Enter on a host to connect instantly.
+                <strong>💡 Quick tips:</strong> Hit <code style="background: #1e1e1e; padding: 2px 8px; border-radius: 4px;">Ctrl+Shift+R</code> to show/hide WinRDP from anywhere. Right-click the tray icon to see your recent connections. Search box filters as you type. Click column headers to sort. Double-click or hit Enter on a host to connect.
             </p>
         </div>
         
         <div class="github-section">
             <h2 style="margin: 0 0 20px 0;">📂 Source Code</h2>
             <p style="font-size: 1.1em; margin-bottom: 20px; opacity: 0.9;">
-                Explore the code, learn from it, modify it. Educational use encouraged!
+                All the code is on GitHub. Feel free to explore it, learn from it, modify it, whatever you want.
             </p>
             <a href="https://github.com/Swatto86/WinRDP" class="github-button">
                 View on GitHub
             </a>
             <p style="margin-top: 20px; opacity: 0.8; font-size: 0.9em;">
-                MIT License • Educational Use • Well Commented • Beginner Friendly
+                MIT License • Well commented • Beginner friendly
             </p>
         </div>
         
         <div class="section">
-            <h2>📖 Comprehensive Documentation (25,000+ Lines)</h2>
-            <p style="margin-bottom: 20px;">Complete learning resources included in the repository - from absolute beginner to advanced Windows programming:</p>
+            <h2>📖 Documentation</h2>
+            <p style="margin-bottom: 20px;">Everything's documented - from getting started to understanding how it all works:</p>
             
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 15px;">
                 <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; border-left: 4px solid #0078d4;">
@@ -653,16 +653,16 @@
             </div>
             
             <p style="margin-top: 20px; padding: 15px; background: #1e3040; border-radius: 8px; border-left: 4px solid #0078d4;">
-                <strong>🎯 Learning Path:</strong> Start with Chapter 1 "Introduction to C Programming" and work through to Chapter 30 "System Testing". Each chapter includes working code examples, exercises, common mistakes, and best practices. By the end, you'll have built WinRDP from scratch and understand every line of code.
+                <strong>🎯 How to use it:</strong> Start at Chapter 1 and work your way through to Chapter 30. Each chapter has working code, exercises, and explanations of common mistakes. By the end, you'll have built WinRDP from scratch and actually understand how it all works.
             </p>
         </div>
     </div>
     
     <footer>
         <div class="container">
-            <p><strong>Created by Swatto</strong></p>
+            <p><strong>Made by Swatto</strong></p>
             <p class="license-info">
-                Educational Windows API Project • Public Domain License
+                MIT License • Use it however you want
             </p>
             <p style="margin-top: 20px; font-size: 0.85em;">
                 <a href="https://swatto.co.uk" style="color: #0078d4; text-decoration: none;">swatto.co.uk</a>
