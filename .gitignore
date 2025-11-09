@@ -16,7 +16,8 @@ WinRDP-Setup-*.exe
 *.log
 
 # Data files (user-specific)
-hosts.csv
+# NOTE: hosts.csv is intentionally tracked for distribution
+# It provides example servers for first-time users
 
 # IDE and editor files
 .vscode/

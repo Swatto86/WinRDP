@@ -4,15 +4,17 @@
  * This module provides encryption/decryption functionality for sensitive data
  * using Windows Data Protection API (DPAPI).
  * 
- * DPAPI provides user-specific encryption without requiring explicit key management.
- * The encryption keys are derived from the user's login credentials and managed
+ * DPAPI provides machine-level encryption without requiring explicit key management.
+ * The encryption keys are derived from the machine's credentials and managed
  * by Windows automatically.
  * 
- * Key features:
- *   - User-specific encryption (only the current Windows user can decrypt)
+ * Key features (v1.4.0+):
+ *   - Machine-level encryption (any user/process on same machine can decrypt)
  *   - No manual key management required
  *   - Integrates with Windows security infrastructure
  *   - Supports optional entropy for additional security
+ *   - Enables autostart scenarios (SYSTEM account can decrypt)
+ *   - Data remains machine-bound (cannot be decrypted on different computers)
  */
 
 #ifndef ENCRYPTION_H

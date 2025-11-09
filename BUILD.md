@@ -8,7 +8,7 @@ Complete guide for building WinRDP from source and creating the installer.
 
 ### Installing WinRDP
 
-1. Download `WinRDP-Setup-1.2.0.exe`
+1. Download `WinRDP-Setup-1.4.0.exe`
 2. Double-click to run the installer
 3. Follow the wizard
 4. WinRDP installs to `C:\Program Files\WinRDP\`
@@ -57,14 +57,14 @@ build.bat
 mkdir build build\obj
 gcc -Wall -Wextra -std=c11 -D_WIN32_WINNT=0x0601 -DUNICODE -D_UNICODE -c src/*.c -o build/obj/*.o
 windres src\resources.rc -o build\obj\resources.o
-gcc -mwindows -municode -o build\WinRDP.exe build\obj\*.o -lcomctl32 -lole32 -lshell32 -ladvapi32 -lcredui -lcomdlg32 -ldwmapi -luxtheme -lnetapi32
+gcc -mwindows -municode -o build\WinRDP.exe build\obj\*.o -lcomctl32 -lole32 -lshell32 -ladvapi32 -lcredui -lcomdlg32 -ldwmapi -luxtheme -lnetapi32 -lcrypt32
 ```
 
 **Manual (MSVC):**
 ```cmd
 cd src
 cl /W4 /D_UNICODE /DUNICODE /D_WIN32_WINNT=0x0601 /c *.c resources.rc
-link /OUT:..\build\WinRDP.exe /SUBSYSTEM:WINDOWS *.obj resources.res user32.lib gdi32.lib shell32.lib comctl32.lib advapi32.lib credui.lib comdlg32.lib ole32.lib dwmapi.lib uxtheme.lib netapi32.lib
+link /OUT:..\build\WinRDP.exe /SUBSYSTEM:WINDOWS *.obj resources.res user32.lib gdi32.lib shell32.lib comctl32.lib advapi32.lib credui.lib comdlg32.lib ole32.lib dwmapi.lib uxtheme.lib netapi32.lib crypt32.lib
 del *.obj *.res
 cd ..
 ```
@@ -98,7 +98,7 @@ makensis installer.nsi
 ### Output
 
 - `build\WinRDP.exe` - Application executable
-- `WinRDP-Setup-1.2.0.exe` - Distribution installer
+- `WinRDP-Setup-1.4.0.exe` - Distribution installer
 
 ---
 
@@ -155,6 +155,7 @@ makensis installer.nsi
 - `dwmapi` - Desktop window manager
 - `uxtheme` - Visual themes
 - `netapi32` - Network enumeration
+- `crypt32` - Encryption/DPAPI (v1.3.0+)
 
 ### Flags & Options
 - `-mwindows` - GUI application (no console)

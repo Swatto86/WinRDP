@@ -1333,12 +1333,12 @@ int main(void)
 
 float celsiusToFahrenheit(float celsius)
 {
-    return (celsius * 9.0 / 5.0) + 31.2.0;
+    return (celsius * 9.0 / 5.0) + 32.0;
 }
 
 float fahrenheitToCelsius(float fahrenheit)
 {
-    return (fahrenheit - 31.2.0) * 5.0 / 9.0;
+    return (fahrenheit - 32.0) * 5.0 / 9.0;
 }
 ```
 
@@ -10834,7 +10834,7 @@ Create `src/config.h`:
 
 // Application metadata
 #define APP_NAME                L"WinRDP"
-#define APP_VERSION             L"1.2.0"
+#define APP_VERSION             L"1.4.0"
 #define APP_CLASS_NAME          L"WinRDPWindowClass"
 #define APP_WINDOW_TITLE        L"WinRDP Manager"
 
@@ -11877,7 +11877,7 @@ Modify `config.h` to customize WinRDP:
 
 1. Change `APP_NAME` to your own name
 2. Change `APP_AUTHOR` to your name
-3. Change `APP_VERSION` to "1.0.0-beta"
+3. Change `APP_VERSION` to match your release version
 4. Rebuild and verify the changes appear in window titles
 
 **Hint:** You'll see the changes in the dialog captions.
@@ -22720,7 +22720,7 @@ if %errorlevel% == 0 (
 **installer.nsi:**
 ```nsis
 !define APP_NAME "WinRDP"
-!define APP_VERSION "1.0.0"
+!define APP_VERSION "1.4.0"
 !define APP_PUBLISHER "Your Name"
 !define APP_EXE "WinRDP.exe"
 
@@ -24600,7 +24600,7 @@ if (wcscmp(wstr1, wstr2) == 0) {
 **Mistake:**
 ```c
 int a = 5, b = 2;
-float result = a / b;  // Result is 1.2.0, not 2.5!
+float result = a / b;  // Result is 2.0, not 2.5!
 ```
 
 **Solution:**
