@@ -76,6 +76,16 @@ All notable changes to WinRDP will be documented in this file.
   - Hostnames sanitized for filesystem compatibility (replaces invalid characters)
   - Windows recognizes trusted RDP files after first connection
 
+### Added
+- **Delete Host with Del Key and Context Menu** - Multiple convenient ways to delete hosts
+  - Press Delete key on selected host in any ListView to remove it
+  - Right-click on host to show context menu with Delete option
+  - Works in both Connect to Host screen and Manage Hosts screen
+  - Confirmation dialog prevents accidental deletions
+  - Context menu also provides quick access to Connect/Edit actions
+  - Follows standard Windows UI conventions for consistency
+  - List automatically refreshes after deletion while preserving search filters
+  
 ### Upcoming Features (Planned)
 
 The following UX improvements are planned for future releases:
@@ -99,11 +109,6 @@ The following UX improvements are planned for future releases:
    - Description column auto-fills available space
    - Adjusts when window is resized
    - Better use of screen real estate
-
-5. **Delete Key to Remove Host** - Quick deletion with keyboard
-    - Press Delete key on selected host to remove it
-    - Confirmation dialog before deletion
-    - Faster host management workflow
 
 ### Added
 - **Tab Order Navigation** - Proper keyboard navigation across all dialogs

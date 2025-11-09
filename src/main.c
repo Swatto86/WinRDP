@@ -1030,11 +1030,12 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                 }
                 else if (pnmhdr->code == LVN_KEYDOWN)
                 {
-                    // Handle Enter key on listview to connect to selected host
+                    // Handle keyboard shortcuts on listview
                     LPNMLVKEYDOWN pnkd = (LPNMLVKEYDOWN)lParam;
+                    
                     if (pnkd->wVKey == VK_RETURN)
                     {
-                        // Same logic as Connect button and double-click
+                        // Enter key - connect to selected host
                         HWND hList = GetDlgItem(hwnd, IDC_LIST_SERVERS);
                         int selected = ListView_GetNextItem(hList, -1, LVNI_SELECTED);
                         
@@ -1052,6 +1053,57 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                                 if (LaunchRDPWithDefaults(hosts[hostIndex].hostname))
                                 {
                                     EndDialog(hwnd, IDOK);
+                                }
+                            }
+                        }
+                        return TRUE;
+                    }
+                    else if (pnkd->wVKey == VK_DELETE)
+                    {
+                        // Delete key - delete selected host
+                        HWND hList = GetDlgItem(hwnd, IDC_LIST_SERVERS);
+                        int selected = ListView_GetNextItem(hList, -1, LVNI_SELECTED);
+                        
+                        if (selected >= 0)
+                        {
+                            // Get the original host index from lParam
+                            LVITEMW item = {0};
+                            item.mask = LVIF_PARAM;
+                            item.iItem = selected;
+                            ListView_GetItem(hList, &item);
+                            int hostIndex = (int)item.lParam;
+                            
+                            if (hostIndex >= 0 && hostIndex < hostCount)
+                            {
+                                // Confirm deletion
+                                wchar_t msg[512];
+                                swprintf_s(msg, 512, L"Delete host '%s'?", hosts[hostIndex].hostname);
+                                
+                                if (MessageBoxW(hwnd, msg, L"Confirm Delete", 
+                                               MB_YESNO | MB_ICONQUESTION) == IDYES)
+                                {
+                                    if (DeleteHost(hosts[hostIndex].hostname))
+                                    {
+                                        // Reload the list
+                                        FreeHosts(hosts, hostCount);
+                                        hosts = NULL;
+                                        hostCount = 0;
+                                        
+                                        if (LoadHosts(&hosts, &hostCount))
+                                        {
+                                            // Get search text if any
+                                            HWND hSearch = GetDlgItem(hwnd, IDC_EDIT_SEARCH);
+                                            wchar_t searchText[256] = {0};
+                                            GetWindowTextW(hSearch, searchText, 256);
+                                            
+                                            int displayedCount = RefreshHostListView(hList, hosts, hostCount, searchText);
+                                            UpdateHostCountLabel(hwnd, IDC_STATIC_HOST_COUNT, displayedCount, hostCount);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        ShowErrorMessage(hwnd, L"Failed to delete host.");
+                                    }
                                 }
                             }
                         }
@@ -1088,6 +1140,95 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                         
                         // Perform the sort
                         ListView_SortItems(hList, CompareListViewItems, (LPARAM)&sortParams);
+                    }
+                    return TRUE;
+                }
+                else if (pnmhdr->code == NM_RCLICK)
+                {
+                    // Right-click on ListView - show context menu
+                    HWND hList = GetDlgItem(hwnd, IDC_LIST_SERVERS);
+                    int selected = ListView_GetNextItem(hList, -1, LVNI_SELECTED);
+                    
+                    if (selected >= 0)
+                    {
+                        // Get cursor position for menu
+                        POINT pt;
+                        GetCursorPos(&pt);
+                        
+                        // Create popup menu
+                        HMENU hMenu = CreatePopupMenu();
+                        if (hMenu)
+                        {
+                            AppendMenuW(hMenu, MF_STRING, IDM_CONTEXT_CONNECT, L"Connect");
+                            AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
+                            AppendMenuW(hMenu, MF_STRING, IDM_CONTEXT_DELETE, L"Delete");
+                            
+                            // Required to make menu disappear when clicking outside
+                            SetForegroundWindow(hwnd);
+                            
+                            // Show menu and get selection
+                            int cmd = TrackPopupMenu(hMenu, TPM_RETURNCMD | TPM_LEFTALIGN,
+                                                    pt.x, pt.y, 0, hwnd, NULL);
+                            
+                            DestroyMenu(hMenu);
+                            
+                            // Handle menu selection
+                            if (cmd == IDM_CONTEXT_CONNECT)
+                            {
+                                // Connect to selected host
+                                LVITEMW item = {0};
+                                item.mask = LVIF_PARAM;
+                                item.iItem = selected;
+                                ListView_GetItem(hList, &item);
+                                int hostIndex = (int)item.lParam;
+                                
+                                if (hostIndex >= 0 && hostIndex < hostCount)
+                                {
+                                    if (LaunchRDPWithDefaults(hosts[hostIndex].hostname))
+                                    {
+                                        EndDialog(hwnd, IDOK);
+                                    }
+                                }
+                            }
+                            else if (cmd == IDM_CONTEXT_DELETE)
+                            {
+                                // Delete selected host
+                                LVITEMW item = {0};
+                                item.mask = LVIF_PARAM;
+                                item.iItem = selected;
+                                ListView_GetItem(hList, &item);
+                                int hostIndex = (int)item.lParam;
+                                
+                                if (hostIndex >= 0 && hostIndex < hostCount)
+                                {
+                                    wchar_t msg[512];
+                                    swprintf_s(msg, 512, L"Delete host '%s'?", hosts[hostIndex].hostname);
+                                    
+                                    if (MessageBoxW(hwnd, msg, L"Confirm Delete", 
+                                                   MB_YESNO | MB_ICONQUESTION) == IDYES)
+                                    {
+                                        if (DeleteHost(hosts[hostIndex].hostname))
+                                        {
+                                            // Reload the list
+                                            FreeHosts(hosts, hostCount);
+                                            hosts = NULL;
+                                            hostCount = 0;
+                                            
+                                            if (LoadHosts(&hosts, &hostCount))
+                                            {
+                                                // Get search text if any
+                                                HWND hSearch = GetDlgItem(hwnd, IDC_EDIT_SEARCH);
+                                                wchar_t searchText[256] = {0};
+                                                GetWindowTextW(hSearch, searchText, 256);
+                                                
+                                                int displayedCount = RefreshHostListView(hList, hosts, hostCount, searchText);
+                                                UpdateHostCountLabel(hwnd, IDC_STATIC_HOST_COUNT, displayedCount, hostCount);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                     return TRUE;
                 }
@@ -1433,14 +1574,142 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                 }
                 else if (pnmhdr->code == LVN_KEYDOWN)
                 {
-                    // Handle Enter key on listview to edit selected host
+                    // Handle keyboard shortcuts on listview
                     LPNMLVKEYDOWN pnkd = (LPNMLVKEYDOWN)lParam;
+                    
                     if (pnkd->wVKey == VK_RETURN)
                     {
-                        // Trigger edit host button
+                        // Enter key - trigger edit host button
                         PostMessage(hwnd, WM_COMMAND, MAKEWPARAM(IDC_BTN_EDIT_HOST, BN_CLICKED), 0);
                         return TRUE;
                     }
+                    else if (pnkd->wVKey == VK_DELETE)
+                    {
+                        // Delete key - delete selected host
+                        HWND hList = GetDlgItem(hwnd, IDC_LIST_HOSTS);
+                        int selected = ListView_GetNextItem(hList, -1, LVNI_SELECTED);
+                        
+                        if (selected >= 0)
+                        {
+                            // Get the original host index from lParam
+                            LVITEMW item = {0};
+                            item.mask = LVIF_PARAM;
+                            item.iItem = selected;
+                            ListView_GetItem(hList, &item);
+                            int hostIndex = (int)item.lParam;
+                            
+                            if (hostIndex >= 0 && hostIndex < hostCount)
+                            {
+                                wchar_t msg[512];
+                                swprintf_s(msg, 512, L"Delete host '%s'?", hosts[hostIndex].hostname);
+                                
+                                if (MessageBoxW(hwnd, msg, L"Confirm Delete", 
+                                               MB_YESNO | MB_ICONQUESTION) == IDYES)
+                                {
+                                    if (DeleteHost(hosts[hostIndex].hostname))
+                                    {
+                                        // Reload the list
+                                        FreeHosts(hosts, hostCount);
+                                        hosts = NULL;
+                                        hostCount = 0;
+                                        
+                                        if (LoadHosts(&hosts, &hostCount))
+                                        {
+                                            // Get search text if any
+                                            HWND hSearch = GetDlgItem(hwnd, IDC_EDIT_SEARCH_HOSTS);
+                                            wchar_t searchText[256] = {0};
+                                            GetWindowTextW(hSearch, searchText, 256);
+                                            
+                                            int displayedCount = RefreshHostListView(hList, hosts, hostCount, searchText);
+                                            UpdateHostCountLabel(hwnd, IDC_STATIC_HOSTS_COUNT, displayedCount, hostCount);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        ShowErrorMessage(hwnd, L"Failed to delete host.");
+                                    }
+                                }
+                            }
+                        }
+                        return TRUE;
+                    }
+                }
+                else if (pnmhdr->code == NM_RCLICK)
+                {
+                    // Right-click on ListView - show context menu
+                    HWND hList = GetDlgItem(hwnd, IDC_LIST_HOSTS);
+                    int selected = ListView_GetNextItem(hList, -1, LVNI_SELECTED);
+                    
+                    if (selected >= 0)
+                    {
+                        // Get cursor position for menu
+                        POINT pt;
+                        GetCursorPos(&pt);
+                        
+                        // Create popup menu
+                        HMENU hMenu = CreatePopupMenu();
+                        if (hMenu)
+                        {
+                            AppendMenuW(hMenu, MF_STRING, IDM_CONTEXT_EDIT, L"Edit");
+                            AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
+                            AppendMenuW(hMenu, MF_STRING, IDM_CONTEXT_DELETE, L"Delete");
+                            
+                            // Required to make menu disappear when clicking outside
+                            SetForegroundWindow(hwnd);
+                            
+                            // Show menu and get selection
+                            int cmd = TrackPopupMenu(hMenu, TPM_RETURNCMD | TPM_LEFTALIGN,
+                                                    pt.x, pt.y, 0, hwnd, NULL);
+                            
+                            DestroyMenu(hMenu);
+                            
+                            // Handle menu selection
+                            if (cmd == IDM_CONTEXT_EDIT)
+                            {
+                                // Edit selected host
+                                PostMessage(hwnd, WM_COMMAND, MAKEWPARAM(IDC_BTN_EDIT_HOST, BN_CLICKED), 0);
+                            }
+                            else if (cmd == IDM_CONTEXT_DELETE)
+                            {
+                                // Delete selected host
+                                LVITEMW item = {0};
+                                item.mask = LVIF_PARAM;
+                                item.iItem = selected;
+                                ListView_GetItem(hList, &item);
+                                int hostIndex = (int)item.lParam;
+                                
+                                if (hostIndex >= 0 && hostIndex < hostCount)
+                                {
+                                    wchar_t msg[512];
+                                    swprintf_s(msg, 512, L"Delete host '%s'?", hosts[hostIndex].hostname);
+                                    
+                                    if (MessageBoxW(hwnd, msg, L"Confirm Delete", 
+                                                   MB_YESNO | MB_ICONQUESTION) == IDYES)
+                                    {
+                                        if (DeleteHost(hosts[hostIndex].hostname))
+                                        {
+                                            // Reload the list
+                                            FreeHosts(hosts, hostCount);
+                                            hosts = NULL;
+                                            hostCount = 0;
+                                            
+                                            if (LoadHosts(&hosts, &hostCount))
+                                            {
+                                                // Get search text if any
+                                                HWND hSearch = GetDlgItem(hwnd, IDC_EDIT_SEARCH_HOSTS);
+                                                wchar_t searchText[256] = {0};
+                                                GetWindowTextW(hSearch, searchText, 256);
+                                                
+                                                int displayedCount = RefreshHostListView(hList, hosts, hostCount, searchText);
+                                                UpdateHostCountLabel(hwnd, IDC_STATIC_HOSTS_COUNT, displayedCount, hostCount);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    return TRUE;
                 }
             }
             break;

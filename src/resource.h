@@ -81,6 +81,11 @@
 #define IDM_RECENT_START        310
 #define IDM_RECENT_END          319  // Allows for up to 10 recent connections
 
+// Context menu IDs for ListView right-click
+#define IDM_CONTEXT_DELETE      320
+#define IDM_CONTEXT_EDIT        321
+#define IDM_CONTEXT_CONNECT     322
+
 // System Tray
 #define ID_TRAYICON             400
 #define WM_TRAYICON             (WM_USER + 1)
