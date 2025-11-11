@@ -163,6 +163,31 @@ makensis installer.nsi
 - `-DUNICODE -D_UNICODE` - Unicode strings
 - `-D_WIN32_WINNT=0x0601` - Windows 7+ APIs
 
+### Project Structure
+```
+WinRDP/
+├── src/               - Source code
+│   ├── main.c        - Entry point, UI, dialogs
+│   ├── hosts.c       - CSV host management
+│   ├── credentials.c - Credential Manager integration
+│   ├── rdp.c         - RDP file generation & launching
+│   ├── encryption.c  - DPAPI encryption module
+│   ├── registry.c    - Autostart configuration
+│   ├── darkmode.c    - Dark mode support
+│   ├── adscan.c      - Network scanning
+│   ├── utils.c       - Helper functions
+│   └── resources.rc  - UI resources, dialogs, icons
+├── build/            - Build output directory
+├── README.md         - Overview and features
+├── CHANGELOG.md      - Version history and roadmap
+├── BUILD.md          - This file
+├── C_PROGRAMMING_BOOK.md - Complete programming guide
+├── build.bat         - Build script
+├── build-installer.bat - Installer build script
+├── installer.nsi     - NSIS installer configuration
+└── hosts.csv         - Example hosts file
+```
+
 ---
 
 **Created by Swatto**  

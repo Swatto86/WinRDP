@@ -94,6 +94,8 @@ The following UX improvements are planned for future releases:
    - Menu options to import/export hosts.csv
    - Choose custom file location for backup
    - Easy migration between systems
+   - Support for JSON and XML formats
+   - Selective export (export filtered results only)
 
 2. **Visual Feedback on Connection** - Indicate when RDP is launching
    - Status message or cursor change during connection
@@ -109,6 +111,121 @@ The following UX improvements are planned for future releases:
    - Description column auto-fills available space
    - Adjusts when window is resized
    - Better use of screen real estate
+
+5. **Host Grouping/Folders** - Organize servers by category
+   - Create folders like "Production", "Development", "Test"
+   - Expandable/collapsible tree view in ListView
+   - Drag and drop hosts between folders
+   - Filter by folder in search
+   - Backup folder structure in CSV
+
+6. **Connection History Log** - Detailed tracking of all connection attempts
+   - Full history beyond just "Last Connected"
+   - Log file with timestamps and connection duration
+   - View history dialog with filtering and search
+   - Track successful and failed connections
+   - Export history for auditing purposes
+
+7. **Advanced RDP Settings Per Host** - Customize connection parameters
+   - Screen resolution options (fullscreen, windowed, custom)
+   - Color depth settings (15-bit, 16-bit, 24-bit, 32-bit)
+   - Multi-monitor configuration (single, all monitors, specific monitors)
+   - Audio redirection settings (local, remote, none)
+   - Clipboard redirection toggle
+   - Printer redirection options
+   - Drive mapping configuration
+   - RemoteApp support
+   - Gateway server settings
+   - Store settings in enhanced CSV format
+
+8. **Host Online Status** - Check if servers are reachable before connecting
+   - Ping check with visual indicator (green/red/yellow dots)
+   - Port 3389 availability check
+   - Background status checking with configurable interval
+   - Manual refresh button
+   - Sort by online/offline status
+   - Skip ping for specific hosts (firewall scenarios)
+
+9. **Quick Actions and Shortcuts** - Faster workflow operations
+   - Copy hostname/IP to clipboard (Ctrl+C)
+   - Copy credentials to clipboard with timeout
+   - Pin favorite hosts to top of list
+   - Star/favorite system with quick filter
+   - Recent hosts counter configuration (currently fixed at 5)
+
+10. **Connection Profiles** - Reusable RDP setting templates
+    - Create named profiles (e.g., "High Quality", "Low Bandwidth")
+    - Apply profile to multiple hosts at once
+    - Default profile selection
+    - Profile management dialog
+
+11. **Bulk Operations** - Edit multiple hosts simultaneously
+    - Multi-select in ListView (Ctrl+Click, Shift+Click)
+    - Bulk credential update
+    - Bulk folder assignment
+    - Bulk delete with confirmation
+
+12. **Smart Reconnect Features** - Handle connection failures gracefully
+    - Configurable connection timeout
+    - Auto-retry on connection failure
+    - Connection error logging
+    - Remember last failed connection for diagnostics
+
+13. **Tags and Metadata** - Additional organization options
+    - Add multiple tags per host (comma-separated)
+    - Filter by tags
+    - Tag-based color coding in ListView
+    - Custom fields (OS version, owner, purpose, etc.)
+
+14. **Connection Statistics** - Usage analytics and insights
+    - Total connections per host
+    - Connection duration tracking
+    - Most frequently used hosts
+    - Statistics dashboard
+    - Generate usage reports
+
+15. **Session Management** - Handle active RDP sessions
+    - Detect and display active RDP sessions
+    - Disconnect/logoff remote sessions
+    - Shadow other user sessions (admin feature)
+    - Session timeout warnings
+
+16. **Configuration Options** - User preferences and settings
+    - Settings dialog for application preferences
+    - Configurable hotkey combinations
+    - Auto-refresh interval for status checks
+    - Startup behavior options
+    - UI font and size preferences
+    - Default RDP options
+
+17. **Network Discovery Enhancements** - Better scanning capabilities
+    - Scan specific IP ranges (CIDR notation)
+    - Scheduled automatic scans
+    - Detect changes in network (new/removed computers)
+    - Remember last scan parameters
+    - Exclude specific hosts from scan results
+
+18. **Backup and Sync** - Cloud backup and multi-PC synchronization
+    - Automatic backup scheduling
+    - OneDrive/Dropbox integration
+    - Sync hosts across multiple computers
+    - Conflict resolution for concurrent edits
+    - Version history for configuration
+
+19. **Security Enhancements** - Additional protection features
+    - Master password for application access
+    - Inactivity timeout with auto-lock
+    - Credential expiration reminders
+    - Two-factor authentication support
+    - Audit log for security events
+    - Encrypted clipboard for credential copying
+
+20. **Command-Line Interface** - Automation and scripting support
+    - Launch specific hosts from command line
+    - Import/export via command line
+    - Headless connection mode
+    - Script-friendly output formats
+    - Integration with PowerShell scripts
 
 ### Added
 - **Tab Order Navigation** - Proper keyboard navigation across all dialogs

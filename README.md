@@ -1,8 +1,42 @@
 # WinRDP
 
-A simple RDP connection manager I wrote in **pure C** using the **Windows API**. I built it to solve my own problem (too many servers, too many passwords) and turned it into a learning resource for anyone who wants to understand Windows programming.
+A simple RDP connection manager written in **pure C** using the **Windows API**. Built to solve the problem of managing too many servers and passwords, while serving as a comprehensive learning resource for Windows programming.
 
 **Made by Swatto**
+
+---
+
+## 📑 Table of Contents
+- [Quick Start](#-quick-start)
+- [What You'll Learn](#-what-youll-learn)
+- [Features](#-what-it-does)
+- [Building It Yourself](#-building-it-yourself)
+- [Documentation](#-documentation)
+- [Windows API Examples](#-windows-api-examples)
+- [Security](#-security-stuff)
+- [Extending It](#-ideas-for-extending-it)
+
+---
+
+## 🚀 Quick Start
+
+### For Users
+1. Download [WinRDP-Setup-1.4.0.exe](https://github.com/Swatto86/WinRDP/releases/latest)
+2. Run the installer
+3. Launch from Start Menu or system tray
+4. Set your credentials and add servers
+
+### For Developers
+```bash
+git clone https://github.com/Swatto86/WinRDP.git
+cd WinRDP
+.\build.bat
+.\build\WinRDP.exe
+```
+
+See [BUILD.md](BUILD.md) for detailed build instructions.
+
+---
 
 ## 🎯 What You'll Learn
 
@@ -89,17 +123,14 @@ pacman -S mingw-w64-x86_64-gcc
 
 ## 📚 Documentation
 
-**Start Here:**
-- **README.md** - This file
-- **BUILD.md** - How to build it
-- **GETTING_STARTED_GUIDE.md** - How to approach building projects from scratch
+**Essential Docs:**
+- **README.md** (this file) - Overview, features, and usage
+- **BUILD.md** - Build instructions and installation
+- **CHANGELOG.md** - Version history and planned features
 
 **Learning:**
-- **C_PROGRAMMING_BOOK.md** - Full C programming book (30 chapters)
-- **Source code** - I commented the hell out of everything
-
-**Reference:**
-- **CHANGELOG.md** - What changed in each version
+- **C_PROGRAMMING_BOOK.md** - Complete 30-chapter C programming guide
+- **Source code** - Extensively commented for educational purposes
 
 ## 🏗️ How to Build
 
@@ -391,6 +422,21 @@ Want to add more stuff? Here are some ideas:
 ## 🙏 About This Project
 
 I built this because I needed a simple RDP manager and thought it would make a good learning resource. All the code is commented and explained so you can see how everything works.
+
+## 🤝 Contributing
+
+Found a bug? Want to add a feature? Contributions are welcome!
+
+1. Check the [planned features](CHANGELOG.md#upcoming-features-planned) in CHANGELOG.md
+2. Fork the repository
+3. Create a feature branch
+4. Make your changes with clear commit messages
+5. Test thoroughly on Windows 7+
+6. Submit a pull request
+
+For major changes, open an issue first to discuss what you'd like to change.
+
+---
 
 **Made by Swatto**
 

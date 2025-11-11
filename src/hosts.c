@@ -6,8 +6,10 @@
  *   hostname,description,lastConnected
  * 
  * As of version 1.3.0, the CSV data is encrypted using Windows DPAPI
- * (Data Protection API) for security. The encryption is user-specific,
- * meaning only the Windows user who created the file can decrypt it.
+ * (Data Protection API) for security. As of v1.4.0, we use machine-level
+ * encryption, meaning any user/process on the same machine can decrypt it.
+ * This enables autostart scenarios where the app runs under SYSTEM account.
+ * Data remains machine-bound (cannot be decrypted on different computers).
  * 
  * We use standard C file I/O functions for reading and writing,
  * with encryption/decryption handled transparently by the encryption module.
