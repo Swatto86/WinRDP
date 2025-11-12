@@ -395,7 +395,7 @@
                 <p style="margin: 0; color: #4ade80;"><strong>🎨 New Features (v1.5.0):</strong></p>
                 <ul style="margin: 10px 0 0 20px; color: #4ade80;">
                     <li><strong>👁️ Visual feedback on connection</strong> - wait cursor and status message when launching RDP</li>
-                    <li><strong>🎯 Highlight search results</strong> - matched text gets a yellow background so you can see why it matched</li>
+                    <li><strong>🎯 Highlight search results</strong> - only the matching characters get highlighted in yellow (not the whole row), making it crystal clear which part matched your search</li>
                     <li><strong>↔️ Auto-resize description column</strong> - description column dynamically fills available space when you resize the window</li>
                 </ul>
             </div>
@@ -591,6 +591,32 @@
             </p>
         </div>
         
+        <div class="section">
+            <h2>🤖 Built with AI - Back to Fundamentals</h2>
+            <p style="margin-bottom: 20px; font-size: 1.05em; color: #ccc;">
+                WinRDP is an interesting experiment: the entire application and its 30-chapter educational book were written with AI assistance. This enabled something remarkable - a return to 1990s-style programming without the bloat of modern frameworks.
+            </p>
+            
+            <div style="background: #2d2a1e; border-left: 4px solid #f59e0b; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <h4 style="color: #f59e0b; margin: 0 0 15px 0;">Why This Matters</h4>
+                <ul style="margin: 0; line-height: 1.8;">
+                    <li><strong>Pure C with no dependencies</strong> - just Windows API and standard library</li>
+                    <li><strong>~470 KB executable</strong> - still smaller than most modern app icons</li>
+                    <li><strong>Instant startup</strong> - no framework initialization, no runtime downloads</li>
+                    <li><strong>Direct hardware access</strong> - talks straight to the OS without layers of abstraction</li>
+                    <li><strong>Fully auditable</strong> - every line of code is readable and documented</li>
+                </ul>
+            </div>
+            
+            <p style="margin-bottom: 20px; font-size: 1.05em; color: #ccc;">
+                AI allowed us to write software the way it was written before the framework explosion - direct, efficient, and comprehensible. No npm packages, no build pipelines, no runtime dependencies. Just pure C compiled to a single executable.
+            </p>
+            
+            <div style="padding: 20px; background: #1e3040; border-radius: 8px; border-left: 4px solid #0078d4;">
+                <p style="margin: 0;"><strong>The result?</strong> A fully-featured application that does everything modern apps do, but in a fraction of the size and with crystal-clear code that anyone can understand and learn from. No magic, no black boxes, just straightforward programming.</p>
+            </div>
+        </div>
+        
         <div class="github-section">
             <h2 style="margin: 0 0 20px 0;">📂 Source Code</h2>
             <p style="font-size: 1.1em; margin-bottom: 20px; opacity: 0.9;">
@@ -600,7 +626,7 @@
                 View on GitHub
             </a>
             <p style="margin-top: 20px; opacity: 0.8; font-size: 0.9em;">
-                MIT License • Well commented • Beginner friendly
+                MIT License • Well commented • Beginner friendly • AI-assisted development
             </p>
         </div>
         

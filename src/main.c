@@ -1319,18 +1319,21 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                     if (!searchContext.hasSearchText)
                     {
                         // No search text - use default drawing
-                        return CDRF_DODEFAULT;
+                        SetWindowLongPtr(hwnd, DWLP_MSGRESULT, CDRF_DODEFAULT);
+                        return TRUE;
                     }
                     
                     switch (lpcd->nmcd.dwDrawStage)
                     {
                         case CDDS_PREPAINT:
                             // Request item-level notifications
-                            return CDRF_NOTIFYITEMDRAW;
+                            SetWindowLongPtr(hwnd, DWLP_MSGRESULT, CDRF_NOTIFYITEMDRAW);
+                            return TRUE;
                             
                         case CDDS_ITEMPREPAINT:
                             // Request subitem-level notifications
-                            return CDRF_NOTIFYSUBITEMDRAW;
+                            SetWindowLongPtr(hwnd, DWLP_MSGRESULT, CDRF_NOTIFYSUBITEMDRAW);
+                            return TRUE;
                             
                         case CDDS_SUBITEM | CDDS_ITEMPREPAINT:
                         {
@@ -1353,18 +1356,113 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                                 _wcslwr_s(textLower, 512);
                                 _wcslwr_s(searchLower, 256);
                                 
-                                // Check if this text contains the search term
-                                if (wcsstr(textLower, searchLower) != NULL)
+                                // Find the matching substring position
+                                wchar_t* matchPos = wcsstr(textLower, searchLower);
+                                if (matchPos != NULL)
                                 {
-                                    // Highlight with yellow background
-                                    lpcd->clrTextBk = RGB(255, 255, 150);  // Light yellow
-                                    return CDRF_NEWFONT;
+                                    // Calculate the match position in the original text
+                                    int matchIndex = (int)(matchPos - textLower);
+                                    int matchLen = (int)wcslen(searchContext.searchText);
+                                    
+                                    // Get the device context and rectangle
+                                    HDC hdc = lpcd->nmcd.hdc;
+                                    RECT rcItem = lpcd->nmcd.rc;
+                                    
+                                    // Adjust rectangle for text padding (ListView has 6px left margin)
+                                    rcItem.left += 6;
+                                    
+                                    // Set up colors (check if item is selected)
+                                    COLORREF bgColor, textColor, highlightBg, highlightText;
+                                    if (lpcd->nmcd.uItemState & CDIS_SELECTED)
+                                    {
+                                        // Selected item - use selection colors
+                                        bgColor = GetSysColor(COLOR_HIGHLIGHT);
+                                        textColor = GetSysColor(COLOR_HIGHLIGHTTEXT);
+                                        highlightBg = RGB(255, 255, 150);
+                                        highlightText = RGB(0, 0, 0);
+                                    }
+                                    else
+                                    {
+                                        // Normal item - use standard ListView colors
+                                        bgColor = ListView_GetBkColor(lpcd->nmcd.hdr.hwndFrom);
+                                        textColor = ListView_GetTextColor(lpcd->nmcd.hdr.hwndFrom);
+                                        highlightBg = RGB(255, 255, 150);
+                                        highlightText = RGB(0, 0, 0);
+                                    }
+                                    
+                                    // Fill background
+                                    HBRUSH hBrush = CreateSolidBrush(bgColor);
+                                    FillRect(hdc, &rcItem, hBrush);
+                                    DeleteObject(hBrush);
+                                    
+                                    // Set up text drawing
+                                    SetBkMode(hdc, TRANSPARENT);
+                                    HFONT hFont = (HFONT)SendMessageW(lpcd->nmcd.hdr.hwndFrom, WM_GETFONT, 0, 0);
+                                    HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
+                                    
+                                    // Calculate total text width for centering
+                                    SIZE totalSize;
+                                    GetTextExtentPoint32W(hdc, text, (int)wcslen(text), &totalSize);
+                                    
+                                    // Center the text horizontally in the column
+                                    int columnWidth = rcItem.right - rcItem.left;
+                                    int startX = rcItem.left + (columnWidth - totalSize.cx) / 2;
+                                    
+                                    int x = startX;
+                                    int y = rcItem.top + 2;  // 2px top padding
+                                    
+                                    // Draw text before the match
+                                    if (matchIndex > 0)
+                                    {
+                                        wchar_t beforeMatch[512] = {0};
+                                        wcsncpy_s(beforeMatch, 512, text, matchIndex);
+                                        SetTextColor(hdc, textColor);
+                                        SIZE size;
+                                        GetTextExtentPoint32W(hdc, beforeMatch, (int)wcslen(beforeMatch), &size);
+                                        TextOutW(hdc, x, y, beforeMatch, (int)wcslen(beforeMatch));
+                                        x += size.cx;
+                                    }
+                                    
+                                    // Draw the highlighted match
+                                    wchar_t matchText[512] = {0};
+                                    wcsncpy_s(matchText, 512, text + matchIndex, matchLen);
+                                    
+                                    // Draw highlight background
+                                    SIZE matchSize;
+                                    GetTextExtentPoint32W(hdc, matchText, (int)wcslen(matchText), &matchSize);
+                                    RECT highlightRect = {x, rcItem.top, x + matchSize.cx, rcItem.bottom};
+                                    HBRUSH hHighlight = CreateSolidBrush(highlightBg);
+                                    FillRect(hdc, &highlightRect, hHighlight);
+                                    DeleteObject(hHighlight);
+                                    
+                                    // Draw match text
+                                    SetTextColor(hdc, highlightText);
+                                    TextOutW(hdc, x, y, matchText, (int)wcslen(matchText));
+                                    x += matchSize.cx;
+                                    
+                                    // Draw text after the match
+                                    int afterIndex = matchIndex + matchLen;
+                                    if (afterIndex < (int)wcslen(text))
+                                    {
+                                        wchar_t afterMatch[512] = {0};
+                                        wcscpy_s(afterMatch, 512, text + afterIndex);
+                                        SetTextColor(hdc, textColor);
+                                        TextOutW(hdc, x, y, afterMatch, (int)wcslen(afterMatch));
+                                    }
+                                    
+                                    SelectObject(hdc, hOldFont);
+                                    
+                                    // Tell Windows we handled the drawing
+                                    SetWindowLongPtr(hwnd, DWLP_MSGRESULT, CDRF_SKIPDEFAULT);
+                                    return TRUE;
                                 }
                             }
-                            return CDRF_DODEFAULT;
+                            SetWindowLongPtr(hwnd, DWLP_MSGRESULT, CDRF_DODEFAULT);
+                            return TRUE;
                         }
                     }
-                    return CDRF_DODEFAULT;
+                    SetWindowLongPtr(hwnd, DWLP_MSGRESULT, CDRF_DODEFAULT);
+                    return TRUE;
                 }
             }
             break;
@@ -1879,18 +1977,21 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                     if (!searchContext.hasSearchText)
                     {
                         // No search text - use default drawing
-                        return CDRF_DODEFAULT;
+                        SetWindowLongPtr(hwnd, DWLP_MSGRESULT, CDRF_DODEFAULT);
+                        return TRUE;
                     }
                     
                     switch (lpcd->nmcd.dwDrawStage)
                     {
                         case CDDS_PREPAINT:
                             // Request item-level notifications
-                            return CDRF_NOTIFYITEMDRAW;
+                            SetWindowLongPtr(hwnd, DWLP_MSGRESULT, CDRF_NOTIFYITEMDRAW);
+                            return TRUE;
                             
                         case CDDS_ITEMPREPAINT:
                             // Request subitem-level notifications
-                            return CDRF_NOTIFYSUBITEMDRAW;
+                            SetWindowLongPtr(hwnd, DWLP_MSGRESULT, CDRF_NOTIFYSUBITEMDRAW);
+                            return TRUE;
                             
                         case CDDS_SUBITEM | CDDS_ITEMPREPAINT:
                         {
@@ -1913,18 +2014,113 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                                 _wcslwr_s(textLower, 512);
                                 _wcslwr_s(searchLower, 256);
                                 
-                                // Check if this text contains the search term
-                                if (wcsstr(textLower, searchLower) != NULL)
+                                // Find the matching substring position
+                                wchar_t* matchPos = wcsstr(textLower, searchLower);
+                                if (matchPos != NULL)
                                 {
-                                    // Highlight with yellow background
-                                    lpcd->clrTextBk = RGB(255, 255, 150);  // Light yellow
-                                    return CDRF_NEWFONT;
+                                    // Calculate the match position in the original text
+                                    int matchIndex = (int)(matchPos - textLower);
+                                    int matchLen = (int)wcslen(searchContext.searchText);
+                                    
+                                    // Get the device context and rectangle
+                                    HDC hdc = lpcd->nmcd.hdc;
+                                    RECT rcItem = lpcd->nmcd.rc;
+                                    
+                                    // Adjust rectangle for text padding (ListView has 6px left margin)
+                                    rcItem.left += 6;
+                                    
+                                    // Set up colors (check if item is selected)
+                                    COLORREF bgColor, textColor, highlightBg, highlightText;
+                                    if (lpcd->nmcd.uItemState & CDIS_SELECTED)
+                                    {
+                                        // Selected item - use selection colors
+                                        bgColor = GetSysColor(COLOR_HIGHLIGHT);
+                                        textColor = GetSysColor(COLOR_HIGHLIGHTTEXT);
+                                        highlightBg = RGB(255, 255, 150);
+                                        highlightText = RGB(0, 0, 0);
+                                    }
+                                    else
+                                    {
+                                        // Normal item - use standard ListView colors
+                                        bgColor = ListView_GetBkColor(lpcd->nmcd.hdr.hwndFrom);
+                                        textColor = ListView_GetTextColor(lpcd->nmcd.hdr.hwndFrom);
+                                        highlightBg = RGB(255, 255, 150);
+                                        highlightText = RGB(0, 0, 0);
+                                    }
+                                    
+                                    // Fill background
+                                    HBRUSH hBrush = CreateSolidBrush(bgColor);
+                                    FillRect(hdc, &rcItem, hBrush);
+                                    DeleteObject(hBrush);
+                                    
+                                    // Set up text drawing
+                                    SetBkMode(hdc, TRANSPARENT);
+                                    HFONT hFont = (HFONT)SendMessageW(lpcd->nmcd.hdr.hwndFrom, WM_GETFONT, 0, 0);
+                                    HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
+                                    
+                                    // Calculate total text width for centering
+                                    SIZE totalSize;
+                                    GetTextExtentPoint32W(hdc, text, (int)wcslen(text), &totalSize);
+                                    
+                                    // Center the text horizontally in the column
+                                    int columnWidth = rcItem.right - rcItem.left;
+                                    int startX = rcItem.left + (columnWidth - totalSize.cx) / 2;
+                                    
+                                    int x = startX;
+                                    int y = rcItem.top + 2;  // 2px top padding
+                                    
+                                    // Draw text before the match
+                                    if (matchIndex > 0)
+                                    {
+                                        wchar_t beforeMatch[512] = {0};
+                                        wcsncpy_s(beforeMatch, 512, text, matchIndex);
+                                        SetTextColor(hdc, textColor);
+                                        SIZE size;
+                                        GetTextExtentPoint32W(hdc, beforeMatch, (int)wcslen(beforeMatch), &size);
+                                        TextOutW(hdc, x, y, beforeMatch, (int)wcslen(beforeMatch));
+                                        x += size.cx;
+                                    }
+                                    
+                                    // Draw the highlighted match
+                                    wchar_t matchText[512] = {0};
+                                    wcsncpy_s(matchText, 512, text + matchIndex, matchLen);
+                                    
+                                    // Draw highlight background
+                                    SIZE matchSize;
+                                    GetTextExtentPoint32W(hdc, matchText, (int)wcslen(matchText), &matchSize);
+                                    RECT highlightRect = {x, rcItem.top, x + matchSize.cx, rcItem.bottom};
+                                    HBRUSH hHighlight = CreateSolidBrush(highlightBg);
+                                    FillRect(hdc, &highlightRect, hHighlight);
+                                    DeleteObject(hHighlight);
+                                    
+                                    // Draw match text
+                                    SetTextColor(hdc, highlightText);
+                                    TextOutW(hdc, x, y, matchText, (int)wcslen(matchText));
+                                    x += matchSize.cx;
+                                    
+                                    // Draw text after the match
+                                    int afterIndex = matchIndex + matchLen;
+                                    if (afterIndex < (int)wcslen(text))
+                                    {
+                                        wchar_t afterMatch[512] = {0};
+                                        wcscpy_s(afterMatch, 512, text + afterIndex);
+                                        SetTextColor(hdc, textColor);
+                                        TextOutW(hdc, x, y, afterMatch, (int)wcslen(afterMatch));
+                                    }
+                                    
+                                    SelectObject(hdc, hOldFont);
+                                    
+                                    // Tell Windows we handled the drawing
+                                    SetWindowLongPtr(hwnd, DWLP_MSGRESULT, CDRF_SKIPDEFAULT);
+                                    return TRUE;
                                 }
                             }
-                            return CDRF_DODEFAULT;
+                            SetWindowLongPtr(hwnd, DWLP_MSGRESULT, CDRF_DODEFAULT);
+                            return TRUE;
                         }
                     }
-                    return CDRF_DODEFAULT;
+                    SetWindowLongPtr(hwnd, DWLP_MSGRESULT, CDRF_DODEFAULT);
+                    return TRUE;
                 }
             }
             break;

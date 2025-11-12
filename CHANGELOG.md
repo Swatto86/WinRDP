@@ -93,14 +93,18 @@ All notable changes to WinRDP will be documented in this file.
   - System tray recent connections continue to launch directly for quick access
   - Professional user experience with clear action confirmation
 
-- **Highlight Search Results** - Visual indication of matching text in ListView
-  - Matching text highlighted with light yellow background (RGB 255, 255, 150)
+- **Highlight Search Results** - Precise visual indication of matching text in ListView
+  - Only the matching characters are highlighted (not the entire row)
+  - Yellow background (RGB 255, 255, 150) with black text for perfect contrast
   - Highlights both hostname and description columns
+  - Text remains properly centered in columns during highlighting
   - Case-insensitive matching for better usability
-  - Uses custom draw (NM_CUSTOMDRAW) for efficient rendering
+  - Respects selection state (blue highlight preserved when selected)
+  - Uses custom draw (NM_CUSTOMDRAW) with manual text rendering
   - Automatically updates as you type in search box
   - Works in both main server list and host management dialogs
-  - Makes it immediately clear why each result matched your search
+  - Works perfectly in both dark and light modes
+  - Makes it immediately clear which characters matched your search
 
 - **Auto-resize Description Column** - Dynamic column width adjustment
   - Description column automatically resizes when window is resized
