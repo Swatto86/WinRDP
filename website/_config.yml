@@ -1,6 +1,6 @@
 # Custom site configuration - no remote theme
 title: "WinRDP - Windows RDP Connection Manager"
-description: "A simple RDP connection manager for Windows. Written in C using Windows API. Open source with complete documentation."
-author: "Swatto"
+description: "A simple RDP connection manager for Windows. Built with AI assistance and directed by Swatto. Written in pure C using Windows API. Open source with complete 30-chapter educational book."
+author: "Directed by Swatto • Built with AI"
 url: "https://swatto.co.uk"
-keywords: "WinRDP, RDP manager, Windows RDP, remote desktop, C programming, Windows API, open source"
+keywords: "WinRDP, RDP manager, Windows RDP, remote desktop, C programming, Windows API, AI-assisted development, open source"

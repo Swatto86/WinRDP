@@ -2,62 +2,6 @@
 
 All notable changes to WinRDP will be documented in this file.
 
-## [1.4.0] - 2025-11-08
-
-### Fixed
-- **Critical Encryption Bug** - Fixed DPAPI encryption to work with SYSTEM account for autostart scenarios
-  - Changed from user-specific encryption to machine-level encryption
-  - Uses `CRYPTPROTECT_LOCAL_MACHINE` flag for both encryption and decryption
-  - Allows application to run under SYSTEM account (autostart, services)
-  - Data encrypted by any user/process can now be decrypted by any user/process on same machine
-  - Still maintains machine-bound security - encrypted data only decryptable on same computer
-  - Fixes issue where CSV file couldn't be read when launched by Windows Task Scheduler or as service
-  - **Important**: Files encrypted with v1.3.0 need to be re-encrypted (open and save) to work with autostart
-- **Empty Example Hosts** - Fixed example hosts.csv showing no servers on first launch
-  - Added 3 example server entries to hosts.csv
-  - Users now see example servers immediately after installation
-  - Examples can be modified or deleted through the application UI
-
-### Security Note
-- Machine-level encryption is less secure than user-specific encryption, but necessary for:
-  - Applications that auto-start with Windows (run by SYSTEM account)
-  - Services running under SYSTEM or other service accounts
-  - Scenarios where multiple users need access to same encrypted data
-- Data remains encrypted at rest and machine-bound (cannot be decrypted on different computers)
-- Application-specific entropy still provides additional security layer
-
-### Changed
-- Updated encryption module documentation to reflect machine-level encryption
-- Modified `CryptProtectData` to use `CRYPTPROTECT_LOCAL_MACHINE` flag
-- Modified `CryptUnprotectData` to use `CRYPTPROTECT_LOCAL_MACHINE` flag
-- Updated all encryption-related comments and documentation
-
----
-
-## [1.3.0] - 2025-11-08
-
-### Added
-- **CSV File Encryption** - Host data is now encrypted using Windows DPAPI
-  - Automatic encryption of hosts.csv file on save
-  - Transparent decryption on load
-  - User-specific encryption - only the Windows user who created the file can decrypt it (changed to machine-level in v1.4.0)
-  - No manual key management required
-  - Backward compatible - can still read unencrypted files from previous versions
-  - File format includes magic number and version for future extensibility
-  - Uses Windows Data Protection API (DPAPI) for secure, OS-integrated encryption
-
-### Changed
-- Hosts CSV file is now stored in encrypted format by default
-- Updated application version to 1.3.0
-- Added crypt32.lib dependency for encryption support
-
-### Technical Details
-- New encryption module (encryption.c/encryption.h) using CryptProtectData/CryptUnprotectData
-- Modified LoadHosts() to detect and decrypt encrypted files
-- Modified SaveHosts() to encrypt data before writing
-- Encrypted file format: [MAGIC][VERSION][ENCRYPTED_DATA]
-- Application-specific entropy for additional security layer
-
 ## [1.5.0] - 2025-11-12
 
 ### Added
@@ -289,6 +233,64 @@ The following UX improvements are planned for future releases:
   - When editing credentials via button, no countdown timer appears
   - Prevents rushed editing experience
   - Shows simple "✓ Credentials saved" message in edit mode
+
+---
+
+## [1.4.0] - 2025-11-08
+
+### Fixed
+- **Critical Encryption Bug** - Fixed DPAPI encryption to work with SYSTEM account for autostart scenarios
+  - Changed from user-specific encryption to machine-level encryption
+  - Uses `CRYPTPROTECT_LOCAL_MACHINE` flag for both encryption and decryption
+  - Allows application to run under SYSTEM account (autostart, services)
+  - Data encrypted by any user/process can now be decrypted by any user/process on same machine
+  - Still maintains machine-bound security - encrypted data only decryptable on same computer
+  - Fixes issue where CSV file couldn't be read when launched by Windows Task Scheduler or as service
+  - **Important**: Files encrypted with v1.3.0 need to be re-encrypted (open and save) to work with autostart
+- **Empty Example Hosts** - Fixed example hosts.csv showing no servers on first launch
+  - Added 3 example server entries to hosts.csv
+  - Users now see example servers immediately after installation
+  - Examples can be modified or deleted through the application UI
+
+### Security Note
+- Machine-level encryption is less secure than user-specific encryption, but necessary for:
+  - Applications that auto-start with Windows (run by SYSTEM account)
+  - Services running under SYSTEM or other service accounts
+  - Scenarios where multiple users need access to same encrypted data
+- Data remains encrypted at rest and machine-bound (cannot be decrypted on different computers)
+- Application-specific entropy still provides additional security layer
+
+### Changed
+- Updated encryption module documentation to reflect machine-level encryption
+- Modified `CryptProtectData` to use `CRYPTPROTECT_LOCAL_MACHINE` flag
+- Modified `CryptUnprotectData` to use `CRYPTPROTECT_LOCAL_MACHINE` flag
+- Updated all encryption-related comments and documentation
+
+---
+
+## [1.3.0] - 2025-11-08
+
+### Added
+- **CSV File Encryption** - Host data is now encrypted using Windows DPAPI
+  - Automatic encryption of hosts.csv file on save
+  - Transparent decryption on load
+  - User-specific encryption - only the Windows user who created the file can decrypt it (changed to machine-level in v1.4.0)
+  - No manual key management required
+  - Backward compatible - can still read unencrypted files from previous versions
+  - File format includes magic number and version for future extensibility
+  - Uses Windows Data Protection API (DPAPI) for secure, OS-integrated encryption
+
+### Changed
+- Hosts CSV file is now stored in encrypted format by default
+- Updated application version to 1.3.0
+- Added crypt32.lib dependency for encryption support
+
+### Technical Details
+- New encryption module (encryption.c/encryption.h) using CryptProtectData/CryptUnprotectData
+- Modified LoadHosts() to detect and decrypt encrypted files
+- Modified SaveHosts() to encrypt data before writing
+- Encrypted file format: [MAGIC][VERSION][ENCRYPTED_DATA]
+- Application-specific entropy for additional security layer
 
 ---
 
