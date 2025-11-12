@@ -11,7 +11,8 @@
  * - Registry operations
  * - Process launching
  * 
- * Author: Swatto
+ * Directed by: Swatto
+ * Built with: AI assistance
  * License: Public Domain
  */
 

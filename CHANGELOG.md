@@ -418,6 +418,6 @@ The following UX improvements are planned for future releases:
 
 ---
 
-**WinRDP by Swatto**  
+**WinRDP - Directed by Swatto • Built with AI**  
 Educational Windows API Programming Project
 

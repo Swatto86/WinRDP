@@ -1,8 +1,10 @@
 # WinRDP
 
+> **🤖 AI-Generated Project:** This entire application and its 30-chapter educational book were written by AI with direction from Swatto. The project demonstrates that AI can help us return to efficient, framework-free software development. Real coding experience was essential for providing effective guidance to the AI.
+
 A simple RDP connection manager written in **pure C** using the **Windows API**. Built to solve the problem of managing too many servers and passwords, while serving as a comprehensive learning resource for Windows programming.
 
-**Made by Swatto**
+**Directed by Swatto • Built with AI**
 
 ---
 
@@ -421,7 +423,7 @@ Want to add more stuff? Here are some ideas:
 
 ## 🙏 About This Project
 
-I built this because I needed a simple RDP manager and thought it would make a good learning resource. All the code is commented and explained so you can see how everything works.
+WinRDP was created with AI assistance to demonstrate that modern software can be built without framework bloat. This project serves as both a practical tool and an extensive learning resource. All the code is commented and explained so you can see how everything works.
 
 ## 🤝 Contributing
 
@@ -438,7 +440,7 @@ For major changes, open an issue first to discuss what you'd like to change.
 
 ---
 
-**Made by Swatto**
+**Directed by Swatto • Built with AI**
 
 Hope you find it useful! 🚀
 
