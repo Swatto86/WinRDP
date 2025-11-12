@@ -6,11 +6,11 @@
 ; (not Program Files (x86)) on 64-bit systems
 
 !define APP_NAME "WinRDP"
-!define APP_VERSION "1.4.0"
+!define APP_VERSION "1.5.0"
 !define COMPANY_NAME "Swatto"
 !define APP_PUBLISHER "Swatto"
 !define EXE_NAME "WinRDP.exe"
-!define INSTALLER_NAME "WinRDP-Setup-1.4.0.exe"
+!define INSTALLER_NAME "WinRDP-Setup-1.5.0.exe"
 
 ; Compressor settings
 SetCompressor /SOLID lzma

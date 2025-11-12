@@ -21,7 +21,7 @@ A simple RDP connection manager written in **pure C** using the **Windows API**.
 ## 🚀 Quick Start
 
 ### For Users
-1. Download [WinRDP-Setup-1.4.0.exe](https://github.com/Swatto86/WinRDP/releases/latest)
+1. Download [WinRDP-Setup-1.5.0.exe](https://github.com/Swatto86/WinRDP/releases/latest)
 2. Run the installer
 3. Launch from Start Menu or system tray
 4. Set your credentials and add servers
@@ -153,7 +153,7 @@ The build script figures out which compiler you have and uses it.
 .\build-installer.bat
 ```
 
-This spits out `WinRDP-Setup-1.4.0.exe` that you can share.
+This spits out `WinRDP-Setup-1.5.0.exe` that you can share.
 
 See [BUILD.md](BUILD.md) for more details.
 
@@ -394,7 +394,7 @@ MIT License. Use it however you want.
 ## 📦 Installing
 
 There's an installer:
-- Download `WinRDP-Setup-1.4.0.exe`
+- Download `WinRDP-Setup-1.5.0.exe`
 - Double-click it
 - Find it in your system tray or Start Menu
 - Check "About" in the tray menu if you want to know who made it

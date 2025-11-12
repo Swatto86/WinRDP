@@ -312,7 +312,7 @@
         "name": "Swatto",
         "url": "https://swatto.co.uk"
       },
-      "softwareVersion": "1.4.0",
+      "softwareVersion": "1.5.0",
       "screenshot": "https://swatto.co.uk/",
       "featureList": [
         "Encrypted CSV storage using Windows DPAPI (machine-level)",
@@ -377,22 +377,30 @@
         <div class="download-section">
             <h2 style="margin: 0 0 20px 0; color: #e0e0e0;">📥 Download</h2>
             <p style="font-size: 1.1em; margin-bottom: 20px;">Grab the latest version</p>
-            <a href="https://github.com/Swatto86/WinRDP/releases/download/1.4.0/WinRDP-Setup-1.4.0.exe" class="download-button">
-                Download WinRDP v1.4.0
+            <a href="https://github.com/Swatto86/WinRDP/releases/download/1.5.0/WinRDP-Setup-1.5.0.exe" class="download-button">
+                Download WinRDP v1.5.0
             </a>
             <div class="version-info">
-                Windows 7+ (64-bit) • ~140 KB installer<br>
-                <span style="color: #16a34a; font-weight: 600;">✨ Latest: Encrypted CSV storage + autostart fixes</span>
+                Windows 7+ (64-bit) • ~233 KB installer<br>
+                <span style="color: #16a34a; font-weight: 600;">✨ Latest: Visual feedback + search highlighting + auto-resize</span>
             </div>
         </div>
         
         <div class="section">
-            <h2>✨ What's New in v1.4.0</h2>
+            <h2>✨ What's New in v1.5.0</h2>
             <p style="margin-bottom: 15px; font-size: 1.05em; color: #ccc;">
-                Fixed some important bugs that were causing issues with encryption and autostart.
+                Three new UX features that make connecting to servers more intuitive and responsive.
             </p>
+            <div style="background: #1e3a1e; border-left: 4px solid #16a34a; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+                <p style="margin: 0; color: #4ade80;"><strong>🎨 New Features (v1.5.0):</strong></p>
+                <ul style="margin: 10px 0 0 20px; color: #4ade80;">
+                    <li><strong>👁️ Visual feedback on connection</strong> - wait cursor and status message when launching RDP</li>
+                    <li><strong>🎯 Highlight search results</strong> - matched text gets a yellow background so you can see why it matched</li>
+                    <li><strong>↔️ Auto-resize description column</strong> - description column dynamically fills available space when you resize the window</li>
+                </ul>
+            </div>
             <div style="background: #3a1e1e; border-left: 4px solid #ef4444; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
-                <p style="margin: 0; color: #fca5a5;"><strong>🔧 Bug Fixes (v1.4.0):</strong></p>
+                <p style="margin: 0; color: #fca5a5;"><strong>🔧 Previous Bug Fixes (v1.4.0):</strong></p>
                 <ul style="margin: 10px 0 0 20px; color: #fca5a5;">
                     <li><strong>🔒 Fixed encryption</strong> - switched to machine-level DPAPI so autostart actually works</li>
                     <li><strong>🖥️ Autostart works now</strong> - no more blank window on startup</li>
@@ -400,21 +408,8 @@
                     <li><strong>🔐 CSV encryption</strong> - your host list is now encrypted on disk</li>
                 </ul>
             </div>
-            <div style="background: #1e3a1e; border-left: 4px solid #16a34a; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
-                <p style="margin: 0; color: #4ade80;"><strong>Recent additions (v1.2.0):</strong></p>
-                <ul style="margin: 10px 0 0 20px; color: #4ade80;">
-                    <li><strong>🔒 Persistent RDP files</strong> - no more security warnings every time you connect</li>
-                    <li><strong>⏱️ Auto-close timer</strong> - window hides after 5 seconds if you don't use it</li>
-                    <li><strong>🕒 Recent connections</strong> - right-click the tray icon to see your last 5 connections</li>
-                    <li><strong>📊 Connection history</strong> - tracks when you last connected to each server</li>
-                    <li><strong>🔍 Search box</strong> - filters your server list as you type</li>
-                    <li><strong>↕️ Sortable columns</strong> - click the column headers to sort</li>
-                    <li><strong>✏️ Edit credentials</strong> - added a button to change credentials without restarting</li>
-                    <li><strong>🔐 Per-host credentials</strong> - override the default credentials for specific servers</li>
-                </ul>
-            </div>
             <p style="margin-top: 15px; font-size: 0.95em; color: #999;">
-                The v1.4.0 fixes were important - the previous encryption method broke when Windows started the app automatically. Now it uses machine-level encryption which works reliably at startup. I also threw in some example hosts so new users have something to look at right away.
+                The v1.5.0 improvements are all about user experience - you get clear feedback when connecting, search results are easier to spot, and the window layout adapts to your screen size. Small changes that make a big difference in daily use.
             </p>
         </div>
         

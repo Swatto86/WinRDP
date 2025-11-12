@@ -58,7 +58,7 @@ All notable changes to WinRDP will be documented in this file.
 - Encrypted file format: [MAGIC][VERSION][ENCRYPTED_DATA]
 - Application-specific entropy for additional security layer
 
-## [Unreleased]
+## [1.5.0] - 2025-11-12
 
 ### Added
 - **New Application Icon** - Professional blue monitor with green frame
@@ -76,7 +76,6 @@ All notable changes to WinRDP will be documented in this file.
   - Hostnames sanitized for filesystem compatibility (replaces invalid characters)
   - Windows recognizes trusted RDP files after first connection
 
-### Added
 - **Delete Host with Del Key and Context Menu** - Multiple convenient ways to delete hosts
   - Press Delete key on selected host in any ListView to remove it
   - Right-click on host to show context menu with Delete option
@@ -85,6 +84,32 @@ All notable changes to WinRDP will be documented in this file.
   - Context menu also provides quick access to Connect/Edit actions
   - Follows standard Windows UI conventions for consistency
   - List automatically refreshes after deletion while preserving search filters
+
+- **Visual Feedback on Connection** - Clear indication when launching RDP
+  - Wait cursor (hourglass) appears during connection
+  - Window title briefly shows "Launching connection to [hostname]..."
+  - 100ms delay ensures user sees the feedback
+  - Applies to all connection methods: button click, double-click, Enter key, context menu
+  - System tray recent connections continue to launch directly for quick access
+  - Professional user experience with clear action confirmation
+
+- **Highlight Search Results** - Visual indication of matching text in ListView
+  - Matching text highlighted with light yellow background (RGB 255, 255, 150)
+  - Highlights both hostname and description columns
+  - Case-insensitive matching for better usability
+  - Uses custom draw (NM_CUSTOMDRAW) for efficient rendering
+  - Automatically updates as you type in search box
+  - Works in both main server list and host management dialogs
+  - Makes it immediately clear why each result matched your search
+
+- **Auto-resize Description Column** - Dynamic column width adjustment
+  - Description column automatically resizes when window is resized
+  - Always fills available space between fixed-width columns
+  - Hostname column fixed at 170px, Last Connected at 160px
+  - Description gets remaining space (minimum 100px)
+  - Smooth resizing as you drag window edges
+  - Better use of screen real estate on large monitors
+  - Responsive design that works at any window size
   
 ### Upcoming Features (Planned)
 
@@ -97,36 +122,21 @@ The following UX improvements are planned for future releases:
    - Support for JSON and XML formats
    - Selective export (export filtered results only)
 
-2. **Visual Feedback on Connection** - Indicate when RDP is launching
-   - Status message or cursor change during connection
-   - Brief confirmation before minimizing window
-   - Clearer feedback for user actions
-
-3. **Highlight Search Results** - Visual indication of matching text
-   - Highlight matched text in ListView results
-   - Makes it clear why each result matched the search
-   - Improved visual feedback for filtering
-
-4. **Auto-resize Description Column** - Dynamic column width adjustment
-   - Description column auto-fills available space
-   - Adjusts when window is resized
-   - Better use of screen real estate
-
-5. **Host Grouping/Folders** - Organize servers by category
+2. **Host Grouping/Folders** - Organize servers by category
    - Create folders like "Production", "Development", "Test"
    - Expandable/collapsible tree view in ListView
    - Drag and drop hosts between folders
    - Filter by folder in search
    - Backup folder structure in CSV
 
-6. **Connection History Log** - Detailed tracking of all connection attempts
+3. **Connection History Log** - Detailed tracking of all connection attempts
    - Full history beyond just "Last Connected"
    - Log file with timestamps and connection duration
    - View history dialog with filtering and search
    - Track successful and failed connections
    - Export history for auditing purposes
 
-7. **Advanced RDP Settings Per Host** - Customize connection parameters
+4. **Advanced RDP Settings Per Host** - Customize connection parameters
    - Screen resolution options (fullscreen, windowed, custom)
    - Color depth settings (15-bit, 16-bit, 24-bit, 32-bit)
    - Multi-monitor configuration (single, all monitors, specific monitors)
@@ -138,7 +148,7 @@ The following UX improvements are planned for future releases:
    - Gateway server settings
    - Store settings in enhanced CSV format
 
-8. **Host Online Status** - Check if servers are reachable before connecting
+5. **Host Online Status** - Check if servers are reachable before connecting
    - Ping check with visual indicator (green/red/yellow dots)
    - Port 3389 availability check
    - Background status checking with configurable interval
@@ -146,51 +156,51 @@ The following UX improvements are planned for future releases:
    - Sort by online/offline status
    - Skip ping for specific hosts (firewall scenarios)
 
-9. **Quick Actions and Shortcuts** - Faster workflow operations
+6. **Quick Actions and Shortcuts** - Faster workflow operations
    - Copy hostname/IP to clipboard (Ctrl+C)
    - Copy credentials to clipboard with timeout
    - Pin favorite hosts to top of list
    - Star/favorite system with quick filter
    - Recent hosts counter configuration (currently fixed at 5)
 
-10. **Connection Profiles** - Reusable RDP setting templates
-    - Create named profiles (e.g., "High Quality", "Low Bandwidth")
-    - Apply profile to multiple hosts at once
-    - Default profile selection
-    - Profile management dialog
+7. **Connection Profiles** - Reusable RDP setting templates
+   - Create named profiles (e.g., "High Quality", "Low Bandwidth")
+   - Apply profile to multiple hosts at once
+   - Default profile selection
+   - Profile management dialog
 
-11. **Bulk Operations** - Edit multiple hosts simultaneously
-    - Multi-select in ListView (Ctrl+Click, Shift+Click)
-    - Bulk credential update
-    - Bulk folder assignment
-    - Bulk delete with confirmation
+8. **Bulk Operations** - Edit multiple hosts simultaneously
+   - Multi-select in ListView (Ctrl+Click, Shift+Click)
+   - Bulk credential update
+   - Bulk folder assignment
+   - Bulk delete with confirmation
 
-12. **Smart Reconnect Features** - Handle connection failures gracefully
-    - Configurable connection timeout
-    - Auto-retry on connection failure
-    - Connection error logging
-    - Remember last failed connection for diagnostics
+9. **Smart Reconnect Features** - Handle connection failures gracefully
+   - Configurable connection timeout
+   - Auto-retry on connection failure
+   - Connection error logging
+   - Remember last failed connection for diagnostics
 
-13. **Tags and Metadata** - Additional organization options
+10. **Tags and Metadata** - Additional organization options
     - Add multiple tags per host (comma-separated)
     - Filter by tags
     - Tag-based color coding in ListView
     - Custom fields (OS version, owner, purpose, etc.)
 
-14. **Connection Statistics** - Usage analytics and insights
+11. **Connection Statistics** - Usage analytics and insights
     - Total connections per host
     - Connection duration tracking
     - Most frequently used hosts
     - Statistics dashboard
     - Generate usage reports
 
-15. **Session Management** - Handle active RDP sessions
+12. **Session Management** - Handle active RDP sessions
     - Detect and display active RDP sessions
     - Disconnect/logoff remote sessions
     - Shadow other user sessions (admin feature)
     - Session timeout warnings
 
-16. **Configuration Options** - User preferences and settings
+13. **Configuration Options** - User preferences and settings
     - Settings dialog for application preferences
     - Configurable hotkey combinations
     - Auto-refresh interval for status checks
@@ -198,21 +208,21 @@ The following UX improvements are planned for future releases:
     - UI font and size preferences
     - Default RDP options
 
-17. **Network Discovery Enhancements** - Better scanning capabilities
+14. **Network Discovery Enhancements** - Better scanning capabilities
     - Scan specific IP ranges (CIDR notation)
     - Scheduled automatic scans
     - Detect changes in network (new/removed computers)
     - Remember last scan parameters
     - Exclude specific hosts from scan results
 
-18. **Backup and Sync** - Cloud backup and multi-PC synchronization
+15. **Backup and Sync** - Cloud backup and multi-PC synchronization
     - Automatic backup scheduling
     - OneDrive/Dropbox integration
     - Sync hosts across multiple computers
     - Conflict resolution for concurrent edits
     - Version history for configuration
 
-19. **Security Enhancements** - Additional protection features
+16. **Security Enhancements** - Additional protection features
     - Master password for application access
     - Inactivity timeout with auto-lock
     - Credential expiration reminders
@@ -220,7 +230,7 @@ The following UX improvements are planned for future releases:
     - Audit log for security events
     - Encrypted clipboard for credential copying
 
-20. **Command-Line Interface** - Automation and scripting support
+17. **Command-Line Interface** - Automation and scripting support
     - Launch specific hosts from command line
     - Import/export via command line
     - Headless connection mode

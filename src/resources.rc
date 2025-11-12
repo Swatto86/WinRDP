@@ -224,7 +224,7 @@ FONT 9, "Segoe UI"
 BEGIN
     /* Application title */
     LTEXT           "WinRDP", IDC_STATIC, 20, 20, 100, 16
-    LTEXT           "Version 1.4.0", IDC_STATIC, 20, 40, 100, 10
+    LTEXT           "Version 1.5.0", IDC_STATIC, 20, 40, 100, 10
     
     /* Separator */
     CONTROL         "", IDC_STATIC, "Static", SS_ETCHEDHORZ, 20, 60, 330, 1

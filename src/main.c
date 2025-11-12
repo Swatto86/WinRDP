@@ -88,6 +88,12 @@ typedef struct {
     int hostCount;       // Number of hosts
 } SortParams;
 
+// Search text tracking for highlighting
+typedef struct {
+    wchar_t searchText[256];
+    BOOL hasSearchText;
+} SearchContext;
+
 // Forward declaration for sort comparison function
 int CALLBACK CompareListViewItems(LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort);
 
@@ -846,6 +852,75 @@ void UpdateHostCountLabel(HWND hwndDialog, int labelId, int displayedCount, int 
 }
 
 /*
+ * LaunchRDPWithVisualFeedback - Connect with visual feedback
+ * 
+ * Feature 2: Visual Feedback on Connection
+ * Shows wait cursor and brief status message while launching RDP connection.
+ * 
+ * Parameters:
+ *   hwnd - Parent window handle
+ *   hostname - The RDP server to connect to
+ * 
+ * Returns:
+ *   TRUE on success, FALSE on failure
+ */
+BOOL LaunchRDPWithVisualFeedback(HWND hwnd, const wchar_t* hostname)
+{
+    // Change cursor to wait cursor for visual feedback
+    HCURSOR hOldCursor = SetCursor(LoadCursor(NULL, IDC_WAIT));
+    
+    // Brief message to show we're connecting
+    wchar_t statusMsg[512];
+    swprintf_s(statusMsg, 512, L"Launching connection to %s...", hostname);
+    SetWindowTextW(hwnd, statusMsg);
+    
+    // Force window update to show the message
+    UpdateWindow(hwnd);
+    
+    // Small delay so user can see the feedback (100ms)
+    Sleep(100);
+    
+    // Actually launch the RDP connection
+    BOOL result = LaunchRDPWithDefaults(hostname);
+    
+    // Restore cursor
+    SetCursor(hOldCursor);
+    
+    // Restore original window title
+    SetWindowTextW(hwnd, APP_WINDOW_TITLE);
+    
+    return result;
+}
+
+/*
+ * ResizeDescriptionColumn - Resize description column to fill available space
+ * 
+ * Feature 4: Auto-resize Description Column
+ * Dynamically adjusts the description column width when the window is resized.
+ * 
+ * Parameters:
+ *   hList - ListView handle
+ */
+void ResizeDescriptionColumn(HWND hList)
+{
+    // Get ListView client area
+    RECT rcList;
+    GetClientRect(hList, &rcList);
+    int listWidth = rcList.right - rcList.left;
+    
+    // Calculate new description column width
+    // Total width minus hostname (170) minus last connected (160) minus dummy (1) minus padding (5)
+    int descWidth = listWidth - 170 - 160 - 1 - 5;
+    
+    // Ensure minimum width
+    if (descWidth < 100)
+        descWidth = 100;
+    
+    // Set the new width for description column (column 2)
+    ListView_SetColumnWidth(hList, 2, descWidth);
+}
+
+/*
  * RefreshHostListView - Refresh the main ListView with optional filtering
  * 
  * Parameters:
@@ -928,6 +1003,7 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
     static Host* hosts = NULL;
     static int hostCount = 0;
     static SortParams sortParams = {1, TRUE, NULL, 0};  // Default: sort by hostname, ascending
+    static SearchContext searchContext = {{0}, FALSE};  // Feature 3: Track search text for highlighting
     
     switch (msg)
     {
@@ -1020,7 +1096,8 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                         
                         if (hostIndex >= 0 && hostIndex < hostCount)
                         {
-                            if (LaunchRDPWithDefaults(hosts[hostIndex].hostname))
+                            // Feature 2: Visual feedback on connection
+                            if (LaunchRDPWithVisualFeedback(hwnd, hosts[hostIndex].hostname))
                             {
                                 EndDialog(hwnd, IDOK);
                             }
@@ -1050,7 +1127,8 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                             
                             if (hostIndex >= 0 && hostIndex < hostCount)
                             {
-                                if (LaunchRDPWithDefaults(hosts[hostIndex].hostname))
+                                // Feature 2: Visual feedback on connection
+                                if (LaunchRDPWithVisualFeedback(hwnd, hosts[hostIndex].hostname))
                                 {
                                     EndDialog(hwnd, IDOK);
                                 }
@@ -1184,7 +1262,8 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                                 
                                 if (hostIndex >= 0 && hostIndex < hostCount)
                                 {
-                                    if (LaunchRDPWithDefaults(hosts[hostIndex].hostname))
+                                    // Feature 2: Visual feedback on connection
+                                    if (LaunchRDPWithVisualFeedback(hwnd, hosts[hostIndex].hostname))
                                     {
                                         EndDialog(hwnd, IDOK);
                                     }
@@ -1232,8 +1311,74 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                     }
                     return TRUE;
                 }
+                else if (pnmhdr->code == NM_CUSTOMDRAW)
+                {
+                    // Feature 3: Custom draw for search result highlighting
+                    LPNMLVCUSTOMDRAW lpcd = (LPNMLVCUSTOMDRAW)lParam;
+                    
+                    if (!searchContext.hasSearchText)
+                    {
+                        // No search text - use default drawing
+                        return CDRF_DODEFAULT;
+                    }
+                    
+                    switch (lpcd->nmcd.dwDrawStage)
+                    {
+                        case CDDS_PREPAINT:
+                            // Request item-level notifications
+                            return CDRF_NOTIFYITEMDRAW;
+                            
+                        case CDDS_ITEMPREPAINT:
+                            // Request subitem-level notifications
+                            return CDRF_NOTIFYSUBITEMDRAW;
+                            
+                        case CDDS_SUBITEM | CDDS_ITEMPREPAINT:
+                        {
+                            // Get the subitem being drawn
+                            int iSubItem = lpcd->iSubItem;
+                            int iItem = (int)lpcd->nmcd.dwItemSpec;
+                            
+                            // Only highlight columns 1 (hostname) and 2 (description)
+                            if (iSubItem == 1 || iSubItem == 2)
+                            {
+                                // Get the text for this subitem
+                                wchar_t text[512] = {0};
+                                ListView_GetItemText(lpcd->nmcd.hdr.hwndFrom, iItem, iSubItem, text, 512);
+                                
+                                // Convert both to lowercase for case-insensitive comparison
+                                wchar_t textLower[512] = {0};
+                                wchar_t searchLower[256] = {0};
+                                wcsncpy_s(textLower, 512, text, _TRUNCATE);
+                                wcsncpy_s(searchLower, 256, searchContext.searchText, _TRUNCATE);
+                                _wcslwr_s(textLower, 512);
+                                _wcslwr_s(searchLower, 256);
+                                
+                                // Check if this text contains the search term
+                                if (wcsstr(textLower, searchLower) != NULL)
+                                {
+                                    // Highlight with yellow background
+                                    lpcd->clrTextBk = RGB(255, 255, 150);  // Light yellow
+                                    return CDRF_NEWFONT;
+                                }
+                            }
+                            return CDRF_DODEFAULT;
+                        }
+                    }
+                    return CDRF_DODEFAULT;
+                }
             }
             break;
+        }
+
+        case WM_SIZE:
+        {
+            // Feature 4: Auto-resize description column when window resizes
+            HWND hList = GetDlgItem(hwnd, IDC_LIST_SERVERS);
+            if (hList)
+            {
+                ResizeDescriptionColumn(hList);
+            }
+            return FALSE;  // Let default processing continue
         }
 
         case WM_COMMAND:
@@ -1245,11 +1390,22 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                     HWND hList = GetDlgItem(hwnd, IDC_LIST_SERVERS);
                     int selected = ListView_GetNextItem(hList, -1, LVNI_SELECTED);
                     
-                    if (selected >= 0 && selected < hostCount)
+                    if (selected >= 0)
                     {
-                        if (LaunchRDPWithDefaults(hosts[selected].hostname))
+                        // Get the original host index from lParam
+                        LVITEMW item = {0};
+                        item.mask = LVIF_PARAM;
+                        item.iItem = selected;
+                        ListView_GetItem(hList, &item);
+                        int hostIndex = (int)item.lParam;
+                        
+                        if (hostIndex >= 0 && hostIndex < hostCount)
                         {
-                            EndDialog(hwnd, IDOK);
+                            // Feature 2: Visual feedback on connection
+                            if (LaunchRDPWithVisualFeedback(hwnd, hosts[hostIndex].hostname))
+                            {
+                                EndDialog(hwnd, IDOK);
+                            }
                         }
                     }
                     else
@@ -1268,12 +1424,15 @@ INT_PTR CALLBACK MainDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                         HWND hSearch = GetDlgItem(hwnd, IDC_EDIT_SEARCH);
                         
                         // Get search text
-                        wchar_t searchText[256] = {0};
-                        GetWindowTextW(hSearch, searchText, 256);
+                        GetWindowTextW(hSearch, searchContext.searchText, 256);
+                        searchContext.hasSearchText = (wcslen(searchContext.searchText) > 0);
                         
                         // Refresh list with filter
-                        int displayedCount = RefreshHostListView(hList, hosts, hostCount, searchText);
+                        int displayedCount = RefreshHostListView(hList, hosts, hostCount, searchContext.searchText);
                         UpdateHostCountLabel(hwnd, IDC_STATIC_HOST_COUNT, displayedCount, hostCount);
+                        
+                        // Feature 3: Redraw list to show highlighting
+                        InvalidateRect(hList, NULL, FALSE);
                     }
                     return TRUE;
                 }
@@ -1388,6 +1547,7 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
     static Host* hosts = NULL;
     static int hostCount = 0;
     static SortParams sortParams = {1, TRUE, NULL, 0};  // Default: sort by hostname, ascending
+    static SearchContext searchContext = {{0}, FALSE};  // Feature 3: Track search text for highlighting
     
     switch (msg)
     {
@@ -1711,8 +1871,74 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                     }
                     return TRUE;
                 }
+                else if (pnmhdr->code == NM_CUSTOMDRAW)
+                {
+                    // Feature 3: Custom draw for search result highlighting
+                    LPNMLVCUSTOMDRAW lpcd = (LPNMLVCUSTOMDRAW)lParam;
+                    
+                    if (!searchContext.hasSearchText)
+                    {
+                        // No search text - use default drawing
+                        return CDRF_DODEFAULT;
+                    }
+                    
+                    switch (lpcd->nmcd.dwDrawStage)
+                    {
+                        case CDDS_PREPAINT:
+                            // Request item-level notifications
+                            return CDRF_NOTIFYITEMDRAW;
+                            
+                        case CDDS_ITEMPREPAINT:
+                            // Request subitem-level notifications
+                            return CDRF_NOTIFYSUBITEMDRAW;
+                            
+                        case CDDS_SUBITEM | CDDS_ITEMPREPAINT:
+                        {
+                            // Get the subitem being drawn
+                            int iSubItem = lpcd->iSubItem;
+                            int iItem = (int)lpcd->nmcd.dwItemSpec;
+                            
+                            // Only highlight columns 1 (hostname) and 2 (description)
+                            if (iSubItem == 1 || iSubItem == 2)
+                            {
+                                // Get the text for this subitem
+                                wchar_t text[512] = {0};
+                                ListView_GetItemText(lpcd->nmcd.hdr.hwndFrom, iItem, iSubItem, text, 512);
+                                
+                                // Convert both to lowercase for case-insensitive comparison
+                                wchar_t textLower[512] = {0};
+                                wchar_t searchLower[256] = {0};
+                                wcsncpy_s(textLower, 512, text, _TRUNCATE);
+                                wcsncpy_s(searchLower, 256, searchContext.searchText, _TRUNCATE);
+                                _wcslwr_s(textLower, 512);
+                                _wcslwr_s(searchLower, 256);
+                                
+                                // Check if this text contains the search term
+                                if (wcsstr(textLower, searchLower) != NULL)
+                                {
+                                    // Highlight with yellow background
+                                    lpcd->clrTextBk = RGB(255, 255, 150);  // Light yellow
+                                    return CDRF_NEWFONT;
+                                }
+                            }
+                            return CDRF_DODEFAULT;
+                        }
+                    }
+                    return CDRF_DODEFAULT;
+                }
             }
             break;
+        }
+
+        case WM_SIZE:
+        {
+            // Feature 4: Auto-resize description column when window resizes
+            HWND hList = GetDlgItem(hwnd, IDC_LIST_HOSTS);
+            if (hList)
+            {
+                ResizeDescriptionColumn(hList);
+            }
+            return FALSE;  // Let default processing continue
         }
 
         case WM_COMMAND:
@@ -1727,12 +1953,15 @@ INT_PTR CALLBACK HostDialogProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                         HWND hSearch = GetDlgItem(hwnd, IDC_EDIT_SEARCH_HOSTS);
                         
                         // Get search text
-                        wchar_t searchText[256] = {0};
-                        GetWindowTextW(hSearch, searchText, 256);
+                        GetWindowTextW(hSearch, searchContext.searchText, 256);
+                        searchContext.hasSearchText = (wcslen(searchContext.searchText) > 0);
                         
                         // Refresh list with filter
-                        int displayedCount = RefreshHostListView(hList, hosts, hostCount, searchText);
+                        int displayedCount = RefreshHostListView(hList, hosts, hostCount, searchContext.searchText);
                         UpdateHostCountLabel(hwnd, IDC_STATIC_HOSTS_COUNT, displayedCount, hostCount);
+                        
+                        // Feature 3: Redraw list to show highlighting
+                        InvalidateRect(hList, NULL, FALSE);
                     }
                     return TRUE;
                 }

@@ -8,7 +8,7 @@ Complete guide for building WinRDP from source and creating the installer.
 
 ### Installing WinRDP
 
-1. Download `WinRDP-Setup-1.4.0.exe`
+1. Download `WinRDP-Setup-1.5.0.exe`
 2. Double-click to run the installer
 3. Follow the wizard
 4. WinRDP installs to `C:\Program Files\WinRDP\`
@@ -98,7 +98,7 @@ makensis installer.nsi
 ### Output
 
 - `build\WinRDP.exe` - Application executable
-- `WinRDP-Setup-1.4.0.exe` - Distribution installer
+- `WinRDP-Setup-1.5.0.exe` - Distribution installer
 
 ---
 
