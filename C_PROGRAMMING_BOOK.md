@@ -11861,13 +11861,13 @@ Run `WinRDP.exe`:
 
 In the next chapters, we'll add functionality:
 
-- **Chapter 18**: Utility functions (CenterWindow, ShowError, etc.)
-- **Chapter 19**: Host management (LoadHosts, SaveHosts)
+- **Chapter 18**: Configuration and Utilities
+- **Chapter 19**: CSV File Management (LoadHosts, SaveHosts)
 - **Chapter 20**: Credential storage (Windows Credential Manager)
-- **Chapter 21**: System tray integration
-- **Chapter 22**: ListView population and selection
+- **Chapter 21**: Main Application Window
+- **Chapter 22**: ListView Control for Host Display
 - **Chapter 23**: RDP connection logic
-- **Chapter 24**: Complete system tray with context menu
+- **Chapter 24**: System Tray Integration
 
 Each chapter adds working features to this skeleton!
 
@@ -16692,7 +16692,7 @@ You've learned:
 **Next chapter:** ListView controls for displaying host lists!
 
 
-# Chapter 23: ListView Control for Host Display
+# Chapter 22: ListView Control for Host Display
 
 > **📝 What's New in WinRDP v1.2.0**
 > 
@@ -17915,7 +17915,7 @@ You've learned:
 
 
 
-# Chapter 24: RDP Connection Logic
+# Chapter 23: RDP Connection Logic
 
 > **📝 What's New in WinRDP v1.2.0**
 > 
@@ -19533,7 +19533,7 @@ Based on the pattern established in the existing chapters:
 
 ---
 
-# Chapter 25: System Tray Integration
+# Chapter 24: System Tray Integration
 
 **What You'll Learn:**
 - Understanding the Windows system tray (notification area)
@@ -20357,7 +20357,7 @@ In this chapter, you learned:
 
 # Part V: Advanced Features
 
-# Chapter 26: Registry Operations and Autostart
+# Chapter 25: Registry Operations and Autostart
 
 **What You'll Learn:**
 - Understanding the Windows Registry structure
@@ -21315,7 +21315,7 @@ In this chapter, you learned:
 
 ---
 
-# Chapter 27: Global Hotkeys
+# Chapter 26: Global Hotkeys
 
 **What You'll Learn:**
 - Understanding Windows hotkey system
@@ -22105,7 +22105,7 @@ In this chapter, you learned:
 
 ---
 
-# Chapter 28: Dark Mode Support
+# Chapter 27: Dark Mode Support
 
 **What You'll Learn:**
 - Detecting Windows dark mode settings
@@ -22492,7 +22492,7 @@ In this chapter, you learned:
 
 ---
 
-# Chapter 29: Network Computer Discovery
+# Chapter 28: Network Computer Discovery
 
 **What You'll Learn:**
 - Using NetAPI32 for network enumeration
@@ -22671,7 +22671,7 @@ In this chapter, you learned:
 
 ---
 
-# Chapter 30: Building and Distribution
+# Chapter 29: Building and Distribution
 
 **What You'll Learn:**
 - Creating build scripts
@@ -22775,7 +22775,7 @@ makensis installer.nsi
 
 # Part VI: Testing and Quality Assurance
 
-# Chapter 31: System Testing and Integration
+# Chapter 30: System Testing and Integration
 
 ## Introduction
 
